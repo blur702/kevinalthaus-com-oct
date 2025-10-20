@@ -28,20 +28,21 @@ export const PLUGIN_MANIFEST_SCHEMA: JSONSchemaType<PluginManifest> = {
       type: 'object',
       properties: {
         name: { type: 'string', minLength: 1 },
-        email: { type: 'string', nullable: true },
-        url: { type: 'string', nullable: true },
+        email: { type: 'string', format: 'email', nullable: true },
+        url: { type: 'string', format: 'uri', nullable: true },
       },
       required: ['name'],
     },
     homepage: {
       type: 'string',
+      format: 'uri',
       nullable: true,
     },
     repository: {
       type: 'object',
       properties: {
         type: { type: 'string' },
-        url: { type: 'string' },
+        url: { type: 'string', format: 'uri' },
       },
       required: ['type', 'url'],
       nullable: true,

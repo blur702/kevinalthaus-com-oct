@@ -16,14 +16,15 @@ export function generatePluginSchemaName(pluginId: string): string {
 }
 
 export function generatePluginTableName(pluginId: string, tableName: string): string {
+  const sanitizedPluginId = sanitizeIdentifier(pluginId);
   const sanitizedTable = sanitizeIdentifier(tableName);
-  const fullName = `${pluginId}_${sanitizedTable}`;
+  const fullName = `${sanitizedPluginId}_${sanitizedTable}`;
 
   if (fullName.length > MAX_IDENTIFIER_LENGTH) {
     const hash = generateShortHash(fullName);
-    const maxTableLength = MAX_IDENTIFIER_LENGTH - pluginId.length - hash.length - 2;
+    const maxTableLength = MAX_IDENTIFIER_LENGTH - sanitizedPluginId.length - hash.length - 2;
     const truncatedTable = sanitizedTable.substring(0, maxTableLength);
-    return `${pluginId}_${truncatedTable}_${hash}`;
+    return `${sanitizedPluginId}_${truncatedTable}_${hash}`;
   }
 
   return fullName;

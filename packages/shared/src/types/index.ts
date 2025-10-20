@@ -1,3 +1,5 @@
+import { Role } from '../security/rbac';
+
 export interface BaseEntity {
   id: string;
   createdAt: Date;
@@ -7,7 +9,7 @@ export interface BaseEntity {
 export interface User extends BaseEntity {
   email: string;
   username: string;
-  role: string;
+  role: Role;
 }
 
 export interface ApiResponse<T = unknown> {

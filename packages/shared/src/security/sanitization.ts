@@ -25,6 +25,24 @@ const DEFAULT_SANITIZE_OPTIONS: IOptions = {
     a: ['http', 'https', 'mailto'],
   },
   allowProtocolRelative: false,
+  transformTags: {
+    a: (tagName, attribs) => {
+      // Enforce rel="noopener noreferrer" when target is present
+      if (attribs.target) {
+        return {
+          tagName,
+          attribs: {
+            ...attribs,
+            rel: 'noopener noreferrer',
+          },
+        };
+      }
+      return {
+        tagName,
+        attribs,
+      };
+    },
+  },
 };
 
 const STRICT_SANITIZE_OPTIONS: IOptions = {
@@ -71,11 +89,35 @@ export function sanitizeDatabaseIdentifier(identifier: string): string {
     .substring(0, 63);
 }
 
+export class ConfigKeyCollisionError extends Error {
+  constructor(
+    message: string,
+    public readonly originalKey: string,
+    public readonly sanitizedKey: string
+  ) {
+    super(message);
+    this.name = 'ConfigKeyCollisionError';
+  }
+}
+
 export function sanitizePluginConfig(config: Record<string, unknown>): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {};
+  const keyMapping = new Map<string, string>();
 
   for (const [key, value] of Object.entries(config)) {
     const sanitizedKey = sanitizeDatabaseIdentifier(key);
+
+    // Check for key collision
+    if (sanitized[sanitizedKey] !== undefined) {
+      const originalKey = keyMapping.get(sanitizedKey);
+      throw new ConfigKeyCollisionError(
+        `Configuration key collision: "${key}" and "${originalKey}" both normalize to "${sanitizedKey}"`,
+        key,
+        sanitizedKey
+      );
+    }
+
+    keyMapping.set(sanitizedKey, key);
 
     if (typeof value === 'string') {
       sanitized[sanitizedKey] = stripAllHTML(value);

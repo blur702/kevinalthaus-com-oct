@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { createHash, createHmac, timingSafeEqual as cryptoTimingSafeEqual } from 'crypto';
+import { createHash, createHmac } from 'crypto';
 
 const SALT_ROUNDS = 12;
 
@@ -37,16 +37,14 @@ export function verifyPluginSignature(
 }
 
 function timingSafeEqual(a: string, b: string): boolean {
-  // Guard against length mismatch before calling cryptoTimingSafeEqual
   if (a.length !== b.length) {
     return false;
   }
 
-  // Convert hex strings to Buffers for timing-safe comparison
-  const bufA = Buffer.from(a, 'hex');
-  const bufB = Buffer.from(b, 'hex');
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
 
-  return cryptoTimingSafeEqual(bufA, bufB);
+  return bufA.compare(bufB) === 0;
 }
 
 export function generateChecksum(content: string | Buffer): string {

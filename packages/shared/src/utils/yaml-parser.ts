@@ -1,9 +1,14 @@
 import yaml from 'js-yaml';
 import Ajv, { ValidateFunction } from 'ajv';
+import addFormats from 'ajv-formats';
 import { PluginManifest } from '../plugin/manifest';
 import { PLUGIN_MANIFEST_SCHEMA } from '../plugin/schema';
 
 const ajv = new Ajv({ allErrors: true, strict: true });
+addFormats(ajv);
+
+// Module-level compiled validator to avoid recompilation on each call
+const manifestValidator: ValidateFunction<PluginManifest> = ajv.compile(PLUGIN_MANIFEST_SCHEMA);
 
 export class YAMLParseError extends Error {
   constructor(
@@ -72,12 +77,10 @@ export function parsePluginManifest(content: string): PluginManifest {
 }
 
 export function validatePluginManifest(data: unknown): PluginManifest {
-  const validator = ajv.compile(PLUGIN_MANIFEST_SCHEMA);
-
-  if (!validator(data)) {
+  if (!manifestValidator(data)) {
     throw new ManifestValidationError(
       'Plugin manifest validation failed',
-      validator.errors || []
+      manifestValidator.errors || []
     );
   }
 
@@ -85,7 +88,7 @@ export function validatePluginManifest(data: unknown): PluginManifest {
 }
 
 export function createManifestValidator(): ValidateFunction<PluginManifest> {
-  return ajv.compile(PLUGIN_MANIFEST_SCHEMA);
+  return manifestValidator;
 }
 
 export function safeParseYAML<T = unknown>(content: string): { success: true; data: T } | { success: false; error: Error } {
