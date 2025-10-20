@@ -1,0 +1,99 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.turbo/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+*.tgz
+
+# Docker volumes
+volumes/
+
+# Uploads and user-generated content
+uploads/
+plugins/
+public/uploads/
+
+# Cache
+.cache/
+.next/
+.nuxt/
+.vuepress/dist
+
+# Lock files (include only one based on your package manager)
+# Uncomment the ones you want to ignore
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets and certificates
+*.pem
+*.key
+*.cert
+*.crt
+secrets/

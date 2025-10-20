@@ -1,0 +1,153 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: kevinalthaus-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./docker/api-gateway/Dockerfile
+    container_name: kevinalthaus-api-gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${API_GATEWAY_PORT:-3000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "${API_GATEWAY_PORT:-3000}:3000"
+    volumes:
+      - ./packages:/app/packages
+      - ./node_modules:/app/node_modules
+      - api_logs:/app/logs
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  main-app:
+    build:
+      context: .
+      dockerfile: ./docker/main-app/Dockerfile
+    container_name: kevinalthaus-main-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${MAIN_APP_PORT:-3001}
+      API_GATEWAY_URL: http://api-gateway:3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
+    ports:
+      - "${MAIN_APP_PORT:-3001}:3001"
+    volumes:
+      - ./packages:/app/packages
+      - ./node_modules:/app/node_modules
+      - app_uploads:/app/uploads
+      - app_logs:/app/logs
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  python-service:
+    build:
+      context: .
+      dockerfile: ./docker/python-service/Dockerfile
+    container_name: kevinalthaus-python-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PYTHON_ENV: ${PYTHON_ENV:-development}
+      PORT: ${PYTHON_SERVICE_PORT:-8000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
+    ports:
+      - "${PYTHON_SERVICE_PORT:-8000}:8000"
+    volumes:
+      - ./python:/app/python
+      - python_logs:/app/logs
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: kevinalthaus-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  api_logs:
+    driver: local
+  app_logs:
+    driver: local
+  python_logs:
+    driver: local
+  app_uploads:
+    driver: local

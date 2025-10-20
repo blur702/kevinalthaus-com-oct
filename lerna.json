@@ -1,0 +1,14 @@
+{
+  "version": "independent",
+  "useWorkspaces": true,
+  "npmClient": "npm",
+  "command": {
+    "publish": {
+      "conventionalCommits": true,
+      "message": "chore(release): publish"
+    },
+    "bootstrap": {
+      "hoist": true
+    }
+  }
+}
