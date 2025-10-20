@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app from '../src/index';
+import app from '../index';
 
 describe('Main App', () => {
   describe('GET /health', () => {
@@ -24,8 +24,32 @@ describe('Main App', () => {
 
       expect(response.body).toMatchObject({
         message: 'Kevin Althaus Main Application',
-        version: '1.0.0',
-        environment: 'test'
+        version: '1.0.0'
+      });
+    });
+  });
+
+  describe('404 Handler', () => {
+    it('should return 404 for unknown routes', async () => {
+      const response = await request(app)
+        .get('/nonexistent-route')
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        error: 'Not Found',
+        message: 'Route /nonexistent-route not found',
+        statusCode: 404
+      });
+    });
+
+    it('should return 404 for unknown POST routes', async () => {
+      const response = await request(app)
+        .post('/unknown')
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        error: 'Not Found',
+        statusCode: 404
       });
     });
   });
