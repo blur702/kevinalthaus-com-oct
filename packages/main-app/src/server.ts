@@ -1,6 +1,12 @@
 import app from './index';
-import { logger } from '@monorepo/shared';
 import { Server } from 'http';
+
+// Simple console logger until shared package is available
+const logger = {
+  info: (message: string, ...args: any[]) => console.log(`[INFO] ${message}`, ...args),
+  error: (message: string, ...args: any[]) => console.error(`[ERROR] ${message}`, ...args),
+  warn: (message: string, ...args: any[]) => console.warn(`[WARN] ${message}`, ...args)
+};
 
 const PORT = process.env.PORT || 3001;
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds

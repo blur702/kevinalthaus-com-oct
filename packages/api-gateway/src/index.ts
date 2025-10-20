@@ -4,6 +4,13 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
+// Simple console logger until shared package is available
+const logger = {
+  info: (message: string, ...args: any[]) => console.log(`[INFO] ${message}`, ...args),
+  error: (message: string, ...args: any[]) => console.error(`[ERROR] ${message}`, ...args),
+  warn: (message: string, ...args: any[]) => console.warn(`[WARN] ${message}`, ...args)
+};
+
 const app = express();
 
 // Middleware
