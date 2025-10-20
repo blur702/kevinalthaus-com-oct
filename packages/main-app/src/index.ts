@@ -2,10 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { logger } from '@monorepo/shared';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet());
@@ -26,15 +24,19 @@ app.get('/health', (req, res) => {
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { logger } from '@monorepo/shared';
+import { version } from '../package.json' assert { type: 'json' };
+
+const app = express();
+
+app.get('/', (req, res) => {
+  res.json({
     message: 'Kevin Althaus Main Application',
-    version: '1.0.0',
+    version,
     environment: process.env.NODE_ENV || 'development'
   });
 });
-
-// Start server
-app.listen(PORT, () => {
-  logger.info(`Main app server running on port ${PORT}`);
-});
-
-export default app;

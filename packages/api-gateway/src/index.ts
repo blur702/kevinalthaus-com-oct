@@ -3,10 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { logger } from '@monorepo/shared';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(helmet());
@@ -50,10 +48,5 @@ app.use('/api/python', createProxyMiddleware({
     '^/api/python': '/'
   }
 }));
-
-// Start server
-app.listen(PORT, () => {
-  logger.info(`API Gateway server running on port ${PORT}`);
-});
 
 export default app;
