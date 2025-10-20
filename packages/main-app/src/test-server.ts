@@ -4,12 +4,15 @@ import * as http from 'http';
 const PORT = process.env.PORT || 3001;
 
 const server = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  
   if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'healthy', service: 'main-app-simple' }));
-  } else {
+  } else if (req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ message: 'Simple test server running' }));
+  } else {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not Found', message: `Route ${req.url} not found`, statusCode: 404 }));
   }
 });
 
@@ -20,11 +23,15 @@ server.listen(PORT, () => {
   process.exit(1);
 });
 
-// Simple shutdown handler
-process.on('SIGINT', () => {
-  console.log('Shutting down test server...');
+// Graceful shutdown handler
+function gracefulShutdown(signal: string) {
+  console.log(`Received ${signal}. Shutting down test server...`);
   server.close(() => {
     console.log('Test server closed');
     process.exit(0);
   });
-});
+}
+
+// Register shutdown handlers for both SIGINT and SIGTERM
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
