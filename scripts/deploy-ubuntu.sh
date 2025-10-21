@@ -96,11 +96,7 @@ mkdir -p "$APP_DIR/logs"
 
 # Configure firewall
 log "Configuring firewall..."
-ufw allow ssh
-if [ $? -ne 0 ]; then
-    log "ERROR: Failed to allow SSH in firewall"
-    exit 1
-fi
+ufw allow ssh || error "Failed to allow SSH in firewall"
 ufw --force enable
 ufw allow 80/tcp    # HTTP
 ufw allow 443/tcp   # HTTPS
@@ -122,15 +118,8 @@ else
 fi
 
 # Validate required Docker Compose files exist before copying
-if [ ! -f "./docker-compose.yml" ]; then
-    log "ERROR: docker-compose.yml not found in current directory"
-    exit 1
-fi
-
-if [ ! -f "./docker-compose.prod.yml" ]; then
-    log "ERROR: docker-compose.prod.yml not found in current directory"
-    exit 1
-fi
+[ ! -f "./docker-compose.yml" ] && error "docker-compose.yml not found in current directory"
+[ ! -f "./docker-compose.prod.yml" ] && error "docker-compose.prod.yml not found in current directory"
 
 # Copy application files
 log "Copying application files..."

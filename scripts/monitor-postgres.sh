@@ -28,14 +28,14 @@ if [ $MAX_CONNECTIONS_EXIT -ne 0 ] || [ -z "$MAX_CONNECTIONS" ]; then
     MAX_CONNECTIONS=100
 fi
 
-DB_SIZE=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT pg_size_pretty(pg_database_size('$POSTGRES_DB'));" 2>/dev/null)
+DB_SIZE=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v dbname="$POSTGRES_DB" -t -c "SELECT pg_size_pretty(pg_database_size(:'dbname'));" 2>/dev/null)
 DB_SIZE_EXIT=$?
 if [ $DB_SIZE_EXIT -ne 0 ] || [ -z "$DB_SIZE" ]; then
     echo "ERROR: Failed to get database size"
     DB_SIZE="unknown"
 fi
 
-CACHE_HIT_RATIO=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT ROUND(100.0 * blks_hit / (blks_hit + blks_read), 2) FROM pg_stat_database WHERE datname = '$POSTGRES_DB';" 2>/dev/null)
+CACHE_HIT_RATIO=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v dbname="$POSTGRES_DB" -t -c "SELECT ROUND(100.0 * blks_hit / (blks_hit + blks_read), 2) FROM pg_stat_database WHERE datname = :'dbname';" 2>/dev/null)
 CACHE_HIT_RATIO_EXIT=$?
 if [ $CACHE_HIT_RATIO_EXIT -ne 0 ] || [ -z "$CACHE_HIT_RATIO" ]; then
     echo "ERROR: Failed to get cache hit ratio"

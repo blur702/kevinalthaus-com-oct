@@ -45,7 +45,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api-gateway
 echo "[$(date)] Recreating database..."
 # Escape double quotes in database name for SQL identifier
 ESCAPED_DB_NAME=$(echo "$POSTGRES_DB" | sed 's/"/""/g')
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$POSTGRES_DB';"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$(echo "$POSTGRES_DB" | sed "s/'/''/g")';"
 docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS \"$ESCAPED_DB_NAME\";"
 docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "CREATE DATABASE \"$ESCAPED_DB_NAME\";"
 
