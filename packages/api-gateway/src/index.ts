@@ -91,6 +91,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cacheMiddleware);
 
 // Stricter rate limit for auth endpoints
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -100,13 +101,15 @@ const authRateLimit = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-});
+}) as express.RequestHandler;
 
 // General rate limit
+// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 app.use('/api/', rateLimitMiddleware);
 
 // Health check endpoints
-app.get('/health', async (_req, res) => {
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+app.get('/health', async (_req, res): Promise<void> => {
   // Check downstream services
   const checks: Record<string, string> = {};
 
@@ -218,6 +221,7 @@ function createSecureProxy(target: string, pathRewrite?: Record<string, string>)
 }
 
 // Auth routes (no JWT required, but stricter rate limiting)
+// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 app.use('/api/auth', authRateLimit, createProxyMiddleware(
   createSecureProxy(MAIN_APP_URL, { '^/api/auth': '/api/auth' })
 ));
