@@ -19,6 +19,14 @@ if [ ! -f "$BACKUP_FILE" ]; then
     exit 1
 fi
 
+# Validate backup file integrity
+echo "[$(date)] Validating backup file integrity..."
+if ! gzip -t "$BACKUP_FILE"; then
+    echo "ERROR: Backup file is corrupt or not a valid gzip archive: $BACKUP_FILE"
+    exit 1
+fi
+echo "[$(date)] Backup file validation: SUCCESS"
+
 echo "WARNING: This will REPLACE the current database with the backup!"
 read -p "Are you sure you want to continue? (yes/no): " confirm
 
@@ -33,11 +41,13 @@ echo "[$(date)] Starting PostgreSQL restore from $BACKUP_FILE..."
 echo "[$(date)] Stopping application services..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api-gateway main-app
 
-# Drop and recreate database
+# Drop and recreate database (safely quote database name)
 echo "[$(date)] Recreating database..."
+# Escape double quotes in database name for SQL identifier
+ESCAPED_DB_NAME=$(echo "$POSTGRES_DB" | sed 's/"/""/g')
 docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$POSTGRES_DB';"
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS $POSTGRES_DB;"
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "CREATE DATABASE $POSTGRES_DB;"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS \"$ESCAPED_DB_NAME\";"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "CREATE DATABASE \"$ESCAPED_DB_NAME\";"
 
 # Restore from backup
 echo "[$(date)] Restoring from backup..."

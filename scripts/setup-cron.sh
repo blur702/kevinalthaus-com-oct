@@ -12,6 +12,21 @@ mkdir -p "$LOG_DIR"
 
 echo "Setting up cron jobs..."
 
+# Validate required scripts exist and are executable
+if [ ! -f "$APP_DIR/scripts/backup-postgres.sh" ] || [ ! -x "$APP_DIR/scripts/backup-postgres.sh" ]; then
+    echo "ERROR: $APP_DIR/scripts/backup-postgres.sh not found or not executable"
+    exit 1
+fi
+
+if [ ! -f "$APP_DIR/scripts/monitor-postgres.sh" ] || [ ! -x "$APP_DIR/scripts/monitor-postgres.sh" ]; then
+    echo "ERROR: $APP_DIR/scripts/monitor-postgres.sh not found or not executable"
+    exit 1
+fi
+
+# Get absolute paths for cron
+FULL_APP_DIR=$(readlink -f "$APP_DIR")
+FULL_LOG_DIR=$(readlink -f "$LOG_DIR")
+
 # Create crontab entries
 CRON_FILE="/tmp/kevinalthaus-cron"
 
@@ -19,16 +34,16 @@ cat > "$CRON_FILE" <<EOF
 # Kevin Althaus Platform - Automated Maintenance Tasks
 
 # Daily PostgreSQL backup at 2 AM
-0 2 * * * cd $APP_DIR && ./scripts/backup-postgres.sh >> $LOG_DIR/backup.log 2>&1
+0 2 * * * cd $FULL_APP_DIR && $FULL_APP_DIR/scripts/backup-postgres.sh >> $FULL_LOG_DIR/backup.log 2>&1
 
-# PostgreSQL monitoring every 5 minutes
-*/5 * * * * cd $APP_DIR && ./scripts/monitor-postgres.sh >> $LOG_DIR/monitor.log 2>&1
+# PostgreSQL monitoring every 5 minutes  
+*/5 * * * * cd $FULL_APP_DIR && $FULL_APP_DIR/scripts/monitor-postgres.sh >> $FULL_LOG_DIR/monitor.log 2>&1
 
 # Weekly database optimization (VACUUM ANALYZE) on Sundays at 3 AM
-0 3 * * 0 docker exec kevinalthaus-postgres-1 psql -U postgres -d kevinalthaus -c "VACUUM ANALYZE;" >> $LOG_DIR/vacuum.log 2>&1
+0 3 * * 0 /usr/bin/docker exec kevinalthaus-postgres-1 /usr/bin/psql -U postgres -d kevinalthaus -c "VACUUM ANALYZE;" >> $FULL_LOG_DIR/vacuum.log 2>&1
 
 # Clean up old logs weekly (keep last 30 days)
-0 4 * * 0 find $LOG_DIR -name "*.log" -type f -mtime +30 -delete
+0 4 * * 0 /usr/bin/find $FULL_LOG_DIR -name "*.log" -type f -mtime +30 -delete
 EOF
 
 # Install crontab

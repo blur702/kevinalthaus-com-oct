@@ -10,7 +10,8 @@
 -- ----------------------------------------
 
 -- Create read-only monitoring role for health checks
-CREATE ROLE monitoring WITH LOGIN PASSWORD 'monitoring_password_change_this';
+-- NOTE: Set password after deployment: ALTER ROLE monitoring WITH PASSWORD '<strong-password>';
+CREATE ROLE monitoring WITH LOGIN;
 GRANT CONNECT ON DATABASE kevinalthaus TO monitoring;
 GRANT USAGE ON SCHEMA public TO monitoring;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO monitoring;
@@ -19,7 +20,8 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO monitoring;
 GRANT pg_monitor TO monitoring;
 
 -- Create application role with specific permissions (not using superuser)
-CREATE ROLE app_user WITH LOGIN PASSWORD 'app_password_change_this';
+-- NOTE: Set password after deployment: ALTER ROLE app_user WITH PASSWORD '<strong-password>';
+CREATE ROLE app_user WITH LOGIN;
 GRANT CONNECT ON DATABASE kevinalthaus TO app_user;
 GRANT USAGE, CREATE ON SCHEMA public TO app_user;
 

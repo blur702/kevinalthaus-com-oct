@@ -102,7 +102,7 @@ Required changes:
 
 ### Connection String
 
-```
+```bash
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres:5432/kevinalthaus
 ```
 
