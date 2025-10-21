@@ -40,13 +40,13 @@ def get_environment_config() -> Dict[str, Any]:
         "debug": environment == "development"
     }
 
-# Parse ALLOWED_ORIGINS from environment variable
-allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
-if allowed_origins_env and allowed_origins_env != "*":
+# Parse CORS_ORIGIN from environment variable (aligned with Node services)
+cors_origin_env = os.getenv("CORS_ORIGIN", "")
+if cors_origin_env and cors_origin_env != "*":
     # Parse comma-separated origins and trim whitespace
-    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
-    allow_credentials = True
-elif allowed_origins_env == "*":
+    allowed_origins = [origin.strip() for origin in cors_origin_env.split(",") if origin.strip()]
+    allow_credentials = os.getenv("CORS_CREDENTIALS", "true").lower() == "true"
+elif cors_origin_env == "*":
     # Wildcard origins - disable credentials for security
     allowed_origins = ["*"]
     allow_credentials = False
@@ -58,8 +58,8 @@ else:
         allowed_origins = ["https://kevinalthaus.com", "https://www.kevinalthaus.com"]
         allow_credentials = True
     else:
-        # Development origins
-        allowed_origins = ["http://localhost:3000", "http://localhost:3001"]
+        # Development origins (aligned with Node services)
+        allowed_origins = ["http://localhost:3000", "http://localhost:3002", "http://localhost:3003"]
         allow_credentials = True
 
 # CORS middleware

@@ -10,6 +10,11 @@ import {
   keepAliveMiddleware,
   cacheMiddleware
 } from './middleware/performance';
+import { authRouter } from './auth';
+import { usersRouter } from './users';
+import { uploadsRouter } from './uploads';
+import { healthCheck } from './db';
+import { ensureUploadDirectory } from './middleware/upload';
 
 // Simple console logger until shared package is available
 const logger = {
@@ -20,14 +25,70 @@ const logger = {
 
 const app = express();
 
+// Initialize upload directory
+(async () => {
+  try {
+    await ensureUploadDirectory();
+    logger.info('Upload directory initialized');
+  } catch (error) {
+    logger.error('Failed to initialize upload directory:', error);
+  }
+})();
+
+// Parse CORS_ORIGIN from environment
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003'];
+
+const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
+
 // Performance and security middleware (order matters)
 app.use(timingMiddleware);
 app.use(compressionMiddleware);
 app.use(rateLimitMiddleware);
-app.use(helmet());
+
+// Configure Helmet with env toggles
+const helmetConfig: helmet.HelmetOptions = {};
+
+if (process.env.HELMET_CSP_ENABLED === 'true') {
+  helmetConfig.contentSecurityPolicy = {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  };
+}
+
+if (process.env.HELMET_HSTS_ENABLED === 'true') {
+  helmetConfig.hsts = {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  };
+}
+
+app.use(helmet(helmetConfig));
 app.use(securityHeadersMiddleware);
 app.use(keepAliveMiddleware);
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || corsOrigins.includes('*') || corsOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: corsCredentials,
+  })
+);
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -35,13 +96,34 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Cache middleware for GET requests
 app.use(cacheMiddleware);
 
-// Health check endpoint
-app.get('/health', (_req, res) => {
-  res.json({ 
-    status: 'healthy', 
+// Health check endpoints
+app.get('/health', async (_req, res) => {
+  const dbHealthy = await healthCheck();
+  const status = dbHealthy ? 'healthy' : 'degraded';
+
+  res.status(dbHealthy ? 200 : 503).json({
+    status,
     service: 'main-app',
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
+    version: process.env.VERSION || '1.0.0',
+    uptime: process.uptime(),
+    checks: {
+      database: dbHealthy ? 'healthy' : 'unhealthy',
+    },
   });
+});
+
+app.get('/health/live', (_req, res) => {
+  res.json({ status: 'alive' });
+});
+
+app.get('/health/ready', async (_req, res) => {
+  const dbHealthy = await healthCheck();
+  if (dbHealthy) {
+    res.json({ status: 'ready' });
+  } else {
+    res.status(503).json({ status: 'not ready' });
+  }
 });
 
 // Root endpoint
@@ -52,6 +134,11 @@ app.get('/', (_req, res) => {
     environment: process.env.NODE_ENV || 'development'
   });
 });
+
+// API routes
+app.use('/api/auth', authRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/uploads', uploadsRouter);
 
 // 404 handler - must be after all other routes
 app.use('*', (req, res) => {
@@ -73,7 +160,7 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
 
   res.status(500).json({
     error: 'Internal Server Error',
-    message: 'Something went wrong',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
     statusCode: 500
   });
 });

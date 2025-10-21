@@ -134,12 +134,37 @@ services:
       retries: 5
     command: redis-server --appendonly yes
 
+  # Automated PostgreSQL backups
+  postgres-backup:
+    image: prodrigestivill/postgres-backup-local:15-alpine
+    container_name: kevinalthaus-postgres-backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: 7
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+      HEALTHCHECK_PORT: 8080
+    volumes:
+      - postgres_backups:/backups
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 networks:
   app_network:
     driver: bridge
 
 volumes:
   postgres_data:
+    driver: local
+  postgres_backups:
     driver: local
   redis_data:
     driver: local

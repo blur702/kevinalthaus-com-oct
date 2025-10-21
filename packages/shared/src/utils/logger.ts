@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 export enum LogLevel {
   DEBUG = 'debug',
   INFO = 'info',
@@ -9,7 +11,9 @@ export interface LogEntry {
   timestamp: Date;
   level: LogLevel;
   message: string;
+  service?: string;
   context?: string;
+  requestId?: string;
   metadata?: Record<string, unknown>;
   error?: Error;
 }
@@ -24,6 +28,7 @@ export interface Logger {
 
 export interface LoggerConfig {
   level: LogLevel;
+  service?: string;
   context?: string;
   enableConsole?: boolean;
   enableFile?: boolean;
@@ -78,7 +83,9 @@ export class ConsoleLogger implements Logger {
       timestamp: new Date(),
       level,
       message,
+      service: this.config.service,
       context: this.config.context,
+      requestId: metadata?.requestId as string | undefined,
       metadata,
       error,
     };
@@ -142,3 +149,8 @@ export function createLogger(config: Partial<LoggerConfig> = {}): Logger {
 }
 
 export const defaultLogger = createLogger();
+
+// Pure utility for generating or extracting request IDs
+export function generateOrExtractRequestId(existingId?: string): string {
+  return existingId ?? randomUUID();
+}

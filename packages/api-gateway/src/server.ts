@@ -6,7 +6,7 @@ const logger = {
   info: (message: string, ...args: any[]) => console.log(`[INFO] ${message}`, ...args)
 };
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.API_GATEWAY_PORT || process.env.PORT || 3000;
 
 // Start server
 app.listen(PORT, () => {
