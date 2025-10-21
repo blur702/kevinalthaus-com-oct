@@ -18,24 +18,6 @@ interface RequestBodyWithCSRF {
 // User session-based CSRF storage (keyed by userId from auth)
 const csrfTokens = new Map<string, { token: string; expires: number }>();
 
-// Cleanup expired tokens every 10 minutes
-const cleanupInterval = setInterval(() => {
-  const now = Date.now();
-  for (const [userId, tokenData] of csrfTokens.entries()) {
-    if (tokenData.expires < now) {
-      csrfTokens.delete(userId);
-    }
-  }
-}, 10 * 60 * 1000);
-
-// Cleanup on process termination
-process.on('SIGTERM', () => {
-  clearInterval(cleanupInterval);
-});
-process.on('SIGINT', () => {
-  clearInterval(cleanupInterval);
-});
-
 function generateCSRFToken(): string {
   return randomBytes(32).toString('hex');
 }
@@ -51,6 +33,12 @@ function csrfProtection(req: express.Request, res: express.Response, next: expre
   const userId = authReq.user.userId;
 
   if (req.method === 'GET') {
+    // Lazy cleanup: remove any existing expired token before generating new one
+    const existingToken = csrfTokens.get(userId);
+    if (existingToken && existingToken.expires < Date.now()) {
+      csrfTokens.delete(userId);
+    }
+    
     // Generate token for GET requests
     const token = generateCSRFToken();
     csrfTokens.set(userId, { token, expires: Date.now() + 3600000 }); // 1 hour
@@ -63,7 +51,14 @@ function csrfProtection(req: express.Request, res: express.Response, next: expre
                           (typeof req.headers['x-csrf-token'] === 'string' ? req.headers['x-csrf-token'] : undefined);
     const stored = csrfTokens.get(userId);
     
-    if (!stored || stored.expires < Date.now() || !submittedToken || stored.token !== submittedToken) {
+    // Lazy cleanup: remove expired token immediately when detected
+    if (stored && stored.expires < Date.now()) {
+      csrfTokens.delete(userId);
+    }
+    
+    // Validate token (after potential cleanup)
+    const validStored = csrfTokens.get(userId);
+    if (!validStored || !submittedToken || validStored.token !== submittedToken) {
       res.status(403).json({ error: 'Invalid CSRF token' });
       return;
     }
