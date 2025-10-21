@@ -40,16 +40,38 @@ function generateRefreshToken(): string {
   return randomBytes(64).toString('hex');
 }
 
-// POST /api/auth/register
-// eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any
-router.post('/register', async (req: Request, res: Response): Promise<any> => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const { email, username, password, role = 'viewer' } = req.body;
+interface RegisterRequest {
+  email: string;
+  username: string;
+  password: string;
+  role?: Role;
+}
 
-    // Validate input
+// POST /api/auth/register
+router.post('/register', async (req: Request, res: Response) => {
+  try {
+    const { email, username, password, role = 'viewer' } = req.body as RegisterRequest;
+
+    // Validate input types
+    if (typeof email !== 'string' || typeof username !== 'string' || typeof password !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Email, username, and password must be strings',
+      });
+      return;
+    }
+
+    if (role && !Object.values(Role).includes(role as Role)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid role specified',
+      });
+      return;
+    }
+
+    // Validate required fields
     if (!email || !username || !password) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'Email, username, and password are required',
       });
@@ -57,14 +79,14 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
 
     // Validate role
     if (!Object.values(Role).includes(role as Role)) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid role',
       });
+      return;
     }
 
     // Hash password
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const password_hash = await hashPassword(password);
 
     // Create user
@@ -112,12 +134,13 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
     const err = error as { code?: string; constraint?: string };
     if (err.code === '23505') {
       // Unique violation
-      return res.status(409).json({
+      res.status(409).json({
         error: 'Conflict',
         message: err.constraint?.includes('email')
           ? 'Email already exists'
           : 'Username already exists',
       });
+      return;
     }
     console.error('[Auth] Registration error:', error);
     res.status(500).json({
@@ -127,18 +150,31 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
 // POST /api/auth/login
-// eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any
-router.post('/login', async (req: Request, res: Response): Promise<any> => {
+router.post('/login', async (req: Request, res: Response) => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const { email, password } = req.body;
+    const { email, password } = req.body as LoginRequest;
+
+    // Validate input types
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Email and password must be strings',
+      });
+      return;
+    }
 
     if (!email || !password) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'Email and password are required',
       });
+      return;
     }
 
     // Find user
@@ -152,30 +188,32 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
     }>('SELECT * FROM users WHERE email = $1', [email]);
 
     if (result.rows.length === 0) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid credentials',
       });
+      return;
     }
 
     const user = result.rows[0];
 
     if (!user.is_active) {
-      return res.status(403).json({
+      res.status(403).json({
         error: 'Forbidden',
         message: 'Account is inactive',
       });
+      return;
     }
 
     // Verify password
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const isValid = await verifyPassword(password, user.password_hash);
 
     if (!isValid) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid credentials',
       });
+      return;
     }
 
     // Update last login
@@ -221,21 +259,32 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
+interface RefreshRequest {
+  refreshToken: string;
+}
+
 // POST /api/auth/refresh
-// eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any
-router.post('/refresh', async (req: Request, res: Response): Promise<any> => {
+router.post('/refresh', async (req: Request, res: Response) => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const { refreshToken } = req.body;
+    const { refreshToken } = req.body as RefreshRequest;
+
+    // Validate input type
+    if (typeof refreshToken !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Refresh token must be a string',
+      });
+      return;
+    }
 
     if (!refreshToken) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'Refresh token is required',
       });
+      return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const tokenHash = hashSHA256(refreshToken);
 
     // Find and validate refresh token
@@ -250,19 +299,21 @@ router.post('/refresh', async (req: Request, res: Response): Promise<any> => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid refresh token',
       });
+      return;
     }
 
     const token = result.rows[0];
 
     if (new Date(token.expires_at) < new Date()) {
-      return res.status(401).json({
+      res.status(401).json({
         error: 'Unauthorized',
         message: 'Refresh token expired',
       });
+      return;
     }
 
     // Get user
@@ -275,10 +326,11 @@ router.post('/refresh', async (req: Request, res: Response): Promise<any> => {
     }>('SELECT * FROM users WHERE id = $1', [token.user_id]);
 
     if (userResult.rows.length === 0 || !userResult.rows[0].is_active) {
-      return res.status(403).json({
+      res.status(403).json({
         error: 'Forbidden',
         message: 'User inactive or not found',
       });
+      return;
     }
 
     const user = userResult.rows[0];
@@ -323,15 +375,25 @@ router.post('/refresh', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
+interface LogoutRequest {
+  refreshToken?: string;
+}
+
 // POST /api/auth/logout
-// eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any
-router.post('/logout', async (req: Request, res: Response): Promise<any> => {
+router.post('/logout', async (req: Request, res: Response) => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const { refreshToken } = req.body;
+    const { refreshToken } = req.body as LogoutRequest;
+
+    // Validate input type if present
+    if (refreshToken !== undefined && typeof refreshToken !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Refresh token must be a string',
+      });
+      return;
+    }
 
     if (refreshToken) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const tokenHash = hashSHA256(refreshToken);
       await query('UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE token_hash = $1', [
         tokenHash,
