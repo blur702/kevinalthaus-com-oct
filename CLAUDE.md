@@ -81,7 +81,7 @@ This is a **Lerna monorepo** with two workspace types:
 6. **PostgreSQL** (`:5432`) - Primary database with plugin schema isolation
 
 **Request Flow**:
-```
+```text
 Client → API Gateway (:3000) → [Main App (:3001) | Python Service (:8000)]
                                          ↓
                                    PostgreSQL (:5432)
@@ -185,7 +185,7 @@ router.post('/endpoint', async (req: Request, res: Response): Promise<void> => {
 
 ### File References in IDE
 
-When referencing files or code locations in responses, use **markdown link syntax** for clickability:
+When referencing files or code locations in responses, use **Markdown link syntax** for clickability:
 - Files: `[filename.ts](packages/main-app/src/filename.ts)`
 - Lines: `[filename.ts:42](packages/main-app/src/filename.ts#L42)`
 - Ranges: `[filename.ts:42-51](packages/main-app/src/filename.ts#L42-L51)`
