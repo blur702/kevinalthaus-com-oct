@@ -47,7 +47,15 @@ function generateAllowedExtensions(mimeTypes: string[]): Set<string> {
       // Derive extension from MIME type subtype
       const parts = normalizedMime.split('/');
       if (parts.length === 2) {
-        const subtype = parts[1];
+        const [type, subtype] = parts.map(p => p.trim());
+        if (!type || !subtype) {
+          throw new Error(
+            `Invalid MIME type format: "${mimeType}". ` +
+            `Both type and subtype must be non-empty strings. ` +
+            `Expected format: "type/subtype" (e.g., "video/mp4", "image/jpeg"). ` +
+            `Please check your ALLOWED_FILE_TYPES configuration.`
+          );
+        }
         // Handle compound subtypes (e.g., 'vnd.ms-excel' -> 'excel')
         const extensionBase = subtype.split('.').pop() || subtype;
         const derivedExt = `.${extensionBase}`;

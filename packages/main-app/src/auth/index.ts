@@ -1,12 +1,22 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 import { query, transaction } from '../db';
 import { hashPassword, verifyPassword, hashSHA256 } from '@monorepo/shared';
 import { Role } from '@monorepo/shared';
 
 const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme_generate_secure_random_string';
+// Secure JWT_SECRET handling - require real secret in production
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'development') {
+    JWT_SECRET = 'development_only_insecure_key_change_for_production';
+    console.warn('WARNING: Using insecure development JWT secret. Set JWT_SECRET environment variable for production!');
+  } else {
+    throw new Error('JWT_SECRET environment variable is required in production. Please set a secure random string.');
+  }
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const REFRESH_TOKEN_EXPIRES_DAYS = 30;
 
@@ -22,13 +32,12 @@ interface AuthenticatedRequest extends Request {
 
 // Generate JWT token
 function generateAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
+  return jwt.sign(payload, JWT_SECRET!, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
 // Generate refresh token
 function generateRefreshToken(): string {
-  const crypto = require('crypto') as typeof import('crypto');
-  return crypto.randomBytes(64).toString('hex');
+  return randomBytes(64).toString('hex');
 }
 
 // POST /api/auth/register
@@ -353,7 +362,7 @@ export function authMiddleware(
   const token = authHeader.substring(7);
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const decoded = jwt.verify(token, JWT_SECRET!) as TokenPayload;
     req.user = decoded;
     next();
   } catch (error) {

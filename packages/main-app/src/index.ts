@@ -47,52 +47,38 @@ app.use(timingMiddleware);
 app.use(compressionMiddleware);
 app.use(rateLimitMiddleware);
 
-// Configure Helmet with env toggles
-if (process.env.HELMET_CSP_ENABLED === 'true' && process.env.HELMET_HSTS_ENABLED === 'true') {
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
-      },
-    },
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
-  }));
-} else if (process.env.HELMET_CSP_ENABLED === 'true') {
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
-      },
-    },
-  }));
-} else if (process.env.HELMET_HSTS_ENABLED === 'true') {
-  app.use(helmet({
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
-  }));
+// Configure Helmet with env toggles - single source of truth
+const cspDirectives = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'"],
+  styleSrc: ["'self'"],
+  imgSrc: ["'self'", 'data:', 'https:'],
+  connectSrc: ["'self'"],
+  fontSrc: ["'self'"],
+  objectSrc: ["'none'"],
+  mediaSrc: ["'self'"],
+  frameSrc: ["'none'"],
+};
+
+const hstsSettings = {
+  maxAge: 31536000,
+  includeSubDomains: true,
+  preload: true,
+};
+
+const helmetConfig: { contentSecurityPolicy?: { directives: typeof cspDirectives }; hsts?: typeof hstsSettings } = {};
+
+if (process.env.HELMET_CSP_ENABLED === 'true') {
+  helmetConfig.contentSecurityPolicy = { directives: cspDirectives };
+}
+
+if (process.env.HELMET_HSTS_ENABLED === 'true') {
+  helmetConfig.hsts = hstsSettings;
+}
+
+// Apply helmet with configuration if any options are set, otherwise use defaults
+if (Object.keys(helmetConfig).length > 0) {
+  app.use(helmet(helmetConfig));
 } else {
   app.use(helmet());
 }
