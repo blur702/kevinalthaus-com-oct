@@ -10,10 +10,10 @@ export interface PluginLifecycleContext {
 }
 
 export interface PluginLogger {
-  debug(message: string, meta?: Record<string, unknown>): void;
-  info(message: string, meta?: Record<string, unknown>): void;
-  warn(message: string, meta?: Record<string, unknown>): void;
-  error(message: string, error?: Error, meta?: Record<string, unknown>): void;
+  debug(message: string, metadata?: Record<string, unknown>): void;
+  info(message: string, metadata?: Record<string, unknown>): void;
+  warn(message: string, metadata?: Record<string, unknown>): void;
+  error(message: string, error?: Error, metadata?: Record<string, unknown>): void;
 }
 
 export interface PluginExecutionContext extends PluginLifecycleContext {

@@ -48,7 +48,6 @@ interface RegisterRequest {
 }
 
 // POST /api/auth/register
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const { email, username, password, role = 'viewer' } = req.body as RegisterRequest;
@@ -157,7 +156,6 @@ interface LoginRequest {
 }
 
 // POST /api/auth/login
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body as LoginRequest;
@@ -266,7 +264,6 @@ interface RefreshRequest {
 }
 
 // POST /api/auth/refresh
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 router.post('/refresh', async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body as RefreshRequest;
@@ -339,7 +336,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const user = userResult.rows[0];
 
     // Revoke old token and create new one
-    await transaction(async (client) => {
+    const result = await transaction(async (client) => {
       await client.query('UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE id = $1', [
         token.id,
       ]);
@@ -363,11 +360,15 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
       const accessToken = generateAccessToken(tokenPayload);
 
-      res.json({
-        message: 'Token refreshed',
+      return {
         accessToken,
         refreshToken: newRefreshToken,
-      });
+      };
+    });
+
+    res.json({
+      message: 'Token refreshed',
+      ...result,
     });
   } catch (error) {
     console.error('[Auth] Refresh error:', error);
@@ -383,7 +384,6 @@ interface LogoutRequest {
 }
 
 // POST /api/auth/logout
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 router.post('/logout', async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body as LogoutRequest;
