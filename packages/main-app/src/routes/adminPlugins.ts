@@ -1,42 +1,69 @@
 import express from 'express';
 import { randomBytes } from 'crypto';
 import { pluginManager } from '../plugins/manager';
+import { AuthenticatedRequest } from '../auth';
 
 export const adminPluginsRouter = express.Router();
 
 // Extend Request interface for CSRF token
-interface RequestWithCSRF extends express.Request {
+interface RequestWithCSRF extends AuthenticatedRequest {
   csrfToken?: () => string;
 }
 
 interface RequestBodyWithCSRF {
   _csrf?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-// Simple CSRF protection middleware
+// User session-based CSRF storage (keyed by userId from auth)
 const csrfTokens = new Map<string, { token: string; expires: number }>();
+
+// Cleanup expired tokens every 10 minutes
+const cleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [userId, tokenData] of csrfTokens.entries()) {
+    if (tokenData.expires < now) {
+      csrfTokens.delete(userId);
+    }
+  }
+}, 10 * 60 * 1000);
+
+// Cleanup on process termination
+process.on('SIGTERM', () => {
+  clearInterval(cleanupInterval);
+});
+process.on('SIGINT', () => {
+  clearInterval(cleanupInterval);
+});
 
 function generateCSRFToken(): string {
   return randomBytes(32).toString('hex');
 }
 
 function csrfProtection(req: express.Request, res: express.Response, next: express.NextFunction): void {
+  const authReq = req as AuthenticatedRequest;
+  
+  if (!authReq.user || !authReq.user.userId) {
+    res.status(401).json({ error: 'Authentication required for CSRF protection' });
+    return;
+  }
+
+  const userId = authReq.user.userId;
+
   if (req.method === 'GET') {
     // Generate token for GET requests
     const token = generateCSRFToken();
-    const sessionId = req.ip || 'default';
-    csrfTokens.set(sessionId, { token, expires: Date.now() + 3600000 }); // 1 hour
+    csrfTokens.set(userId, { token, expires: Date.now() + 3600000 }); // 1 hour
     (req as RequestWithCSRF).csrfToken = () => token;
     next();
   } else if (req.method === 'POST') {
     // Verify token for POST requests
-    const sessionId = req.ip || 'default';
     const body = req.body as RequestBodyWithCSRF;
-    const submittedToken = body._csrf || (req.headers['x-csrf-token'] as string);
-    const stored = csrfTokens.get(sessionId);
+    const submittedToken = (typeof body._csrf === 'string' ? body._csrf : undefined) || 
+                          (typeof req.headers['x-csrf-token'] === 'string' ? req.headers['x-csrf-token'] : undefined);
+    const stored = csrfTokens.get(userId);
     
-    if (!stored || stored.expires < Date.now() || stored.token !== submittedToken) {
+    if (!stored || stored.expires < Date.now() || !submittedToken || stored.token !== submittedToken) {
       res.status(403).json({ error: 'Invalid CSRF token' });
       return;
     }
@@ -69,7 +96,6 @@ function layout(title: string, body: string, csrfToken?: string): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapedTitle}</title>
-    ${csrfToken ? `<meta name="csrf-token" content="${escapeHtml(csrfToken)}">` : ''}
     <style>
       body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
       table { border-collapse: collapse; width: 100%; }
@@ -85,21 +111,21 @@ function layout(title: string, body: string, csrfToken?: string): string {
     <script>
       // Add CSRF token to all forms
       document.addEventListener('DOMContentLoaded', function() {
-        const token = document.querySelector('meta[name="csrf-token"]');
+        const token = document.body.dataset.csrfToken;
         if (token) {
           const forms = document.querySelectorAll('form[method="post"]');
           forms.forEach(form => {
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = '_csrf';
-            input.value = token.getAttribute('content');
+            input.value = token;
             form.appendChild(input);
           });
         }
       });
     </script>
   </head>
-  <body>
+  <body${csrfToken ? ` data-csrf-token="${escapeHtml(csrfToken)}"` : ''}>
     <h1>${escapedTitle}</h1>
     ${body}
   </body>

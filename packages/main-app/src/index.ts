@@ -161,7 +161,13 @@ void (async () => {
   try {
     await discoverPlugins(app);
   } catch (e) {
-    logger.warn('Plugin discovery failed');
+    logger.error('Plugin discovery failed:', {
+      message: (e as Error).message,
+      stack: (e as Error).stack,
+      error: e
+    });
+    // Consider exiting if plugin discovery is critical for your application
+    // process.exit(1);
   }
 })();
 
