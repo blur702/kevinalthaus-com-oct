@@ -15,6 +15,9 @@ import { usersRouter } from './users';
 import { uploadsRouter } from './uploads';
 import { healthCheck } from './db';
 import { ensureUploadDirectory } from './middleware/upload';
+import { discoverPlugins } from './plugins';
+import { pluginManager } from './plugins/manager';
+import { adminPluginsRouter } from './routes/adminPlugins';
 
 // Simple console logger until shared package is available
 const logger = {
@@ -146,6 +149,19 @@ app.get('/', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/uploads', uploadsRouter);
+
+// Admin UI for plugin management
+pluginManager.init(app);
+app.use('/admin/plugins', adminPluginsRouter);
+
+// Discover plugins (manifests only for now)
+void (async () => {
+  try {
+    await discoverPlugins(app);
+  } catch (e) {
+    logger.warn('Plugin discovery failed');
+  }
+})();
 
 // 404 handler - must be after all other routes
 app.use('*', (req, res) => {
