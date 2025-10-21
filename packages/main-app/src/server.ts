@@ -8,7 +8,7 @@ const logger = {
   warn: (message: string, ...args: any[]) => console.warn(`[WARN] ${message}`, ...args)
 };
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4001;
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
 // Start server and capture potential listen errors

@@ -1,7 +1,6 @@
-import { JSONSchemaType } from 'ajv';
-import { PluginManifest } from './manifest';
+// Plugin schema validation using JSON Schema
 
-export const PLUGIN_MANIFEST_SCHEMA: JSONSchemaType<PluginManifest> = {
+export const PLUGIN_MANIFEST_SCHEMA = {
   type: 'object',
   properties: {
     name: {

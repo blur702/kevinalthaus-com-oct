@@ -2,6 +2,9 @@ const PLUGIN_SCHEMA_PREFIX = 'plugin_';
 const MAX_IDENTIFIER_LENGTH = 63;
 const RESERVED_SCHEMAS = ['public', 'information_schema', 'pg_catalog', 'pg_toast'];
 
+// Cache for hash results to improve performance
+const hashCache = new Map<string, string>();
+
 export function generatePluginSchemaName(pluginId: string): string {
   const sanitized = sanitizeIdentifier(pluginId);
   const schemaName = `${PLUGIN_SCHEMA_PREFIX}${sanitized}`;
@@ -102,13 +105,26 @@ export function generateForeignKeyName(
 }
 
 function generateShortHash(input: string): string {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
+  // Check cache first
+  if (hashCache.has(input)) {
+    return hashCache.get(input)!;
   }
-  return Math.abs(hash).toString(36).substring(0, 8);
+
+  // Optimized hash function using FNV-1a algorithm for better distribution
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  
+  const result = Math.abs(hash).toString(36).substring(0, 8);
+  
+  // Cache the result
+  if (hashCache.size < 1000) { // Prevent memory leaks
+    hashCache.set(input, result);
+  }
+  
+  return result;
 }
 
 export const DatabaseNaming = {

@@ -1,4 +1,4 @@
-import { PluginDatabaseConfig, IsolationLevel } from './plugin-database';
+
 
 export interface IsolationPolicy {
   allowCrossPluginQueries: boolean;
@@ -42,103 +42,76 @@ export const ADMIN_ISOLATION_POLICY: IsolationPolicy = {
   allowedOperations: Object.values(DatabaseOperation),
 };
 
-export class IsolationEnforcer {
-  constructor(private readonly policy: IsolationPolicy) {}
+export interface ResourceQuotas {
+  maxConnections: number;
+  maxStorageBytes: number;
+  maxTablesPerPlugin: number;
+  maxRowsPerTable: number;
+  maxIndexesPerTable: number;
+  maxQueryComplexity: number;
+  maxQueryRows: number;
+  maxExecutionTime: number;
+}
 
-  validateQuery(query: string, pluginId: string): QueryValidationResult {
-    const errors: string[] = [];
-    const warnings: string[] = [];
+export class DatabaseIsolationEnforcer {
+  // Pre-compiled regex patterns for better performance
+  private static readonly complexityPatterns = {
+    join: /\bjoin\b/gi,
+    subquery: /\(select\b/gi,
+    aggregate: /\b(count|sum|avg|min|max|group\s+by)\b/gi,
+    wildcard: /\*\s*from/gi,
+    window: /\bover\s*\(/gi,
+    cte: /\bwith\b/gi,
+  };
 
-    const operation = this.extractOperation(query);
-    if (operation && !this.policy.allowedOperations.includes(operation)) {
-      errors.push(`Operation ${operation} is not allowed by isolation policy`);
-    }
+  constructor(
+    private readonly quotas: ResourceQuotas,
+  ) {}
 
-    if (!this.policy.allowCrossPluginQueries) {
-      const schemas = this.extractSchemaReferences(query);
-      const pluginSchema = `plugin_${pluginId}`;
-
-      for (const schema of schemas) {
-        if (schema !== pluginSchema && schema.startsWith('plugin_')) {
-          errors.push(`Cross-plugin query to schema ${schema} is not allowed`);
-        }
-      }
-    }
-
-    if (!this.policy.allowSystemSchemaAccess) {
-      const systemSchemas = ['information_schema', 'pg_catalog', 'pg_toast'];
-      const schemas = this.extractSchemaReferences(query);
-
-      for (const schema of schemas) {
-        if (systemSchemas.includes(schema.toLowerCase())) {
-          errors.push(`Access to system schema ${schema} is not allowed`);
-        }
-      }
-    }
-
+  enforceQuotas(
+    query: string,
+    estimatedRows: number = 1000,
+  ): void {
     const complexity = this.estimateQueryComplexity(query);
-    if (complexity > this.policy.maxQueryComplexity) {
-      errors.push(`Query complexity ${complexity} exceeds maximum ${this.policy.maxQueryComplexity}`);
+    
+    if (complexity > this.quotas.maxQueryComplexity) {
+      throw new Error(
+        `Query complexity ${complexity} exceeds limit ${this.quotas.maxQueryComplexity}`,
+      );
     }
 
-    return {
-      valid: errors.length === 0,
-      errors,
-      warnings,
-      complexity,
-    };
-  }
-
-  getIsolationLevel(config: PluginDatabaseConfig): IsolationLevel {
-    if (config.readOnly) {
-      return IsolationLevel.READ_COMMITTED;
+    if (estimatedRows > this.quotas.maxQueryRows) {
+      throw new Error(
+        `Estimated rows ${estimatedRows} exceeds limit ${this.quotas.maxQueryRows}`,
+      );
     }
-
-    return config.isolationLevel || IsolationLevel.READ_COMMITTED;
-  }
-
-  private extractOperation(query: string): DatabaseOperation | null {
-    const normalized = query.trim().toUpperCase();
-
-    for (const op of Object.values(DatabaseOperation)) {
-      if (normalized.startsWith(op)) {
-        return op;
-      }
-    }
-
-    return null;
-  }
-
-  private extractSchemaReferences(query: string): string[] {
-    const schemaPattern = /(?:from|join|into|update|table)\s+(?:([a-z_][a-z0-9_]*)\.)?\s*[a-z_][a-z0-9_]*/gi;
-    const schemas = new Set<string>();
-    let match;
-
-    while ((match = schemaPattern.exec(query)) !== null) {
-      if (match[1]) {
-        schemas.add(match[1]);
-      }
-    }
-
-    return Array.from(schemas);
   }
 
   private estimateQueryComplexity(query: string): number {
     let complexity = 1;
 
-    const joinCount = (query.match(/\bjoin\b/gi) || []).length;
-    complexity += joinCount * 10;
+    // Use a single pass through the query to count all patterns
+    const lowerQuery = query.toLowerCase();
+    
+    // Count joins
+    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.join) || []).length * 10;
+    
+    // Count subqueries (higher cost)
+    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.subquery) || []).length * 20;
+    
+    // Count aggregates
+    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.aggregate) || []).length * 5;
+    
+    // Count wildcards
+    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.wildcard) || []).length * 3;
+    
+    // Count window functions (high cost)
+    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.window) || []).length * 15;
+    
+    // Count CTEs
+    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.cte) || []).length * 8;
 
-    const subqueryCount = (query.match(/\(select\b/gi) || []).length;
-    complexity += subqueryCount * 20;
-
-    const aggregateCount = (query.match(/\b(count|sum|avg|min|max|group\s+by)\b/gi) || []).length;
-    complexity += aggregateCount * 5;
-
-    const wildcardCount = (query.match(/\*\s*from/gi) || []).length;
-    complexity += wildcardCount * 3;
-
-    return complexity;
+    return Math.min(complexity, 1000); // Cap at reasonable maximum
   }
 }
 
@@ -166,15 +139,13 @@ export const DEFAULT_RESOURCE_QUOTA: ResourceQuota = {
 };
 
 export function enforceResourceQuota(
-  pluginId: string,
   quota: ResourceQuota
 ): ResourceQuotaEnforcer {
-  return new ResourceQuotaEnforcer(pluginId, quota);
+  return new ResourceQuotaEnforcer(quota);
 }
 
 export class ResourceQuotaEnforcer {
   constructor(
-    private readonly pluginId: string,
     private readonly quota: ResourceQuota
   ) {}
 

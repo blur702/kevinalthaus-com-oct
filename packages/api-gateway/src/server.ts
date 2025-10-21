@@ -1,7 +1,12 @@
 import app from './index';
-import { logger } from '@monorepo/shared';
+// import { logger } from '@monorepo/shared';
 
-const PORT = process.env.PORT || 3000;
+// Simple console logger
+const logger = {
+  info: (message: string, ...args: any[]) => console.log(`[INFO] ${message}`, ...args)
+};
+
+const PORT = process.env.PORT || 4000;
 
 // Start server
 app.listen(PORT, () => {
