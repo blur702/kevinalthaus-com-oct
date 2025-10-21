@@ -48,6 +48,7 @@ interface RegisterRequest {
 }
 
 // POST /api/auth/register
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const { email, username, password, role = 'viewer' } = req.body as RegisterRequest;
@@ -156,6 +157,7 @@ interface LoginRequest {
 }
 
 // POST /api/auth/login
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body as LoginRequest;
@@ -264,6 +266,7 @@ interface RefreshRequest {
 }
 
 // POST /api/auth/refresh
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 router.post('/refresh', async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body as RefreshRequest;
@@ -380,6 +383,7 @@ interface LogoutRequest {
 }
 
 // POST /api/auth/logout
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 router.post('/logout', async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body as LogoutRequest;
