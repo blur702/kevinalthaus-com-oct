@@ -5,9 +5,10 @@
 # Quick script to start and stop all Docker Compose services
 #
 # Usage:
-#   ./scripts/web -on      Start all services
-#   ./scripts/web -off     Stop all services
-#   ./scripts/web --help   Show help
+#   ./scripts/web -on         Start all services
+#   ./scripts/web -off        Stop all services (preserves volumes)
+#   ./scripts/web -off-clean  Stop services and remove volumes (DESTRUCTIVE)
+#   ./scripts/web --help      Show help
 #
 # The script automatically detects and kills processes using
 # required ports before starting services.
@@ -61,7 +62,7 @@ success() {
 check_port() {
     local port=$1
     set +e
-    lsof -ti:$port > /dev/null 2>&1
+    lsof -t -i:$port > /dev/null 2>&1
     local result=$?
     set -e
     return $result
@@ -70,7 +71,7 @@ check_port() {
 kill_port_process() {
     local port=$1
     set +e
-    local pid=$(lsof -ti:$port 2>/dev/null)
+    local pid=$(lsof -t -i:$port 2>/dev/null)
     set -e
 
     if [ -n "$pid" ]; then
@@ -210,7 +211,7 @@ stop_services() {
 
     if [ -n "$remaining" ]; then
         warn "Some containers still running, forcing shutdown..."
-        docker compose down -v --remove-orphans
+        docker compose down --remove-orphans
     fi
 
     success "All services stopped"
@@ -241,14 +242,33 @@ handle_off() {
     success "Shutdown complete at $(date +'%Y-%m-%d %H:%M:%S')"
 }
 
+handle_off_clean() {
+    warn "DESTRUCTIVE: This will remove all volumes and delete stateful data!"
+    echo -n "Are you sure you want to continue? (y/N): "
+    read -r response
+    
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        log "Clean shutdown cancelled"
+        return 0
+    fi
+    
+    log "Stopping all services and cleaning volumes..."
+
+    # Force stop with volume removal
+    docker compose down -v --remove-orphans
+    
+    success "Clean shutdown complete - all volumes removed at $(date +'%Y-%m-%d %H:%M:%S')"
+}
+
 show_help() {
     cat << EOF
 ${GREEN}Web Service Management Script${NC}
 
 Usage:
-  $0 -on       Start all Docker Compose services
-  $0 -off      Stop all Docker Compose services
-  $0 --help    Show this help message
+  $0 -on          Start all Docker Compose services
+  $0 -off         Stop all Docker Compose services (preserves volumes)
+  $0 -off-clean   Stop services and remove all volumes (DESTRUCTIVE)
+  $0 --help       Show this help message
 
 Commands:
   ${BLUE}-on${NC}
@@ -261,13 +281,22 @@ Commands:
     • Gracefully stops all Docker Compose services
     • Verifies all containers are stopped
     • Removes orphaned containers
+    • Preserves all volumes and stateful data
+
+  ${BLUE}-off-clean${NC} ${RED}(DESTRUCTIVE)${NC}
+    • Stops all Docker Compose services
+    • Removes all volumes and stateful data
+    • Requires confirmation before proceeding
 
 Examples:
   # Start all services
   ./scripts/web -on
 
-  # Stop all services
+  # Stop all services (preserves data)
   ./scripts/web -off
+
+  # Stop and clean all volumes (DESTRUCTIVE)
+  ./scripts/web -off-clean
 
   # Make globally accessible (add to PATH)
   sudo ln -s \$(pwd)/scripts/web /usr/local/bin/web
@@ -312,6 +341,9 @@ case "${1:-}" in
         ;;
     -off)
         handle_off
+        ;;
+    -off-clean)
+        handle_off_clean
         ;;
     --help|-h)
         show_help

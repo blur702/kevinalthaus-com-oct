@@ -2,50 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Development Commands
 
-Kevin Althaus Platform is a Lerna-managed monorepo featuring a microservices architecture with a powerful plugin system. The platform consists of multiple Node.js/TypeScript services (API Gateway, Main App, Frontend, Admin Panel), a Python FastAPI service, and a shared utilities package.
-
-## Repository Structure
-
-This is a **Lerna monorepo** with the following packages:
-
-- `packages/shared` - Common utilities, types, security functions, and plugin system interfaces
-- `packages/api-gateway` - Central routing, authentication, rate limiting
-- `packages/main-app` - Core business logic and plugin coordination
-- `packages/frontend` - Public-facing React application (Vite + Material UI)
-- `packages/admin` - Administrative dashboard (React + Material UI)
-- `python/` - FastAPI service for Python-specific features
-
-**Key architectural files to review:**
-- [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) - Detailed service architecture and integration patterns
-- [PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md) - Plugin system implementation guide
-- [API_REFERENCE.md](API_REFERENCE.md) - Complete API documentation
-
-## Common Commands
-
-### Development
-
+### Quick Start
 ```bash
-# Install all dependencies (uses Lerna)
+# Start all services (automatic port conflict resolution)
+./scripts/web -on
+
+# Stop all services
+./scripts/web -off
+
+# Development mode (no Docker, requires PostgreSQL running)
 npm install
-
-# Start all services in development mode
-npm run dev
-
-# Start individual services
-cd packages/api-gateway && npm run dev
-cd packages/main-app && npm run dev
-cd packages/frontend && npm run dev
-cd packages/admin && npm run dev
-cd python && uvicorn main:app --reload
-
-# Start required infrastructure
-docker-compose up -d postgres redis
+npm run build
+npm run dev  # Starts all packages in parallel
 ```
 
 ### Building
-
 ```bash
 # Build all packages
 npm run build
@@ -57,180 +30,233 @@ cd packages/main-app && npm run build
 npm run clean
 ```
 
-### Testing
-
+### Linting and Formatting
 ```bash
-# Run all tests
+# Lint all TypeScript files
+npm run lint
+
+# Format all files
+npm run format
+```
+
+### Testing
+```bash
+# Run all tests (when available)
 npm test
 
 # Run tests for specific package
 cd packages/main-app && npm test
 
-# Run tests in watch mode
-cd packages/main-app && npm run test:watch
-
-# Run with coverage
-cd packages/main-app && npm run test:coverage
+# Run single test file
+cd packages/main-app && npx jest src/__tests__/app.test.ts
 ```
 
-**Test configuration:** Uses Jest with ts-jest preset. Test files are located in `src/__tests__/**/*.test.ts` within each package.
-
-### Code Quality
-
+### Docker Services
 ```bash
-# Lint all code
-npm run lint
+# Start with production configuration
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
-# Format code with Prettier
-npm run format
+# View logs
+docker compose logs -f
 
-# Type-check frontend packages
-cd packages/frontend && npm run type-check
+# Stop services
+docker compose down
 ```
 
-## Architecture Patterns
+### Monorepo Structure
+This is a **Lerna monorepo** with two workspace types:
+- `packages/*` - Core application packages (5 packages)
+- `plugins/*` - Extensible plugin system
 
-### Monorepo Dependencies
+**Key principle**: Shared types and utilities live in `packages/shared`, which all other packages depend on.
 
-All packages reference the shared package using TypeScript project references:
-- Use `@monorepo/shared` to import common utilities
-- The shared package exports: types, security, plugin interfaces, database utilities, theme system
-- When modifying shared package, run `npm run build` in the shared directory to update references
+### Service Architecture
+**6 Docker services** orchestrated by docker-compose:
+
+1. **API Gateway** (`:3000`) - Single entry point, proxies to all backend services
+2. **Main App** (`:3001`) - Core Node.js/Express backend with database access
+3. **Python Service** (`:8000`) - FastAPI service for Python-specific functionality
+4. **Frontend** (`:3002`) - React 18 public-facing application
+5. **Admin** (`:3003`) - React 18 admin dashboard with Material-UI
+6. **PostgreSQL** (`:5432`) - Primary database with plugin schema isolation
+
+**Request Flow**:
+```
+Client → API Gateway (:3000) → [Main App (:3001) | Python Service (:8000)]
+                                         ↓
+                                   PostgreSQL (:5432)
+```
 
 ### Plugin System Architecture
 
-**Critical pattern:** The plugin system uses database schema isolation. Each plugin gets its own PostgreSQL schema (`plugin_<plugin_name>`).
+**Critical concept**: Plugins are isolated, lifecycle-managed modules with their own database schemas.
 
-Key shared modules for plugins:
-- `packages/shared/src/plugin/` - Plugin lifecycle, manifest parsing, registry
-- `packages/shared/src/database/plugin-database.ts` - Plugin database isolation
-- `packages/shared/src/security/` - Security, hashing, RBAC, sanitization
+**Plugin Lifecycle Hooks** (defined in `packages/shared/src/plugin/lifecycle.ts`):
+- `onInstall(context)` - Run database migrations, create schemas
+- `onActivate(context)` - Register routes, start services
+- `onDeactivate(context)` - Cleanup, stop background processes
+- `onUninstall(context)` - Remove data (optional), revoke tokens
+- `onUpdate(context, oldVersion)` - Handle version migrations
 
-**Plugin lifecycle hooks:**
+**PluginExecutionContext** provides:
+- `logger` - Structured logging with metadata
+- `api` - HTTP client for external requests
+- `storage` - Key-value storage scoped to plugin
+- `db` - PostgreSQL connection pool
+- `app` - Express app instance for route registration
+
+**Example Plugin Structure**:
 ```typescript
-interface PluginLifecycleHooks {
-  onInstall?(context: PluginExecutionContext): Promise<void>;
-  onActivate?(context: PluginExecutionContext): Promise<void>;
-  onDeactivate?(context: PluginExecutionContext): Promise<void>;
-  onUninstall?(context: PluginExecutionContext): Promise<void>;
+export default class MyPlugin implements PluginLifecycleHooks {
+  async onActivate(context: PluginExecutionContext): Promise<void> {
+    context.logger.info('Activating plugin');
+    if (context.app) {
+      context.app.use('/api/myplugin', myRouter);
+    }
+  }
 }
 ```
 
-### Service Communication
-
-- **API Gateway** (port 3000) proxies requests to backend services
-- **Main App** (port 3001) handles core business logic
-- **Python Service** (port 8000) provides Python-specific functionality
-- **Frontend** (port 3002) and **Admin** (port 3003) are client applications
-
-Services communicate through the API Gateway. Direct service-to-service communication should go through the gateway for authentication/rate limiting.
-
-### Error Handling Pattern
-
-All services implement consistent error handling:
-- Global error handlers log with error IDs for traceability
-- Health check endpoints at `/health` on all services
-- Graceful shutdown with cleanup handlers (see `packages/main-app/src/server.ts`)
+**Plugin Discovery**: Plugins in `plugins/` directory must have:
+- `plugin.yaml` manifest with name, version, capabilities
+- `package.json` with `@monorepo/shared` dependency
+- Entry point implementing `PluginLifecycleHooks`
 
 ### Database Patterns
 
-- **PostgreSQL** is the primary database
-- **Schema isolation** for plugins (see `packages/shared/src/database/isolation.ts`)
-- **Connection pooling** with configured limits (min: 2, max: 10)
-- Row-level security policies for multi-tenant data
+**Schema Isolation**: Each plugin gets its own PostgreSQL schema created during `onInstall`.
 
-## Environment Configuration
+**Main App Database** (`packages/main-app/src/db/`):
+- `index.ts` - Connection pool and query functions
+- `migrations.ts` - Sequential migration runner
+- Migrations run automatically on server start
 
-Copy `.env.example` to `.env` and configure:
+**Query Pattern**:
+```typescript
+import { query } from '../db';
 
-**Critical environment variables:**
-- `POSTGRES_*` - Database connection details
-- `JWT_SECRET`, `SESSION_SECRET`, `ENCRYPTION_KEY` - Security keys (generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
-- `API_GATEWAY_PORT`, `MAIN_APP_PORT` - Service ports
-- `ENABLE_PLUGIN_SYSTEM`, `ENABLE_THEME_SYSTEM` - Feature flags
-
-## TypeScript Configuration
-
-- Root `tsconfig.json` uses **TypeScript project references** for composite builds
-- All packages use strict mode with comprehensive compiler options
-- Target: ES2020, Module: CommonJS for backend, ESM for frontend
-- Frontend packages use Vite with special tsconfig configuration
-
-## Important Patterns & Conventions
-
-### Shared Package Usage
-
-Always import from `@monorepo/shared` for:
-- Security functions (hashing, validation, sanitization)
-- Plugin system interfaces and types
-- Database utilities and isolation helpers
-- Common constants and type definitions
-- Theme system types
-
-### Security Best Practices
-
-This codebase prioritizes security:
-- All user inputs validated and sanitized (using `ajv`, `sanitize-html`, `validator`)
-- Password hashing with bcrypt
-- SQL injection prevention through parameterized queries
-- Plugin sandboxing with resource quotas
-- RBAC implementation in `packages/shared/src/security/rbac.ts`
-
-### Plugin Development Workflow
-
-1. Create plugin directory with `plugin.yaml` manifest
-2. Implement lifecycle hooks from `PluginLifecycleHooks`
-3. Plugin receives isolated database schema on activation
-4. Access shared utilities via `PluginExecutionContext`
-5. Follow resource quotas and security policies
-
-### React Application Patterns
-
-Both Frontend and Admin use:
-- React 18 with TypeScript
-- Material UI 5 for components
-- Vite for build tooling
-- React Router for navigation
-- Axios for API calls
-
-## Development Workflow
-
-1. **Start infrastructure:** `docker-compose up -d postgres redis`
-2. **Install dependencies:** `npm install`
-3. **Build shared package:** `cd packages/shared && npm run build`
-4. **Start services:** Run individual service dev scripts or use `npm run dev`
-5. **Make changes:** Edit TypeScript files, hot reload is enabled
-6. **Run tests:** Test changes before committing
-7. **Lint/format:** Use `npm run lint` and `npm run format`
-
-## Service Ports
-
-- API Gateway: 3000
-- Main App: 3001
-- Frontend: 3002
-- Admin: 3003
-- Plugin Engine: 3004 (if applicable)
-- Python Service: 8000
-- PostgreSQL: 5432
-- Redis: 6379
-
-## Docker Support
-
-Full Docker Compose setup available:
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
+const result = await query<UserRow>(
+  'SELECT * FROM users WHERE email = $1',
+  [email]
+);
 ```
 
-## Additional Resources
+**Transactions**:
+```typescript
+import { transaction } from '../db';
 
-- Health checks available at `/health` on all services
-- API documentation at `/docs` on Python service (dev mode only)
-- Plugin marketplace features planned in roadmap
-- See SYSTEM_ARCHITECTURE.md for database schema details and deployment strategy
+await transaction(async (client) => {
+  await client.query('INSERT INTO users ...');
+  await client.query('INSERT INTO audit_log ...');
+});
+```
+
+### Authentication Flow
+
+**JWT-based authentication** with access + refresh tokens:
+
+1. `POST /api/auth/register` - Create user with hashed password
+2. `POST /api/auth/login` - Returns `{ accessToken, refreshToken }`
+3. Protected routes use `authenticateToken` middleware
+4. `POST /api/auth/refresh` - Get new access token
+5. `POST /api/auth/logout` - Revoke refresh token
+
+**Token Storage**:
+- Access tokens: Short-lived (15m), verified via JWT
+- Refresh tokens: Long-lived (7d), stored in `refresh_tokens` table with expiry
+
+**RBAC**: Users have roles (`admin`, `editor`, `viewer`), middleware `requireRole(...roles)` enforces permissions.
+
+### TypeScript Configuration
+
+**Strict mode enabled** across all packages with these key rules:
+- `@typescript-eslint/no-explicit-any: error` - Avoid `any`, use `unknown` or proper types
+- `@typescript-eslint/no-floating-promises: error` - Always await or handle promises
+- `@typescript-eslint/no-misused-promises: error` - Don't use async functions where sync expected
+- Explicit return types required for functions (can disable for arrow functions)
+
+**ESLint Pattern for Async Route Handlers**:
+```typescript
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+router.post('/endpoint', async (req: Request, res: Response): Promise<void> => {
+  // Handler code
+});
+```
+
+### File References in IDE
+
+When referencing files or code locations in responses, use **markdown link syntax** for clickability:
+- Files: `[filename.ts](packages/main-app/src/filename.ts)`
+- Lines: `[filename.ts:42](packages/main-app/src/filename.ts#L42)`
+- Ranges: `[filename.ts:42-51](packages/main-app/src/filename.ts#L42-L51)`
+
+**Never use backticks** for file paths unless explicitly asked.
+
+## Production Deployment
+
+**Ubuntu deployment script**: `sudo ./scripts/deploy-ubuntu.sh`
+- Installs Docker, configures firewall, sets up environment
+- Uses `docker-compose.prod.yml` overlay for production settings
+
+**PostgreSQL Production**:
+- Configuration: `docker/postgres/postgresql.conf` (tuned for 2GB RAM)
+- Authentication: `docker/postgres/pg_hba.conf` (scram-sha-256)
+- Initialization: Scripts in `docker/postgres/init/` run on first start
+
+**Backup & Monitoring**:
+```bash
+./scripts/backup-postgres.sh        # Manual backup
+./scripts/restore-postgres.sh <file> # Restore from backup
+./scripts/monitor-postgres.sh       # Health check
+./scripts/setup-cron.sh             # Schedule automated tasks
+```
+
+## Important Patterns
+
+### Error Handling in Async Routes
+Always return from error responses to prevent further execution:
+```typescript
+if (!user) {
+  res.status(404).json({ error: 'Not found' });
+  return;  // CRITICAL: prevents "headers already sent" errors
+}
+```
+
+### Shared Package Updates
+When modifying `packages/shared/src/types/`, rebuild before using:
+```bash
+cd packages/shared && npm run build
+cd ../main-app && npm run build  # Will pick up new types
+```
+
+### Port Conflicts
+The `./scripts/web` tool automatically kills processes on required ports (3000-3003, 5432, 6379, 8000, 8080).
+
+Manual check: `lsof -i :PORT` or `netstat -ano | findstr :PORT` (Windows)
+
+### Database Migrations
+- Place in `packages/main-app/src/db/migrations/`
+- Naming: `YYYYMMDD_description.sql`
+- Execute in order via `runMigrations()` in `migrations.ts`
+- Idempotent: Use `IF NOT EXISTS`, `IF EXISTS` clauses
+
+### Environment Variables
+Development uses `.env`, production uses `.env.production`.
+
+**Critical production settings**:
+```bash
+NODE_ENV=production
+JWT_SECRET=$(openssl rand -hex 32)          # Generate secure secrets
+SESSION_SECRET=$(openssl rand -hex 32)
+POSTGRES_PASSWORD=<strong-password>
+DATABASE_URL=postgresql://user:pass@postgres:5432/kevinalthaus
+```
+
+## Key Files
+
+- `SYSTEM_ARCHITECTURE.md` - Detailed service documentation
+- `DEPLOYMENT.md` - Production deployment guide
+- `packages/shared/src/plugin/lifecycle.ts` - Plugin system types
+- `docker-compose.yml` - Development service definitions
+- `docker-compose.prod.yml` - Production overrides
+- `.eslintrc.json` - TypeScript linting rules
