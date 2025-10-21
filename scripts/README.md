@@ -4,6 +4,73 @@ This directory contains scripts for deploying and maintaining the Kevin Althaus 
 
 ## Scripts Overview
 
+### web
+**Purpose**: Quick service management script for starting and stopping all Docker Compose services
+
+**Usage**:
+```bash
+# Start all services
+./scripts/web -on
+
+# Stop all services
+./scripts/web -off
+
+# Show help information
+./scripts/web --help
+```
+
+**What it does**:
+
+*For `-on` flag:*
+- Checks if ports (3000, 3001, 3002, 3003, 5432, 6379, 8000, 8080) are in use
+- Detects and kills processes using those ports
+- Starts all Docker Compose services with `docker compose up -d --build`
+- Waits for health checks to pass (up to 2 minutes)
+- Displays service status and access URLs
+
+*For `-off` flag:*
+- Gracefully stops all services with `docker compose down`
+- Verifies all containers are stopped
+- Displays shutdown confirmation
+
+**When to use**:
+- Quick development environment startup/shutdown
+- Resolving port conflicts before starting services
+- Daily development workflow
+
+**Adding to PATH**:
+
+To use the `web` command from anywhere:
+
+*Option 1 - Create symlink (requires sudo):*
+```bash
+sudo ln -s $(pwd)/scripts/web /usr/local/bin/web
+```
+
+*Option 2 - Add to PATH in shell config:*
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+export PATH="$PATH:/path/to/kevinalthaus-com-oct/scripts"
+
+# Reload shell configuration
+source ~/.bashrc  # or source ~/.zshrc
+```
+
+After setup, you can run `web -on` from anywhere.
+
+**Note**: Make script executable first:
+```bash
+chmod +x scripts/web
+```
+
+**Troubleshooting**:
+- **Port already in use**: The script automatically kills conflicting processes, but if issues persist, manually check with `lsof -i :PORT`
+- **Docker not running**: Start Docker daemon with `sudo systemctl start docker` (Linux) or start Docker Desktop (Windows/Mac)
+- **Services not healthy**: Check logs with `docker compose logs -f [service-name]`
+- **Permission denied**: Make script executable with `chmod +x scripts/web`
+
+---
+
 ### deploy-ubuntu.sh
 **Purpose**: Automated deployment script for Ubuntu servers
 

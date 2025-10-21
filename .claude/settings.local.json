@@ -3,7 +3,9 @@
     "allow": [
       "Bash(powershell.exe:*)",
       "Bash(sc.exe query:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker run:*)"
     ],
     "deny": [],
     "ask": []
