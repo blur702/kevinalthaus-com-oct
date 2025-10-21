@@ -11,7 +11,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // GET /api/users - List users with pagination and search
-router.get('/', requireCapability(Capability.USER_VIEW), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/', requireCapability(Capability.USER_VIEW), async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const {
       page = '1',
@@ -91,7 +91,7 @@ router.get('/', requireCapability(Capability.USER_VIEW), async (req: Authenticat
 });
 
 // GET /api/users/:id - Get user by ID
-router.get('/:id', requireCapability(Capability.USER_VIEW), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:id', requireCapability(Capability.USER_VIEW), async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
 
@@ -128,7 +128,7 @@ router.get('/:id', requireCapability(Capability.USER_VIEW), async (req: Authenti
 });
 
 // POST /api/users - Create new user (admin only)
-router.post('/', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const { email, username, password, role = 'viewer' } = req.body;
 
@@ -187,7 +187,7 @@ router.post('/', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res:
 });
 
 // PATCH /api/users/:id - Update user (admin only)
-router.patch('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res: Response) => {
+router.patch('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
     const { email, username, role, is_active } = req.body;
@@ -281,7 +281,7 @@ router.patch('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, 
 });
 
 // DELETE /api/users/:id - Delete user (admin only)
-router.delete('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
 

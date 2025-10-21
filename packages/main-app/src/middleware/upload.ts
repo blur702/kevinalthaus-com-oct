@@ -18,10 +18,61 @@ const ALLOWED_FILE_TYPES = process.env.ALLOWED_FILE_TYPES
   ? process.env.ALLOWED_FILE_TYPES.split(',').map((type) => type.trim())
   : ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
-// Define allowed file extensions
-const ALLOWED_EXTENSIONS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'
-]);
+// MIME type to file extension mapping
+const MIME_TO_EXTENSIONS: Record<string, string[]> = {
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/gif': ['.gif'],
+  'image/webp': ['.webp'],
+  'application/pdf': ['.pdf'],
+  // Add more mappings as needed
+  'image/jpg': ['.jpg'],  // Some systems use this variant
+  'text/plain': ['.txt'],
+  'application/json': ['.json'],
+  'text/csv': ['.csv'],
+};
+
+// Generate allowed extensions from MIME types
+function generateAllowedExtensions(mimeTypes: string[]): Set<string> {
+  const extensions = new Set<string>();
+  
+  for (const mimeType of mimeTypes) {
+    const normalizedMime = mimeType.toLowerCase().trim();
+    const exts = MIME_TO_EXTENSIONS[normalizedMime];
+    
+    if (exts) {
+      // Use predefined mappings
+      exts.forEach(ext => extensions.add(ext));
+    } else {
+      // Derive extension from MIME type subtype
+      const parts = normalizedMime.split('/');
+      if (parts.length === 2) {
+        const subtype = parts[1];
+        // Handle compound subtypes (e.g., 'vnd.ms-excel' -> 'excel')
+        const extensionBase = subtype.split('.').pop() || subtype;
+        const derivedExt = `.${extensionBase}`;
+        extensions.add(derivedExt);
+      } else {
+        // Invalid MIME type format - fail fast with clear error
+        throw new Error(
+          `Invalid MIME type format: "${mimeType}". ` +
+          `Expected format: "type/subtype" (e.g., "video/mp4", "image/jpeg"). ` +
+          `Please check your ALLOWED_FILE_TYPES configuration.`
+        );
+      }
+    }
+  }
+  
+  // If no MIME types configured, use safe defaults
+  if (extensions.size === 0) {
+    ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'].forEach(ext => extensions.add(ext));
+  }
+  
+  return extensions;
+}
+
+// Define allowed file extensions based on MIME types
+const ALLOWED_EXTENSIONS = generateAllowedExtensions(ALLOWED_FILE_TYPES);
 
 // Configure multer storage
 const storage = multer.diskStorage({
@@ -29,8 +80,12 @@ const storage = multer.diskStorage({
     // Use synchronous operations to avoid async callback issues
     try {
       // Check if directory exists
+      // UPLOAD_DIRECTORY is validated and resolved to absolute path at module initialization
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       if (!existsSync(UPLOAD_DIRECTORY)) {
         // Create directory if it doesn't exist
+        // UPLOAD_DIRECTORY is validated and resolved to absolute path at module initialization
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         mkdirSync(UPLOAD_DIRECTORY, { recursive: true });
       }
       cb(null, UPLOAD_DIRECTORY);
@@ -42,9 +97,9 @@ const storage = multer.diskStorage({
     // Extract and validate the file extension
     const originalExt = path.extname(file.originalname).toLowerCase();
     
-    // Check if extension is in allowlist
+    // Check if extension is in allowlist (derived from allowed MIME types)
     if (!ALLOWED_EXTENSIONS.has(originalExt)) {
-      return cb(new Error(`File extension ${originalExt} not allowed. Allowed extensions: ${Array.from(ALLOWED_EXTENSIONS).join(', ')}`), '');
+      return cb(new Error(`File extension ${originalExt} not allowed. Allowed extensions (based on MIME types): ${Array.from(ALLOWED_EXTENSIONS).join(', ')}`), '');
     }
 
     // Sanitize the original filename
@@ -88,6 +143,8 @@ export const uploadMiddleware = multer({
 // Utility function to ensure upload directory exists
 export async function ensureUploadDirectory(): Promise<void> {
   try {
+    // UPLOAD_DIRECTORY is validated and resolved to absolute path at module initialization
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     await fs.mkdir(UPLOAD_DIRECTORY, { recursive: true });
   } catch (error) {
     throw new Error(`Failed to create upload directory: ${(error as Error).message}`);

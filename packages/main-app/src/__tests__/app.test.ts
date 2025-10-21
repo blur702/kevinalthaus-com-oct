@@ -1,6 +1,14 @@
 import request from 'supertest';
 import app from '../index';
 
+interface HealthResponse {
+  status: string;
+  service: string;
+  timestamp: string;
+  version?: string;
+  uptime?: number;
+}
+
 describe('Main App', () => {
   describe('GET /health', () => {
     it('should return health status', async () => {
@@ -8,11 +16,12 @@ describe('Main App', () => {
         .get('/health')
         .expect(200);
 
-      expect(response.body).toMatchObject({
+      const body = response.body as HealthResponse;
+      expect(body).toMatchObject({
         status: 'healthy',
         service: 'main-app'
       });
-      expect(response.body.timestamp).toBeDefined();
+      expect(body.timestamp).toBeDefined();
     });
   });
 

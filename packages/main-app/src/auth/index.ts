@@ -22,16 +22,17 @@ interface AuthenticatedRequest extends Request {
 
 // Generate JWT token
 function generateAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
 // Generate refresh token
 function generateRefreshToken(): string {
-  return require('crypto').randomBytes(64).toString('hex');
+  const crypto = require('crypto') as typeof import('crypto');
+  return crypto.randomBytes(64).toString('hex');
 }
 
 // POST /api/auth/register
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, username, password, role = 'viewer' } = req.body;
 
@@ -115,7 +116,7 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, password } = req.body;
 
@@ -206,7 +207,7 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/refresh
-router.post('/refresh', async (req: Request, res: Response) => {
+router.post('/refresh', async (req: Request, res: Response): Promise<any> => {
   try {
     const { refreshToken } = req.body;
 
@@ -305,7 +306,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/logout
-router.post('/logout', async (req: Request, res: Response) => {
+router.post('/logout', async (req: Request, res: Response): Promise<any> => {
   try {
     const { refreshToken } = req.body;
 

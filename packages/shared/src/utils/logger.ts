@@ -122,6 +122,7 @@ export class ConsoleLogger implements Logger {
   }
 
   private getConsoleMethod(level: LogLevel): (...args: unknown[]) => void {
+    /* eslint-disable no-console */
     switch (level) {
       case LogLevel.DEBUG:
         return console.debug.bind(console);
@@ -134,6 +135,7 @@ export class ConsoleLogger implements Logger {
       default:
         return console.log.bind(console);
     }
+    /* eslint-enable no-console */
   }
 }
 

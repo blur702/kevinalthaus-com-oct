@@ -1,5 +1,8 @@
 import { Role } from '../security/rbac';
 
+// Include Express type declarations
+import './express';
+
 export interface BaseEntity {
   id: string;
   createdAt: Date;

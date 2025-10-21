@@ -5,7 +5,7 @@ import { generateOrExtractRequestId } from '@monorepo/shared';
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
   const existingId = req.headers['x-request-id'] as string | undefined;
   const requestId = generateOrExtractRequestId(existingId);
-  (req as Request & { id: string }).id = requestId;
+  req.id = requestId;
   res.setHeader('X-Request-Id', requestId);
   next();
 }

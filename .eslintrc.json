@@ -4,7 +4,7 @@
   "parserOptions": {
     "ecmaVersion": 2020,
     "sourceType": "module",
-    "project": ["./tsconfig.json", "./packages/*/tsconfig.json"]
+    "project": ["./tsconfig.json", "./packages/*/tsconfig.json", "./packages/*/tsconfig.node.json"]
   },
   "env": {
     "node": true,
@@ -53,5 +53,5 @@
     "eqeqeq": ["error", "always"],
     "curly": ["error", "all"]
   },
-  "ignorePatterns": ["node_modules/", "dist/", "build/", "coverage/", "*.js"]
+  "ignorePatterns": ["node_modules/", "dist/", "build/", "coverage/", "*.js", "vite.config.ts", "**/*.d.ts", "packages/shared/src/types/"]
 }

@@ -26,11 +26,11 @@ import {
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 
 // Import pages
-import Dashboard from './pages/Dashboard'
-import Users from './pages/Users'
-import Content from './pages/Content'
-import Analytics from './pages/Analytics'
-import Settings from './pages/Settings'
+import Dashboard from './pages/Dashboard.tsx'
+import Users from './pages/Users.tsx'
+import Content from './pages/Content.tsx'
+import Analytics from './pages/Analytics.tsx'
+import Settings from './pages/Settings.tsx'
 
 const drawerWidth = 240
 
@@ -52,7 +52,7 @@ const App: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
 
-  const handleDrawerToggle = () => {
+  const handleDrawerToggle = (): void => {
     setMobileOpen(!mobileOpen)
   }
 

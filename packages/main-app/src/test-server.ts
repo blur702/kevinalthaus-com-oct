@@ -16,6 +16,7 @@ const server = http.createServer((req, res) => {
   }
 });
 
+/* eslint-disable no-console */
 server.listen(PORT, () => {
   console.log(`Test server running on port ${PORT}`);
 }).on('error', (err) => {
@@ -24,13 +25,14 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown handler
-function gracefulShutdown(signal: string) {
+function gracefulShutdown(signal: string): void {
   console.log(`Received ${signal}. Shutting down test server...`);
   server.close(() => {
     console.log('Test server closed');
     process.exit(0);
   });
 }
+/* eslint-enable no-console */
 
 // Register shutdown handlers for both SIGINT and SIGTERM
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));

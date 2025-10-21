@@ -45,8 +45,12 @@ const StatCard: React.FC<StatCardProps> = ({
               label={change} 
               color={(() => {
                 const trimmedChange = change.trim()
-                if (trimmedChange.startsWith('+')) return 'success'
-                if (trimmedChange.startsWith('-')) return 'error'
+                if (trimmedChange.startsWith('+')) {
+                  return 'success'
+                }
+                if (trimmedChange.startsWith('-')) {
+                  return 'error'
+                }
                 return 'default'
               })()}
               size="small"
