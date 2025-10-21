@@ -10,7 +10,9 @@ import {
   keepAliveMiddleware,
   cacheMiddleware
 } from './middleware/performance';
-import { authRouter } from './auth';
+import { authRouter, authMiddleware } from './auth';
+import { requireRole } from './auth/rbac-middleware';
+import { Role } from '@monorepo/shared';
 import { usersRouter } from './users';
 import { uploadsRouter } from './uploads';
 import { healthCheck } from './db';
@@ -152,7 +154,7 @@ app.use('/api/uploads', uploadsRouter);
 
 // Admin UI for plugin management
 pluginManager.init(app);
-app.use('/admin/plugins', adminPluginsRouter);
+app.use('/admin/plugins', authMiddleware, requireRole(Role.ADMIN), adminPluginsRouter);
 
 // Discover plugins (manifests only for now)
 void (async () => {
