@@ -9,12 +9,27 @@ export interface PluginLifecycleContext {
   config?: Record<string, unknown>;
 }
 
+export interface PluginLogger {
+  debug(message: string, meta?: Record<string, unknown>): void;
+  info(message: string, meta?: Record<string, unknown>): void;
+  warn(message: string, meta?: Record<string, unknown>): void;
+  error(message: string, error?: Error, meta?: Record<string, unknown>): void;
+}
+
+export interface PluginExecutionContext extends PluginLifecycleContext {
+  logger: PluginLogger;
+  api: PluginAPI;
+  storage: PluginStorage;
+  db?: any; // Database connection pool (eslint-disable-line @typescript-eslint/no-explicit-any)
+  app?: any; // Express app instance (eslint-disable-line @typescript-eslint/no-explicit-any)
+}
+
 export interface PluginLifecycleHooks {
-  onInstall?(context: PluginLifecycleContext): Promise<void>;
-  onActivate?(context: PluginLifecycleContext): Promise<void>;
-  onDeactivate?(context: PluginLifecycleContext): Promise<void>;
-  onUninstall?(context: PluginLifecycleContext): Promise<void>;
-  onUpdate?(context: PluginLifecycleContext, oldVersion: string): Promise<void>;
+  onInstall?(context: PluginExecutionContext): Promise<void>;
+  onActivate?(context: PluginExecutionContext): Promise<void>;
+  onDeactivate?(context: PluginExecutionContext): Promise<void>;
+  onUninstall?(context: PluginExecutionContext): Promise<void>;
+  onUpdate?(context: PluginExecutionContext, oldVersion: string): Promise<void>;
 }
 
 export interface PluginInstance {
@@ -26,19 +41,6 @@ export interface PluginInstance {
   lastUpdatedAt?: Date;
   error?: string;
   config?: Record<string, unknown>;
-}
-
-export interface PluginExecutionContext extends PluginLifecycleContext {
-  logger: PluginLogger;
-  api: PluginAPI;
-  storage: PluginStorage;
-}
-
-export interface PluginLogger {
-  debug(message: string, meta?: Record<string, unknown>): void;
-  info(message: string, meta?: Record<string, unknown>): void;
-  warn(message: string, meta?: Record<string, unknown>): void;
-  error(message: string, error?: Error, meta?: Record<string, unknown>): void;
 }
 
 export interface PluginAPI {
