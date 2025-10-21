@@ -288,7 +288,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const tokenHash = hashSHA256(refreshToken);
 
     // Find and validate refresh token
-    const result = await query<{
+    const tokenResult = await query<{
       id: string;
       user_id: string;
       expires_at: Date;
@@ -298,7 +298,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
       [tokenHash]
     );
 
-    if (result.rows.length === 0) {
+    if (tokenResult.rows.length === 0) {
       res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid refresh token',
@@ -306,7 +306,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
       return;
     }
 
-    const token = result.rows[0];
+    const token = tokenResult.rows[0];
 
     if (new Date(token.expires_at) < new Date()) {
       res.status(401).json({

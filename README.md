@@ -294,7 +294,60 @@ For complete API documentation, see [API Reference](./API_REFERENCE.md).
 
 ## 🚀 Deployment
 
-### Production Deployment
+### Ubuntu Production Deployment
+
+**Quick Start** (Ubuntu 20.04/22.04/24.04 LTS):
+```bash
+# Automated deployment
+sudo ./scripts/deploy-ubuntu.sh
+```
+
+This script will:
+- Install Docker and Docker Compose
+- Setup application directory (`/opt/kevinalthaus`)
+- Configure firewall (UFW)
+- Deploy all services with production configuration
+
+**PostgreSQL Setup:**
+
+The simple Docker command:
+```bash
+docker run --name postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=kevinalthaus \
+  -p 5432:5432 \
+  -d postgres:16
+```
+
+Our production docker-compose setup improves this with:
+- Health checks and automatic restart
+- Persistent volumes for data safety
+- Automated WAL archiving and backups
+- Performance tuning (2GB RAM, optimized postgresql.conf)
+- Security hardening (pg_hba.conf, restricted network)
+- Monitoring views and statistics
+
+**Access PostgreSQL:**
+```bash
+# CLI access
+docker exec -it kevinalthaus-postgres-1 psql -U postgres -d kevinalthaus
+
+# View logs
+docker logs kevinalthaus-postgres-1
+
+# Health check
+docker exec kevinalthaus-postgres-1 pg_isready -U postgres
+```
+
+**Automated Maintenance:**
+```bash
+# Setup cron jobs for backups and monitoring
+sudo ./scripts/setup-cron.sh
+```
+
+📘 **Complete deployment guide**: See [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+### Production Deployment (Manual)
 
 1. **Build the application:**
    ```bash
@@ -305,6 +358,7 @@ For complete API documentation, see [API Reference](./API_REFERENCE.md).
    ```bash
    cp .env.example .env.production
    # Update with production values
+   # Generate secrets: openssl rand -hex 32
    ```
 
 3. **Deploy with Docker:**

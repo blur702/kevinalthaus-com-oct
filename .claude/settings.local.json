@@ -1,20 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat:*)",
-      "Bash(npm install:*)",
-      "Bash(npm run build:*)",
-      "Bash(npx tsc:*)",
-      "Bash(npx eslint:*)",
-      "Bash(test:*)",
-      "Bash(psql:*)",
-      "Bash(netstat:*)",
-      "Bash(findstr:*)",
-      "Bash(taskkill:*)",
-      "Bash(cmd.exe /c \"taskkill /PID 19928 /F\")",
-      "Bash(cmd.exe /c \"taskkill /PID 26860 /F\")",
-      "Bash(powershell.exe -Command \"Stop-Process -Id 19928 -Force\")",
-      "Bash(powershell.exe -Command \"Stop-Process -Id 26860 -Force\")"
+      "Bash(powershell.exe:*)",
+      "Bash(sc.exe query:*)",
+      "Bash(where:*)"
     ],
     "deny": [],
     "ask": []

@@ -15,6 +15,7 @@ build/
 .env
 .env.*
 !.env.example
+.env.production
 
 # Git
 .git/
@@ -42,6 +43,7 @@ tests/
 docs/
 *.md
 !README.md
+DEPLOYMENT.md
 
 # Logs
 logs/
@@ -72,6 +74,9 @@ Dockerfile*
 .prettierrc*
 .prettierignore
 .editorconfig
+
+# Deployment scripts (not needed in container)
+scripts/
 
 # Uploads and plugins (will be mounted as volumes)
 uploads/
