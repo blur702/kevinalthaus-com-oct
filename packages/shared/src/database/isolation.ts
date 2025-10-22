@@ -171,50 +171,68 @@ export class DatabaseIsolationEnforcer {
       let whereOrs = 0;
       let whereFunctions = 0;
 
-      const visit = (node: any): void => {
-        if (!node || typeof node !== 'object') return;
+      const visit = (node: unknown): void => {
+        if (!node || typeof node !== 'object') {
+          return;
+        }
+        const n = node as Record<string, unknown>;
 
         // Detect select columns
-        if (node.type === 'select') {
+        if (n.type === 'select') {
           // WITH RECURSIVE
-          if (node.with && node.with.recursive) {
+          if (n.with && typeof n.with === 'object' && n.with !== null && 'recursive' in n.with && (n.with as Record<string, unknown>).recursive) {
             recursiveCtes += 1;
           }
 
           // Columns
-          if (Array.isArray(node.columns)) {
-            for (const col of node.columns) {
-              const expr = col && (col.expr || col);
-              if (expr && expr.type === 'star') {
+          if (Array.isArray(n.columns)) {
+            for (const col of n.columns) {
+              if (!col || typeof col !== 'object') {
+                continue;
+              }
+              const colObj = col as Record<string, unknown>;
+              const expr = ('expr' in colObj ? colObj.expr : colObj) as Record<string, unknown> | undefined;
+              if (expr && typeof expr === 'object' && 'type' in expr && expr.type === 'star') {
                 wildcards += 1;
               }
-              if (expr && expr.type === 'aggr_func') {
+              if (expr && typeof expr === 'object' && 'type' in expr && expr.type === 'aggr_func') {
                 aggregates += 1;
               }
               // Window function
-              if (expr && expr.over) {
+              if (expr && typeof expr === 'object' && 'over' in expr && expr.over) {
                 windows += 1;
               }
-              visit(expr);
+              if (expr) {
+                visit(expr);
+              }
             }
           }
 
           // FROM/JOIN
-          if (Array.isArray(node.from)) {
+          if (Array.isArray(n.from)) {
             let plainTables = 0;
-            for (const fromItem of node.from) {
+            for (const fromItem of n.from) {
+              if (!fromItem || typeof fromItem !== 'object') {
+                continue;
+              }
+              const fromObj = fromItem as Record<string, unknown>;
               // Joined table
-              if (fromItem && fromItem.join) {
+              if ('join' in fromObj && fromObj.join) {
                 joins += 1;
-                if (!fromItem.on) {
+                if (!('on' in fromObj) || !fromObj.on) {
                   cartesianJoins += 1;
                 }
-                visit(fromItem.on);
-                visit(fromItem.table);
+                if ('on' in fromObj) {
+                  visit(fromObj.on);
+                }
+                if ('table' in fromObj) {
+                  visit(fromObj.table);
+                }
               } else {
                 // Plain table in FROM list — if more than one without join, potential cartesian
                 plainTables += 1;
-                visit(fromItem.table || fromItem);
+                const tableOrItem = ('table' in fromObj ? fromObj.table : fromItem) as unknown;
+                visit(tableOrItem);
               }
             }
             if (plainTables > 1) {
@@ -224,60 +242,90 @@ export class DatabaseIsolationEnforcer {
           }
 
           // WHERE analysis
-          const walkWhere = (w: any): void => {
-            if (!w) return;
-            if (w.type === 'binary_expr') {
-              if (String(w.operator).toUpperCase() === 'OR') {
+          const walkWhere = (w: unknown): void => {
+            if (!w || typeof w !== 'object') {
+              return;
+            }
+            const wObj = w as Record<string, unknown>;
+            if ('type' in wObj && wObj.type === 'binary_expr') {
+              if ('operator' in wObj && String(wObj.operator).toUpperCase() === 'OR') {
                 whereOrs += 1;
               }
-              walkWhere(w.left);
-              walkWhere(w.right);
-            } else if (w.type === 'function') {
+              if ('left' in wObj) {
+                walkWhere(wObj.left);
+              }
+              if ('right' in wObj) {
+                walkWhere(wObj.right);
+              }
+            } else if ('type' in wObj && wObj.type === 'function') {
               whereFunctions += 1;
-              if (Array.isArray(w.args)) {
-                w.args.forEach(visit);
-              } else if (w.args) {
-                visit(w.args);
+              if ('args' in wObj && Array.isArray(wObj.args)) {
+                wObj.args.forEach(visit);
+              } else if ('args' in wObj && wObj.args) {
+                visit(wObj.args);
               }
             } else {
               visit(w);
             }
           };
-          walkWhere(node.where);
+          if ('where' in n) {
+            walkWhere(n.where);
+          }
 
           // Subqueries in different clauses
-          const findSubqueries = (n: any): void => {
-            if (!n || typeof n !== 'object') return;
-            if (n.type === 'select') {
+          const findSubqueries = (fsNode: unknown): void => {
+            if (!fsNode || typeof fsNode !== 'object') {
+              return;
+            }
+            const fsObj = fsNode as Record<string, unknown>;
+            if ('type' in fsObj && fsObj.type === 'select') {
               subqueries += 1;
             }
-            for (const key of Object.keys(n)) {
-              const v = (n as any)[key];
+            for (const key of Object.keys(fsObj)) {
+              const v = fsObj[key];
               if (v && typeof v === 'object') {
-                if (Array.isArray(v)) v.forEach(findSubqueries);
-                else findSubqueries(v);
+                if (Array.isArray(v)) {
+                  v.forEach(findSubqueries);
+                } else {
+                  findSubqueries(v);
+                }
               }
             }
           };
           // Exclude counting the root select itself
-          if (node.where) findSubqueries(node.where);
-          if (node.from) findSubqueries(node.from);
-          if (node.columns) findSubqueries(node.columns);
+          if ('where' in n) {
+            findSubqueries(n.where);
+          }
+          if ('from' in n) {
+            findSubqueries(n.from);
+          }
+          if ('columns' in n) {
+            findSubqueries(n.columns);
+          }
         }
 
         // Set operations might appear as nested structures depending on parser version
-        if (node.type && typeof node.type === 'string') {
-          const t = String(node.type).toLowerCase();
-          if (t === 'union') unions += 1;
-          if (t === 'intersect') intersects += 1;
-          if (t === 'except') excepts += 1;
+        if ('type' in n && typeof n.type === 'string') {
+          const t = String(n.type).toLowerCase();
+          if (t === 'union') {
+            unions += 1;
+          }
+          if (t === 'intersect') {
+            intersects += 1;
+          }
+          if (t === 'except') {
+            excepts += 1;
+          }
         }
 
-        for (const key of Object.keys(node)) {
-          const val = (node as any)[key];
+        for (const key of Object.keys(n)) {
+          const val = n[key];
           if (val && typeof val === 'object') {
-            if (Array.isArray(val)) val.forEach(visit);
-            else visit(val);
+            if (Array.isArray(val)) {
+              val.forEach(visit);
+            } else {
+              visit(val);
+            }
           }
         }
       };

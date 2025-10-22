@@ -186,12 +186,16 @@ Authorization: Bearer <token>
 
 ### Plugin Management
 
+> **Note:** Plugin Management REST API is not yet implemented. Plugin management is currently only available through the admin web UI at `/admin/plugins` (requires admin role and authentication).
+
 #### List Plugins
 
 ```http
 GET /api/plugins?status=active&page=1&limit=20
 Authorization: Bearer <token>
 ```
+
+**Status:** Not yet implemented
 
 **Query Parameters:**
 - `status` (string): Filter by status (installed, active, inactive, error)
@@ -363,8 +367,8 @@ interface PluginExecutionContext {
   logger: PluginLogger;
   api: PluginAPI;
   storage: PluginStorage;
-  database: PluginDatabaseConnection;
-  permissions: PermissionContext;
+  db?: Pool; // PostgreSQL connection pool (optional)
+  app?: Application; // Express app instance (optional)
 }
 ```
 
@@ -629,6 +633,8 @@ Authorization: Bearer <token>
 
 ### Theme Development API
 
+> **Note:** ThemeAPI is not yet implemented. The `context.themeAPI` property is not available in `PluginExecutionContext`.
+
 ```typescript
 interface ThemeAPI {
   registerTheme(theme: PluginTheme): Promise<void>;
@@ -638,7 +644,7 @@ interface ThemeAPI {
 }
 ```
 
-**Usage Example:**
+**Usage Example (Planned):**
 ```typescript
 export async function registerMyTheme(context: PluginExecutionContext) {
   const theme: PluginTheme = {
@@ -705,8 +711,9 @@ export async function registerMyTheme(context: PluginExecutionContext) {
     }
   };
 
-  await context.themeAPI.registerTheme(theme);
-  context.logger.info('Theme registered successfully', { themeId: theme.id });
+  // await context.themeAPI.registerTheme(theme);  // NOT YET AVAILABLE - themeAPI will be added in future release
+  context.logger.info('Theme configuration prepared', { themeId: theme.id });
+  // When themeAPI is available, uncomment the line above to register the theme
 }
 ```
 
