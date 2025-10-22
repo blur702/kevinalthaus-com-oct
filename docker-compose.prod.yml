@@ -46,13 +46,20 @@ services:
     ports:
       - "4000:4000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - app_network
     restart: always
     environment:
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     volumes:
       - /app/node_modules
     logging:
@@ -75,7 +82,8 @@ services:
     ports:
       - "4001:4001"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - app_network
     restart: always
@@ -83,6 +91,14 @@ services:
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h postgres -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-kevinalthaus} || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     volumes:
       - /app/node_modules
       - ./uploads:/app/uploads

@@ -319,6 +319,8 @@ docker run --name postgres \
   -d postgres:16
 ```
 
+**⚠️ Security Warning:** The hardcoded password `postgres` shown above is for **examples only**. In production, you **must** use a strong, randomly generated password stored securely (e.g., environment secrets, secret manager, or Docker secrets). Rotate credentials regularly. See [Docker secrets documentation](https://docs.docker.com/engine/swarm/secrets/) and [PostgreSQL security best practices](https://www.postgresql.org/docs/current/auth-methods.html).
+
 Our production docker-compose setup improves this with:
 - Health checks and automatic restart
 - Persistent volumes for data safety

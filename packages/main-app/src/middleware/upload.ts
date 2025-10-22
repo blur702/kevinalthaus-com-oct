@@ -25,8 +25,6 @@ const MIME_TO_EXTENSIONS: Record<string, string[]> = {
   'image/gif': ['.gif'],
   'image/webp': ['.webp'],
   'application/pdf': ['.pdf'],
-  // Add more mappings as needed
-  'image/jpg': ['.jpg'],  // Some systems use this variant
   'text/plain': ['.txt'],
   'application/json': ['.json'],
   'text/csv': ['.csv'],

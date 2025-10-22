@@ -87,7 +87,14 @@ function getCookie(req: express.Request, name: string): string | undefined {
   }
   const cookies = cookieHeader.split(';').map((c) => c.trim());
   for (const c of cookies) {
-    const [k, v] = c.split('=');
+    // Split only on first '=' to handle values containing '='
+    const eqIndex = c.indexOf('=');
+    if (eqIndex === -1) {
+      // No '=' found, treat as key with empty value
+      continue;
+    }
+    const k = c.substring(0, eqIndex);
+    const v = c.substring(eqIndex + 1);
     if (k === name) {
       return decodeURIComponent(v || '');
     }

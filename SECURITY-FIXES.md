@@ -62,13 +62,19 @@ import session from 'express-session';
 import RedisStore from 'connect-redis';
 import { createClient } from 'redis';
 
+// Validate required environment variable at startup
+if (!process.env.SESSION_SECRET) {
+  console.error('FATAL: SESSION_SECRET environment variable is required');
+  process.exit(1);
+}
+
 const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379'
 });
 
 app.use(session({
   store: new RedisStore({ client: redisClient }),
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  secret: process.env.SESSION_SECRET, // No fallback - fail fast if not set
   resave: false,
   saveUninitialized: false,
   cookie: {

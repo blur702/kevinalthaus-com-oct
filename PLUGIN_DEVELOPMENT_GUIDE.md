@@ -680,8 +680,15 @@ export class WeatherPlugin {
     }
 
     try {
+      // Build URL with properly encoded parameters to handle spaces and special characters
+      const params = new URLSearchParams({
+        q: city,
+        appid: apiKey
+      });
+      const url = `https://api.openweathermap.org/data/2.5/weather?${params.toString()}`;
+
       const response = await context.api.get(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`,
+        url,
         {
           timeout: 5000,
           retries: 2

@@ -134,7 +134,7 @@ SELECT
     COUNT(*) FILTER (WHERE state = 'idle') AS idle_connections,
     COUNT(*) FILTER (WHERE state = 'idle in transaction') AS idle_in_transaction,
     COUNT(*) FILTER (WHERE wait_event_type IS NOT NULL) AS waiting_connections,
-    MAX(EXTRACT(EPOCH FROM (now() - query_start))) AS longest_query_seconds,
+    MAX(EXTRACT(EPOCH FROM (now() - query_start))) FILTER (WHERE query_start IS NOT NULL) AS longest_query_seconds,
     MAX(EXTRACT(EPOCH FROM (now() - state_change))) AS longest_idle_seconds
 FROM pg_stat_activity
 WHERE datname = current_database();
@@ -162,7 +162,8 @@ SELECT
     wait_event_type,
     wait_event
 FROM pg_stat_activity
-WHERE (now() - pg_stat_activity.query_start) > interval '5 seconds'
+WHERE query_start IS NOT NULL
+  AND (now() - pg_stat_activity.query_start) > interval '5 seconds'
   AND state != 'idle'
   AND datname = current_database()
 ORDER BY duration DESC;
@@ -172,6 +173,9 @@ GRANT SELECT ON v_database_health TO monitoring;
 GRANT SELECT ON v_connection_stats TO monitoring;
 GRANT SELECT ON v_table_sizes TO monitoring;
 GRANT SELECT ON v_slow_queries TO monitoring;
+
+-- Grant default privileges for future tables to monitoring role
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO monitoring;
 
 -- ----------------------------------------
 -- MAINTENANCE CONFIGURATION
@@ -203,7 +207,15 @@ END $$;
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
 -- Reset statistics to start fresh
-SELECT pg_stat_statements_reset();
+-- Wrap in DO block to handle case where pg_stat_statements is not in shared_preload_libraries
+-- This allows the script to complete even if the extension was created but not properly loaded
+DO $$
+BEGIN
+    PERFORM pg_stat_statements_reset();
+EXCEPTION
+    WHEN undefined_function THEN
+        RAISE NOTICE 'pg_stat_statements_reset() not available - extension may not be in shared_preload_libraries';
+END $$;
 
 -- ----------------------------------------
 -- PARTITION SETUP (Optional - for high volume tables)

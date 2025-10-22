@@ -92,13 +92,15 @@ app.use(
       return;
     }
     const origin = req.header('Origin');
-    const isAllowed = !origin || corsOrigins.includes(origin);
+    // Only allow requests with valid Origin header that's in allowlist
+    // Missing Origin headers are not allowed by default
+    const isAllowed = origin ? corsOrigins.includes(origin) : false;
     callback(null, { origin: isAllowed, credentials: corsCredentials });
   })
 );
 app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '1mb' })); // Reduced from 10mb to prevent DoS
+app.use(express.urlencoded({ extended: true, limit: '100kb' })); // Reduced from 10mb
 
 // Cache middleware for GET requests
 app.use(cacheMiddleware);
