@@ -2,10 +2,10 @@ import express from 'express';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import React from 'react';
 import { pluginManager } from '../plugins/manager';
-import { AuthenticatedRequest } from '../auth';
+import type { AuthenticatedRequest } from '../auth';
 import { renderReactSSR } from '../utils/ssr-renderer';
 import PluginManagement, { Plugin } from '../components/PluginManagement';
-import { createLogger, LogLevel } from '@monorepo/shared';
+import { createLogger, LogLevel, type PluginManifest } from '@monorepo/shared';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -217,7 +217,7 @@ function layout(title: string, body: string, csrfToken?: string): string {
       .status-installed { background: #e0e7ff; }
       .status-inactive { background: #fef3c7; }
       .status-error { background: #fee2e2; }
-    </link>
+    </style>
     <script>
       // Add CSRF token to all forms
       document.addEventListener('DOMContentLoaded', function() {
@@ -259,8 +259,8 @@ adminPluginsRouter.get('/', csrfProtection, (req, res): void => {
       name: manifest?.displayName ?? id,
       version: manifest?.version,
       description: manifest?.description,
-      author: (manifest as any)?.author?.name,
-      status: String(status) === 'not installed' ? 'inactive' : 
+      author: manifest?.author?.name,
+      status: String(status) === 'not installed' ? 'inactive' :
               (String(status) as 'active' | 'installed' | 'inactive' | 'error')
     };
   });

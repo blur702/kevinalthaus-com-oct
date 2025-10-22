@@ -55,6 +55,7 @@ export async function clearTokens(): Promise<void> {
     });
   } catch (error) {
     console.error('Logout failed:', error);
+    throw error;
   }
 }
 

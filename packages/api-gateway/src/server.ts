@@ -67,8 +67,10 @@ function gracefulShutdown(signal: string): void {
 process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
 process.on('uncaughtException', (err) => {
-  logger.error('Uncaught Exception in API Gateway', err);
-  void gracefulShutdown('uncaughtException');
+  logger.error('Uncaught Exception in API Gateway - exiting immediately', err);
+  // Node.js recommends immediate exit after uncaught exception
+  // Use setImmediate to ensure log is flushed before exit
+  setImmediate(() => process.exit(1));
 });
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled Rejection in API Gateway', new Error(String(reason)));

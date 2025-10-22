@@ -1,4 +1,4 @@
-import { query, transaction } from './index';
+import { query, transaction, pool } from './index';
 import { PoolClient } from 'pg';
 
 // Advisory lock ID for migrations (arbitrary number, must be consistent)
@@ -7,10 +7,14 @@ const MIGRATION_LOCK_ID = 1234567890;
 export async function runMigrations(): Promise<void> {
   console.log('[Migrations] Running database migrations...');
 
+  // Get a dedicated client to hold the advisory lock for the entire migration duration
+  const lockClient = await pool.connect();
+
   try {
     // Acquire advisory lock to prevent concurrent migrations
+    // This lock is session-scoped and will be held until we release it or disconnect
     console.log('[Migrations] Acquiring migration lock...');
-    await query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
+    await lockClient.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
     console.log('[Migrations] Migration lock acquired');
 
     // Create migrations tracking table
@@ -149,13 +153,17 @@ export async function runMigrations(): Promise<void> {
     console.error('[Migrations] Migration failed:', error);
     throw error;
   } finally {
-    // Release advisory lock
+    // Release advisory lock and return client to pool
     try {
-      await query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
+      await lockClient.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
       console.log('[Migrations] Migration lock released');
     } catch (unlockError) {
       console.error('[Migrations] Failed to release migration lock:', unlockError);
       // Don't throw here, as the lock will be auto-released when connection closes
+    } finally {
+      // Always release the client back to the pool
+      lockClient.release();
+      console.log('[Migrations] Lock client released');
     }
   }
 }

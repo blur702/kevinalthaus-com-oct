@@ -172,7 +172,7 @@ const Dashboard: React.FC = () => {
           {
             id: 'growth',
             title: 'Growth',
-            value: data.growth ? `${data.growth}%` : mockStats[3].value,
+            value: (data.growth !== null && data.growth !== undefined) ? `${data.growth}%` : mockStats[3].value,
             change: data.changes?.growth ?? mockStats[3].change,
             icon: <TrendingUp />,
             color: 'secondary' as const,

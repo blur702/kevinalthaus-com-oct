@@ -48,13 +48,11 @@ interface AuthenticatedRequest extends Request {
 }
 
 // Helper function to extract real client IP from proxied requests
+// Note: Only use X-Forwarded-For when Express trust proxy is configured
+// Otherwise, fall back to req.ip to prevent IP spoofing
 function getClientIp(req: Request): string | undefined {
-  const forwardedFor = req.headers['x-forwarded-for'];
-  if (forwardedFor) {
-    // X-Forwarded-For can be comma-separated list, take first value
-    const ips = typeof forwardedFor === 'string' ? forwardedFor.split(',') : forwardedFor;
-    return ips[0].trim();
-  }
+  // req.ip respects the trust proxy setting and handles X-Forwarded-For safely
+  // when trust proxy is configured, otherwise returns direct connection IP
   return req.ip;
 }
 

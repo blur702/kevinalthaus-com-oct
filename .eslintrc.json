@@ -53,5 +53,15 @@
     "eqeqeq": ["error", "always"],
     "curly": ["error", "all"]
   },
-  "ignorePatterns": ["node_modules/", "dist/", "build/", "coverage/", "*.js", "vite.config.ts", "**/*.d.ts", "packages/shared/src/types/"]
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "build/",
+    "coverage/",
+    "*.js",
+    "vite.config.ts",
+    "**/dist/**/*.d.ts",
+    "**/build/**/*.d.ts",
+    "**/node_modules/**/*.d.ts"
+  ]
 }
