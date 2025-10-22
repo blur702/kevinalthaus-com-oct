@@ -11,9 +11,7 @@ const logger = createLogger({
 const PORT = process.env.API_GATEWAY_PORT || process.env.PORT || 3000;
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
-let server: Server;
-
-server = app
+const server: Server = app
   .listen(PORT, () => {
     logger.info(`API Gateway server running on port ${PORT}`);
   })
@@ -22,7 +20,7 @@ server = app
     process.exit(1);
   });
 
-async function gracefulShutdown(signal: string) {
+function gracefulShutdown(signal: string): void {
   logger.info(`Received ${signal}. Shutting down API Gateway...`);
   const timer = setTimeout(() => {
     logger.warn('Forcing API Gateway shutdown due to timeout');

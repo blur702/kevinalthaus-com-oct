@@ -35,7 +35,7 @@ class ResponseCache {
 
   set(req: Request, data: unknown, headers: Record<string, string>): void {
     if (this.cache.size >= this.maxSize) {
-      // Remove oldest entries (simple LRU)
+      // Remove oldest entries (simple FIFO)
       const oldestKey = this.cache.keys().next().value;
       if (oldestKey) {
         this.cache.delete(oldestKey);

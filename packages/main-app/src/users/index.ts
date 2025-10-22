@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { query } from '../db';
-import { hashPassword } from '@monorepo/shared';
+import { hashPassword, validateEmail } from '@monorepo/shared';
 import { Role, Capability } from '@monorepo/shared';
 import { AuthenticatedRequest, authMiddleware } from '../auth';
 import { requireRole, requireCapability } from '../auth/rbac-middleware';
@@ -140,6 +140,14 @@ router.post('/', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res:
       });
     }
 
+    // Validate email format
+    if (!validateEmail(email)) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid email format',
+      });
+    }
+
     if (!Object.values(Role).includes(role as Role)) {
       return res.status(400).json({
         error: 'Bad Request',
@@ -197,6 +205,13 @@ router.patch('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, 
     let paramCount = 0;
 
     if (email !== undefined) {
+      // Validate email format if provided
+      if (!validateEmail(email)) {
+        return res.status(400).json({
+          error: 'Bad Request',
+          message: 'Invalid email format',
+        });
+      }
       paramCount++;
       updates.push(`email = $${paramCount}`);
       params.push(email);

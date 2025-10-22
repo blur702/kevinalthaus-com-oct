@@ -16,7 +16,7 @@ const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 let server: Server;
 
 // Initialize database and start server
-async function start() {
+async function start(): Promise<void> {
   try {
     // Run database migrations
     await runMigrations();
@@ -38,10 +38,10 @@ async function start() {
   }
 }
 
-start();
+void start();
 
 // Graceful shutdown handler
-async function gracefulShutdown(signal: string) {
+async function gracefulShutdown(signal: string): Promise<void> {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
 
   // Capture timeout timer so we can clear it if shutdown completes successfully
@@ -50,7 +50,7 @@ async function gracefulShutdown(signal: string) {
     process.exit(1);
   }, SHUTDOWN_TIMEOUT);
 
-  server.close(async (err) => {
+  server.close((err) => {
     if (err) {
       logger.error('Error during server shutdown', err);
       clearTimeout(shutdownTimer); // Clear timeout even on error
@@ -60,21 +60,27 @@ async function gracefulShutdown(signal: string) {
     logger.info('Server closed successfully');
 
     // Close database pool
-    try {
-      await closePool();
-      logger.info('Database pool closed');
-    } catch (dbError) {
-      logger.error('Error closing database pool', dbError as Error);
-    }
-
-    clearTimeout(shutdownTimer); // Clear timeout on successful shutdown
-    process.exit(0);
+    closePool()
+      .then(() => {
+        logger.info('Database pool closed');
+        clearTimeout(shutdownTimer); // Clear timeout on successful shutdown
+        process.exit(0);
+      })
+      .catch((dbError) => {
+        logger.error('Error closing database pool', dbError as Error);
+        clearTimeout(shutdownTimer);
+        process.exit(1);
+      });
   });
 }
 
 // Register signal handlers for graceful shutdown
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => {
+  void gracefulShutdown('SIGINT');
+});
+process.on('SIGTERM', () => {
+  void gracefulShutdown('SIGTERM');
+});
 
 // Handle uncaught exceptions and unhandled rejections
 process.on('uncaughtException', (err) => {
@@ -88,4 +94,7 @@ process.on('unhandledRejection', (reason, promise) => {
   void gracefulShutdown('unhandledRejection');
 });
 
-export { server };
+// Export getter function instead of potentially undefined server instance
+export function getServer(): Server | undefined {
+  return server;
+}
