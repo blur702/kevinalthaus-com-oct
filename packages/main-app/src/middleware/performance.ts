@@ -173,6 +173,12 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
         Object.entries(res.getHeaders()).forEach(([key, value]) => {
           if (typeof value === 'string') {
             headers[key] = value;
+          } else if (typeof value === 'number') {
+            headers[key] = String(value);
+          } else if (Array.isArray(value)) {
+            headers[key] = value.join(', ');
+          } else if (value !== null && value !== undefined) {
+            headers[key] = String(value);
           }
         });
         responseCache.set(req, data, headers);

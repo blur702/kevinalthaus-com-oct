@@ -25,10 +25,17 @@ const logger = createLogger({
   format: getLogFormat(),
 });
 
-const PORT = process.env.MAIN_APP_PORT || process.env.PORT || 3001;
+const PORT = Number(process.env.MAIN_APP_PORT || process.env.PORT || 3001);
+
+// Validate PORT is a valid number in range
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
+  logger.error('Invalid PORT value', new Error(`PORT must be an integer between 1 and 65535, got: ${PORT}`));
+  process.exit(1);
+}
+
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
-let server: Server;
+let server: Server | undefined;
 let isShuttingDown = false; // Idempotency guard for graceful shutdown
 
 // Initialize database and start server

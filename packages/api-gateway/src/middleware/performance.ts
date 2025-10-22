@@ -66,7 +66,8 @@ const responseCache = new ResponseCache();
 // Response caching middleware for GET requests
 export const cacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   // Skip caching for non-GET requests or authenticated requests
-  if (req.method !== 'GET' || req.headers.authorization) {
+  // Check for Authorization header, Cookie header (session auth), and any other auth indicators
+  if (req.method !== 'GET' || req.headers.authorization || req.headers.cookie) {
     next();
     return;
   }

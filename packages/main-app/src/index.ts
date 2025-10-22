@@ -32,8 +32,13 @@ const logger = createLogger({
 
 const app = express();
 
-// Enable trust proxy to get real client IP from X-Forwarded-For
-app.set('trust proxy', true);
+// Trust proxy configuration - can be number of hops, specific IPs, or CIDR ranges
+// Defaults to 1 (first proxy hop) for typical reverse proxy setup
+// Set TRUST_PROXY env var to customize (e.g., "1", "loopback", or specific IPs/CIDRs)
+const trustProxyConfig = process.env.TRUST_PROXY ?
+  (Number.isNaN(Number(process.env.TRUST_PROXY)) ? process.env.TRUST_PROXY : Number(process.env.TRUST_PROXY)) :
+  1;
+app.set('trust proxy', trustProxyConfig);
 
 // Parse CORS_ORIGIN from environment
 const corsOrigins = process.env.CORS_ORIGIN
