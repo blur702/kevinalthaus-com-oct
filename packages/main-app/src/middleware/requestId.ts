@@ -6,7 +6,14 @@ import { generateOrExtractRequestId } from '@monorepo/shared';
 // Express middleware for request ID management
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
   const headerValue = req.headers['x-request-id'];
-  const existingId = typeof headerValue === 'string' ? headerValue : undefined;
+  let existingId: string | undefined;
+  if (Array.isArray(headerValue) && headerValue.length > 0) {
+    existingId = headerValue[0];
+  } else if (typeof headerValue === 'string') {
+    existingId = headerValue;
+  } else {
+    existingId = undefined;
+  }
   const requestId = generateOrExtractRequestId(existingId);
   req.id = requestId;
   res.setHeader('X-Request-Id', requestId);

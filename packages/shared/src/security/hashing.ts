@@ -37,28 +37,18 @@ export function verifyPluginSignature(
 }
 
 function timingSafeEqual(a: string, b: string): boolean {
-  // Guard against length mismatch before calling cryptoTimingSafeEqual
-  if (a.length !== b.length) {
+  // Always perform the same preparatory work regardless of input to avoid timing leaks
+  let bufA: Buffer;
+  let bufB: Buffer;
+  try {
+    bufA = Buffer.from(a, 'hex');
+    bufB = Buffer.from(b, 'hex');
+    // crypto.timingSafeEqual enforces equal length and will throw if mismatched
+    return cryptoTimingSafeEqual(bufA, bufB);
+  } catch {
+    // Any error (invalid hex, length mismatch) results in false without leaking timing
     return false;
   }
-
-  // Convert hex strings to Buffers for timing-safe comparison
-  const bufA = Buffer.from(a, 'hex');
-  const bufB = Buffer.from(b, 'hex');
-
-  // Validate hex conversion produced expected byte lengths
-  // Odd-length hex strings or invalid hex characters will produce incorrect buffer sizes
-  const expectedLength = a.length / 2;
-  if (bufA.length !== expectedLength || bufB.length !== expectedLength) {
-    return false;
-  }
-
-  // Additional safety check: ensure buffers have equal lengths
-  if (bufA.length !== bufB.length) {
-    return false;
-  }
-
-  return cryptoTimingSafeEqual(bufA, bufB);
 }
 
 export function generateChecksum(content: string | Buffer): string {

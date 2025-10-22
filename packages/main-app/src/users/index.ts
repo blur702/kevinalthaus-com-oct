@@ -111,10 +111,11 @@ router.get('/:id', requireCapability(Capability.USER_VIEW), async (req: Authenti
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Not Found',
         message: 'User not found',
       });
+      return;
     }
 
     res.json({ user: result.rows[0] });
@@ -134,25 +135,28 @@ router.post('/', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res:
 
     // Validate input
     if (!email || !username || !password) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'Email, username, and password are required',
       });
+      return;
     }
 
     // Validate email format
     if (!validateEmail(email)) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid email format',
       });
+      return;
     }
 
     if (!Object.values(Role).includes(role as Role)) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid role',
       });
+      return;
     }
 
     // Hash password
@@ -179,12 +183,13 @@ router.post('/', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, res:
   } catch (error: unknown) {
     const err = error as { code?: string; constraint?: string };
     if (err.code === '23505') {
-      return res.status(409).json({
+      res.status(409).json({
         error: 'Conflict',
         message: err.constraint?.includes('email')
           ? 'Email already exists'
           : 'Username already exists',
       });
+      return;
     }
     console.error('[Users] Create error:', error);
     res.status(500).json({
@@ -207,10 +212,11 @@ router.patch('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, 
     if (email !== undefined) {
       // Validate email format if provided
       if (!validateEmail(email)) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Bad Request',
           message: 'Invalid email format',
         });
+        return;
       }
       paramCount++;
       updates.push(`email = $${paramCount}`);
@@ -225,10 +231,11 @@ router.patch('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, 
 
     if (role !== undefined) {
       if (!Object.values(Role).includes(role as Role)) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Bad Request',
           message: 'Invalid role',
         });
+        return;
       }
       paramCount++;
       updates.push(`role = $${paramCount}`);
@@ -242,10 +249,11 @@ router.patch('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, 
     }
 
     if (updates.length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'No fields to update',
       });
+      return;
     }
 
     paramCount++;
@@ -267,10 +275,11 @@ router.patch('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, 
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Not Found',
         message: 'User not found',
       });
+      return;
     }
 
     res.json({
@@ -280,12 +289,13 @@ router.patch('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest, 
   } catch (error: unknown) {
     const err = error as { code?: string; constraint?: string };
     if (err.code === '23505') {
-      return res.status(409).json({
+      res.status(409).json({
         error: 'Conflict',
         message: err.constraint?.includes('email')
           ? 'Email already exists'
           : 'Username already exists',
       });
+      return;
     }
     console.error('[Users] Update error:', error);
     res.status(500).json({
@@ -302,19 +312,21 @@ router.delete('/:id', requireRole(Role.ADMIN), async (req: AuthenticatedRequest,
 
     // Prevent self-deletion
     if (req.user?.userId === id) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'Cannot delete your own account',
       });
+      return;
     }
 
     const result = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Not Found',
         message: 'User not found',
       });
+      return;
     }
 
     res.json({ message: 'User deleted successfully' });

@@ -42,10 +42,11 @@ cat > "$CRON_FILE" <<EOF
 */5 * * * * cd $FULL_APP_DIR && $FULL_APP_DIR/scripts/monitor-postgres.sh >> $FULL_LOG_DIR/monitor.log 2>&1
 
 # Weekly database optimization (VACUUM ANALYZE) on Sundays at 3 AM
-0 3 * * 0 /usr/bin/docker exec $CONTAINER_NAME /usr/bin/psql -U postgres -d "$POSTGRES_DB" -c "VACUUM ANALYZE;" >> $FULL_LOG_DIR/vacuum.log 2>&1
+0 3 * * 0 /usr/bin/docker exec "$CONTAINER_NAME" /usr/bin/psql -U postgres -d "$POSTGRES_DB" -c "VACUUM ANALYZE;" >> "$FULL_LOG_DIR"/vacuum.log 2>&1
 
 # Clean up old logs weekly (keep last 30 days)
-0 4 * * 0 /usr/bin/find $FULL_LOG_DIR -name "*.log" -type f -mtime +30 -delete
+# Guard against unsafe or empty FULL_LOG_DIR before running destructive find
+0 4 * * 0 [ -n "$FULL_LOG_DIR" ] && [ "$FULL_LOG_DIR" != "/" ] && [ "$FULL_LOG_DIR" != "." ] && /usr/bin/find "$FULL_LOG_DIR" -name "*.log" -type f -mtime +30 -delete || echo "[ERROR] Unsafe FULL_LOG_DIR=\"$FULL_LOG_DIR\" — skipping log cleanup" >> "$FULL_LOG_DIR"/cleanup.error.log 2>&1
 EOF
 
 # Install crontab

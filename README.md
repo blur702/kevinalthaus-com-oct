@@ -501,13 +501,11 @@ For support and questions:
 
 ## 🗺 Roadmap
 
-- [ ] Plugin marketplace
+
 - [ ] Advanced theme editor
-- [ ] Real-time collaboration features
 - [ ] Mobile application
 - [ ] Advanced analytics dashboard
 - [ ] GraphQL API
-- [ ] Kubernetes deployment templates
 
 ---
 

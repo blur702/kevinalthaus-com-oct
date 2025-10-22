@@ -13,7 +13,7 @@ import {
   Link,
 } from '@mui/material';
 import api from '../../lib/api';
-import { setTokens, AuthResponse } from '../../lib/auth';
+import { AuthResponse } from '../../lib/auth';
 
 interface RegisterFormData {
   email: string;
@@ -105,14 +105,14 @@ const Register: React.FC = () => {
     setApiError('');
 
     try {
-      const response = await api.post<AuthResponse>('/auth/register', {
+      await api.post<AuthResponse>('/auth/register', {
         email: formData.email,
         username: formData.username,
         password: formData.password,
       });
 
-      const { accessToken, refreshToken } = response.data;
-      setTokens(accessToken, refreshToken);
+      // Cookie-based auth: tokens are set via httpOnly cookies by the server
+      // Response contains user info; no client-side token storage needed
 
       // Redirect to dashboard after successful registration
       navigate('/', { replace: true });

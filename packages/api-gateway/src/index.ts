@@ -82,18 +82,19 @@ if (Object.keys(helmetOptions).length > 0) {
 }
 app.use(securityHeadersMiddleware);
 app.use(keepAliveMiddleware);
-app.use(
-  cors((req, callback) => {
-    const allowAll = corsOrigins.includes('*');
-    if (allowAll) {
-      callback(null, { origin: '*', credentials: false });
-      return;
-    }
-    const origin = req.header('Origin');
-    const isAllowed = !origin || corsOrigins.includes(origin);
-    callback(null, { origin: isAllowed, credentials: corsCredentials });
-  })
-);
+  app.use(
+    cors((req, callback) => {
+      const allowAll = corsOrigins.includes('*');
+      if (allowAll) {
+        callback(null, { origin: '*', credentials: false });
+        return;
+      }
+      const origin = req.header('Origin');
+      // Require a present Origin header and membership in the allowlist
+      const isAllowed = Boolean(origin) && corsOrigins.includes(String(origin));
+      callback(null, { origin: isAllowed ? origin : false, credentials: corsCredentials });
+    })
+  );
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

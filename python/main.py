@@ -14,7 +14,7 @@ app = FastAPI(
 # Performance middleware - compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-@lru_cache(maxsize=100)
+@lru_cache()
 def get_environment_config() -> Dict[str, Any]:
     """Cached environment configuration"""
     environment = os.getenv("PYTHON_ENV", "development")

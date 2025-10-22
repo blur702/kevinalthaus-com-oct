@@ -196,86 +196,31 @@ const App: React.FC = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Protected admin routes - with drawer layout */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout
-                drawer={drawer}
-                drawerWidth={drawerWidth}
-                mobileOpen={mobileOpen}
-                handleDrawerToggle={handleDrawerToggle}
-                handleLogout={handleLogout}
-              >
-                <Dashboard />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/users"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout
-                drawer={drawer}
-                drawerWidth={drawerWidth}
-                mobileOpen={mobileOpen}
-                handleDrawerToggle={handleDrawerToggle}
-                handleLogout={handleLogout}
-              >
-                <Users />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/content"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout
-                drawer={drawer}
-                drawerWidth={drawerWidth}
-                mobileOpen={mobileOpen}
-                handleDrawerToggle={handleDrawerToggle}
-                handleLogout={handleLogout}
-              >
-                <Content />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/analytics"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout
-                drawer={drawer}
-                drawerWidth={drawerWidth}
-                mobileOpen={mobileOpen}
-                handleDrawerToggle={handleDrawerToggle}
-                handleLogout={handleLogout}
-              >
-                <Analytics />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <ProtectedLayout
-                drawer={drawer}
-                drawerWidth={drawerWidth}
-                mobileOpen={mobileOpen}
-                handleDrawerToggle={handleDrawerToggle}
-                handleLogout={handleLogout}
-              >
-                <Settings />
-              </ProtectedLayout>
-            </ProtectedRoute>
-          }
-        />
+        {[
+          { path: '/', element: <Dashboard /> },
+          { path: '/users', element: <Users /> },
+          { path: '/content', element: <Content /> },
+          { path: '/analytics', element: <Analytics /> },
+          { path: '/settings', element: <Settings /> },
+        ].map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout
+                  drawer={drawer}
+                  drawerWidth={drawerWidth}
+                  mobileOpen={mobileOpen}
+                  handleDrawerToggle={handleDrawerToggle}
+                  handleLogout={handleLogout}
+                >
+                  {route.element}
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+        ))}
       </Routes>
     </>
   )

@@ -118,10 +118,15 @@ const HomePage: React.FC = () => {
             spacing={2}
             justifyContent="center"
           >
+            {/* Build email on interaction to avoid exposing plain text to scrapers */}
             <Button
               variant="contained"
               size="large"
-              href="mailto:contact@kevinalthaus.com"
+              onClick={() => {
+                const local = 'contact';
+                const domain = 'kevinalthaus.com';
+                window.location.href = `mailto:${local}@${domain}`;
+              }}
             >
               Get In Touch
             </Button>

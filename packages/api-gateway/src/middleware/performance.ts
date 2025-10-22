@@ -155,12 +155,12 @@ export const timingMiddleware = (_req: Request, res: Response, next: NextFunctio
   const start = process.hrtime.bigint();
 
   // Wrap res.end to set header before response is sent
-  const originalEnd = res.end;
-  res.end = function(...args: unknown[]): Response {
+  const originalEnd = res.end.bind(res) as any;
+  (res as any).end = function(chunk?: any, encodingOrCallback?: any, callback?: any): Response {
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1000000; // Convert to milliseconds
     res.setHeader('X-Response-Time', `${duration.toFixed(2)}ms`);
-    return originalEnd.apply(res, args as never[]);
+    return originalEnd(chunk, encodingOrCallback, callback);
   };
 
   next();

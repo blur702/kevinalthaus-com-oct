@@ -2,7 +2,13 @@ import express from 'express';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { pluginManager } from '../plugins/manager';
 import { AuthenticatedRequest } from '../auth';
-import { logger } from '../logger';
+import { createLogger, LogLevel } from '@monorepo/shared';
+
+const logger = createLogger({
+  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
+  service: 'main-app',
+  format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
+});
 
 export const adminPluginsRouter = express.Router();
 
@@ -19,7 +25,7 @@ function validatePluginId(
   res: express.Response
 ): boolean {
   if (!VALID_PLUGIN_ID_PATTERN.test(pluginId)) {
-    logger.warn({ pluginId, route: routeName }, 'Invalid plugin ID format');
+    logger.warn('Invalid plugin ID format', { pluginId, route: routeName });
     res.status(400).send(
       layout(
         'Invalid Plugin ID',
@@ -39,11 +45,23 @@ const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const CSRF_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 
-// Require CSRF_SECRET in production, allow fallback for development
+// Require CSRF_SECRET in production. In development, generate a strong random secret if missing.
 if (process.env.NODE_ENV === 'production' && !process.env.CSRF_SECRET) {
   throw new Error('CSRF_SECRET environment variable is required in production');
 }
-const CSRF_SECRET = process.env.CSRF_SECRET || 'development_only_insecure_csrf_secret';
+const CSRF_SECRET: string = (() => {
+  if (process.env.CSRF_SECRET) {
+    return process.env.CSRF_SECRET;
+  }
+  // Development fallback: generate at startup and warn prominently
+  const generated = randomBytes(32).toString('hex');
+  if (process.env.NODE_ENV !== 'production') {
+    logger.warn(
+      'CSRF_SECRET not set. Generated ephemeral development secret. DO NOT use in persistent environments. Set CSRF_SECRET to a stable value.'
+    );
+  }
+  return generated;
+})();
 
 function signCsrf(userId: string, nonce: string, ts: number): string {
   const payload = `${userId}:${nonce}:${ts}`;
@@ -288,7 +306,7 @@ adminPluginsRouter.post('/:id/install', csrfProtection, (req, res): void => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      logger.error({ err: e, pluginId }, 'Plugin install failed');
+      logger.error('Plugin install failed', e as Error, { pluginId });
       res.status(400).send(layout('Install Error', `<p>Plugin installation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
@@ -305,7 +323,7 @@ adminPluginsRouter.post('/:id/activate', csrfProtection, (req, res): void => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      logger.error({ err: e, pluginId }, 'Plugin activate failed');
+      logger.error('Plugin activate failed', e as Error, { pluginId });
       res.status(400).send(layout('Activate Error', `<p>Plugin activation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
@@ -322,7 +340,7 @@ adminPluginsRouter.post('/:id/deactivate', csrfProtection, (req, res): void => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      logger.error({ err: e, pluginId }, 'Plugin deactivate failed');
+      logger.error('Plugin deactivate failed', e as Error, { pluginId });
       res.status(400).send(layout('Deactivate Error', `<p>Plugin deactivation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
@@ -339,7 +357,7 @@ adminPluginsRouter.post('/:id/uninstall', csrfProtection, (req, res): void => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      logger.error({ err: e, pluginId }, 'Plugin uninstall failed');
+      logger.error('Plugin uninstall failed', e as Error, { pluginId });
       res.status(400).send(layout('Uninstall Error', `<p>Plugin uninstall failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });

@@ -13,7 +13,7 @@ import {
   Link,
 } from '@mui/material';
 import api from '../../lib/api';
-import { setTokens, AuthResponse } from '../../lib/auth';
+import { AuthResponse } from '../../lib/auth';
 
 interface LoginFormData {
   email: string;
@@ -86,13 +86,13 @@ const Login: React.FC = () => {
     setApiError('');
 
     try {
-      const response = await api.post<AuthResponse>('/auth/login', {
+      await api.post<AuthResponse>('/auth/login', {
         email: formData.email,
         password: formData.password,
       });
 
-      const { accessToken, refreshToken } = response.data;
-      setTokens(accessToken, refreshToken);
+      // Cookie-based auth: tokens are set via httpOnly cookies by the server
+      // Response contains user info; no client-side token storage needed
 
       // Redirect to the page they tried to visit or to dashboard
       navigate(from, { replace: true });

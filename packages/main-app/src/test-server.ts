@@ -4,15 +4,21 @@ import * as http from 'http';
 const PORT = process.env.PORT || 3001;
 
 const server = http.createServer((req, res) => {
-  if (req.url === '/health') {
+  const url = req.url;
+  if (typeof url !== 'string') {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Bad Request', message: 'Invalid request URL' }));
+    return;
+  }
+  if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'healthy', service: 'main-app-simple' }));
-  } else if (req.url === '/') {
+  } else if (url === '/') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ message: 'Simple test server running' }));
   } else {
     res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Not Found', message: `Route ${req.url} not found`, statusCode: 404 }));
+    res.end(JSON.stringify({ error: 'Not Found', message: `Route ${url} not found`, statusCode: 404 }));
   }
 });
 

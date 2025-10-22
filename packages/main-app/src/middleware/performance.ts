@@ -164,7 +164,8 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   res.json = function(data: unknown) {
     if (res.statusCode === 200) {
       // Check response Cache-Control before caching
-      const responseCacheControl = res.getHeader('Cache-Control');
+      const responseCacheControlHeader = res.getHeader('Cache-Control');
+      const responseCacheControl = typeof responseCacheControlHeader === 'number' ? String(responseCacheControlHeader) : responseCacheControlHeader;
       const shouldCache = isCacheControlCacheable(responseCacheControl);
 
       if (shouldCache) {

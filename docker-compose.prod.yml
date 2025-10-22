@@ -80,7 +80,7 @@ services:
       context: .
       dockerfile: docker/main-app/Dockerfile
     ports:
-      - "4001:4001"
+      - "4001:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,15 +89,16 @@ services:
     restart: always
     environment:
       NODE_ENV: production
+      MAIN_APP_PORT: 3001
       JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h postgres -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-kevinalthaus} || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
       start_period: 40s
     volumes:
       - /app/node_modules

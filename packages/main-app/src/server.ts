@@ -123,7 +123,8 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   const err = reason instanceof Error ? reason : new Error(String(reason));
   logger.error('Unhandled Rejection', err, { promise: String(promise) });
-  void gracefulShutdown('unhandledRejection');
+  // Exit immediately after logging per Node.js guidance to avoid undefined state
+  process.exit(1);
 });
 
 // Export getter function instead of potentially undefined server instance

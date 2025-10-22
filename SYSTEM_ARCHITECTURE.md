@@ -558,7 +558,7 @@ app.get('/health', (req, res) => {
 ```typescript
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   const errorId = generateErrorId();
-  
+
   logger.error('Unhandled error', err, {
     errorId,
     url: req.url,
@@ -566,11 +566,20 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     userAgent: req.get('User-Agent')
   });
 
-  res.status(500).json({
+  // Only expose detailed error information in strict local development
+  const isLocalDev = process.env.NODE_ENV === 'development' && (process.env.DEPLOY_ENV ?? 'local') === 'local';
+
+  const body: Record<string, unknown> = {
     error: 'Internal Server Error',
     errorId,
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-  });
+  };
+
+  if (isLocalDev) {
+    body.message = err.message || 'Unknown error';
+    body.stack = err.stack;
+  }
+
+  res.status(500).json(body);
 });
 ```
 

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import {
   compressionMiddleware,
   rateLimitMiddleware,
@@ -101,6 +102,7 @@ app.use(
 app.use(morgan('combined'));
 app.use(express.json({ limit: '1mb' })); // Reduced from 10mb to prevent DoS
 app.use(express.urlencoded({ extended: true, limit: '100kb' })); // Reduced from 10mb
+app.use(cookieParser());
 
 // Cache middleware for GET requests
 app.use(cacheMiddleware);

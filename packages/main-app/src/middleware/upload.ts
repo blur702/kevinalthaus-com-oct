@@ -100,13 +100,8 @@ const storage = multer.diskStorage({
     }
   },
   filename: (_req, file, cb) => {
-    // Extract and validate the file extension
+    // Extract the file extension (validation happens in fileFilter)
     const originalExt = path.extname(file.originalname).toLowerCase();
-    
-    // Check if extension is in allowlist (derived from allowed MIME types)
-    if (!ALLOWED_EXTENSIONS.has(originalExt)) {
-      return cb(new Error(`File extension ${originalExt} not allowed. Allowed extensions (based on MIME types): ${Array.from(ALLOWED_EXTENSIONS).join(', ')}`), '');
-    }
 
     // Sanitize the original filename
     const baseName = path.basename(file.originalname, path.extname(file.originalname));
@@ -126,14 +121,17 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ): void => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    // Reject files with disallowed extensions before writing
+    cb(null, false);
+    return;
+  }
+
   if (ALLOWED_FILE_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(
-      new Error(
-        `Invalid file type. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`
-      )
-    );
+    cb(new Error(`Invalid file type. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`));
   }
 };
 

@@ -21,6 +21,19 @@ if (!JWT_SECRET) {
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const REFRESH_TOKEN_EXPIRES_DAYS = 30;
 
+const ACCESS_TOKEN_COOKIE_NAME = 'accessToken';
+const REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
+
+// Helper function to configure cookie options
+function getCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    maxAge,
+  };
+}
+
 // Dummy hash for timing attack prevention - valid bcrypt hash format
 const DUMMY_PASSWORD_HASH = '$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
@@ -146,6 +159,11 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
       [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req)]
     );
 
+    const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+    res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getCookieOptions(sevenDaysInMs));
+    res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getCookieOptions(thirtyDaysInMs));
+
     res.status(201).json({
       message: 'User registered successfully',
       user: {
@@ -154,8 +172,6 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
         username: user.username,
         role: user.role,
       },
-      accessToken,
-      refreshToken,
     });
   } catch (error: unknown) {
     const err = error as { code?: string; constraint?: string };
@@ -270,6 +286,11 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
       [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req)]
     );
 
+    const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+    res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getCookieOptions(sevenDaysInMs));
+    res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getCookieOptions(thirtyDaysInMs));
+
     res.json({
       message: 'Login successful',
       user: {
@@ -278,8 +299,6 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
         username: user.username,
         role: user.role,
       },
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
     console.error('[Auth] Login error:', error);
@@ -290,14 +309,11 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-interface RefreshRequest {
-  refreshToken: string;
-}
 
 // POST /api/auth/refresh
 router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body as RefreshRequest;
+    const { refreshToken } = req.cookies as { refreshToken?: string };
 
     // Validate input type
     if (typeof refreshToken !== 'string') {
@@ -397,9 +413,13 @@ router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
       };
     });
 
+    const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+    res.cookie(ACCESS_TOKEN_COOKIE_NAME, result.accessToken, getCookieOptions(sevenDaysInMs));
+    res.cookie(REFRESH_TOKEN_COOKIE_NAME, result.refreshToken, getCookieOptions(thirtyDaysInMs));
+
     res.json({
       message: 'Token refreshed',
-      ...result,
     });
   } catch (error) {
     console.error('[Auth] Refresh error:', error);
@@ -410,23 +430,11 @@ router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-interface LogoutRequest {
-  refreshToken?: string;
-}
 
 // POST /api/auth/logout
 router.post('/logout', asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body as LogoutRequest;
-
-    // Validate input type if present
-    if (refreshToken !== undefined && typeof refreshToken !== 'string') {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: 'Refresh token must be a string',
-      });
-      return;
-    }
+    const { refreshToken } = req.cookies as { refreshToken?: string };
 
     if (refreshToken) {
       const tokenHash = hashSHA256(refreshToken);
@@ -434,6 +442,11 @@ router.post('/logout', asyncHandler(async (req: Request, res: Response) => {
         tokenHash,
       ]);
     }
+
+    // Clear cookies
+    const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' as const };
+    res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, cookieOptions);
+    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, cookieOptions);
 
     res.json({ message: 'Logout successful' });
   } catch (error) {
@@ -444,6 +457,14 @@ router.post('/logout', asyncHandler(async (req: Request, res: Response) => {
     });
   }
 }));
+
+// GET /api/auth/validate
+router.get('/validate', authMiddleware, (req: AuthenticatedRequest, res: Response) => {
+  res.status(200).json({
+    message: 'Token is valid',
+    user: req.user,
+  });
+});
 
 // GET /api/users/me
 router.get('/me', authMiddleware, (req: AuthenticatedRequest, res: Response) => {
@@ -458,17 +479,24 @@ export function authMiddleware(
   res: Response,
   next: NextFunction
 ): void {
-  const authHeader = req.headers.authorization;
+  let token: string | undefined;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  // 1. Check for token in httpOnly cookie
+  if (req.cookies && req.cookies.accessToken) {
+    token = req.cookies.accessToken;
+  }
+  // 2. Fallback to Authorization header for backward compatibility
+  else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.substring(7);
+  }
+
+  if (!token) {
     res.status(401).json({
       error: 'Unauthorized',
       message: 'No token provided',
     });
     return;
   }
-
-  const token = authHeader.substring(7);
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET!) as TokenPayload;

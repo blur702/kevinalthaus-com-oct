@@ -419,8 +419,15 @@ interface RequestOptions {
 ```typescript
 export async function fetchWeatherData(context: PluginExecutionContext, city: string) {
   try {
+    const apiKey = String(context.config?.apiKey || '');
+    const params = new URLSearchParams({
+      q: city,
+      appid: apiKey,
+    });
+    const url = `https://api.openweathermap.org/data/2.5/weather?${params.toString()}`;
+
     const response = await context.api.get(
-      `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${context.config?.apiKey}`,
+      url,
       {
         timeout: 5000,
         retries: 3,

@@ -5,7 +5,8 @@
     "rootDir": "src"
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../shared/src/types/**/*.d.ts"
   ],
   "references": [
     {

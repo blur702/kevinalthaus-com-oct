@@ -98,6 +98,9 @@ api.interceptors.response.use(
         window.dispatchEvent(new CustomEvent('auth:logout', {
           detail: { reason: 'no_refresh_token' }
         }));
+        // Reset refresh state and clear any queued requests to avoid hanging
+        isRefreshing = false;
+        processQueue(new Error('No refresh token available'), null);
         return Promise.reject(error);
       }
 
