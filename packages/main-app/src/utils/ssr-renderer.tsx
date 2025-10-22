@@ -1,0 +1,90 @@
+import React from 'react';
+import { renderToString } from 'react-dom/server';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { backendTheme } from '../theme/backend-theme';
+
+export interface SSRRenderOptions {
+  title: string;
+  csrfToken?: string;
+  additionalHead?: string;
+  additionalBody?: string;
+}
+
+export function renderReactSSR(
+  component: React.ReactElement,
+  options: SSRRenderOptions
+): string {
+  // Wrap component with Material-UI providers
+  const app = (
+    <ThemeProvider theme={backendTheme}>
+      <CssBaseline />
+      {component}
+    </ThemeProvider>
+  );
+
+  // Render to string
+  const html = renderToString(app);
+
+  // Create full HTML document with Material-UI styling
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(options.title)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    /* Material-UI CSS Reset and Base Styles */
+    * {
+      box-sizing: border-box;
+    }
+    html {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    body {
+      margin: 0;
+      font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+      font-size: 14px;
+      line-height: 1.43;
+      letter-spacing: 0.01071em;
+      color: rgba(0, 0, 0, 0.87);
+      background-color: #fafafa;
+    }
+  </style>
+  ${options.additionalHead || ''}
+  <script>
+    // Add CSRF token to all forms
+    document.addEventListener('DOMContentLoaded', function() {
+      const token = document.body.dataset.csrfToken;
+      if (token) {
+        const forms = document.querySelectorAll('form[method="post"]');
+        forms.forEach(form => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = '_csrf';
+          input.value = token;
+          form.appendChild(input);
+        });
+      }
+    });
+  </script>
+</head>
+<body${options.csrfToken ? ` data-csrf-token="${escapeHtml(options.csrfToken)}"` : ''}>
+  ${html}
+  ${options.additionalBody || ''}
+</body>
+</html>`;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/`/g, '&#96;');
+}

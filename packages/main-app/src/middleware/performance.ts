@@ -224,18 +224,19 @@ export const rateLimitMiddleware = rateLimit({
 export const timingMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   const start = process.hrtime.bigint();
 
-  // Store original res.end
-  const originalEnd = res.end.bind(res);
+  // Store original res.end with proper typing
+  type EndFunction = typeof res.end;
+  const originalEnd: EndFunction = res.end.bind(res);
 
   // Override res.end to set timing header before headers are sent
-  res.end = function(chunk?: any, encodingOrCallback?: any, callback?: any): Response {
+  res.end = function(this: Response, ...args: Parameters<EndFunction>): ReturnType<EndFunction> {
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1000000; // Convert to milliseconds
     res.setHeader('X-Response-Time', `${duration.toFixed(2)}ms`);
 
     // Call original res.end with original arguments
-    return originalEnd.call(res, chunk, encodingOrCallback, callback);
-  };
+    return originalEnd(...args);
+  } as EndFunction;
 
   next();
 };

@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import { query, transaction } from '../db';
-import { hashPassword, verifyPassword, hashSHA256 } from '@monorepo/shared';
+import { hashPassword, verifyPassword, hashSHA256, defaultLogger } from '@monorepo/shared';
 import { Role } from '@monorepo/shared';
 import { asyncHandler } from '../utils/asyncHandler';
 
@@ -228,7 +228,14 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
     // Always perform password verification to prevent timing attacks
     // Use dummy hash when user not found or inactive
     const hashToVerify = (user && user.is_active) ? user.password_hash : DUMMY_PASSWORD_HASH;
-    const isValid = await verifyPassword(password, hashToVerify);
+    let isValid = false;
+    try {
+      isValid = await verifyPassword(password, hashToVerify);
+    } catch (error) {
+      // If verification fails (e.g., invalid hash format), treat as invalid password
+      defaultLogger.error('Password verification error', error as Error);
+      isValid = false;
+    }
 
     // Check if user exists and is active
     if (!user) {

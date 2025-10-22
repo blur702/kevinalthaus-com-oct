@@ -1,7 +1,10 @@
 import express from 'express';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+import React from 'react';
 import { pluginManager } from '../plugins/manager';
 import { AuthenticatedRequest } from '../auth';
+import { renderReactSSR } from '../utils/ssr-renderer';
+import PluginManagement, { Plugin } from '../components/PluginManagement';
 import { createLogger, LogLevel } from '@monorepo/shared';
 
 const logger = createLogger({
@@ -214,7 +217,7 @@ function layout(title: string, body: string, csrfToken?: string): string {
       .status-installed { background: #e0e7ff; }
       .status-inactive { background: #fef3c7; }
       .status-error { background: #fee2e2; }
-    </style>
+    </link>
     <script>
       // Add CSRF token to all forms
       document.addEventListener('DOMContentLoaded', function() {
@@ -244,54 +247,39 @@ adminPluginsRouter.get('/', csrfProtection, (req, res): void => {
   const registry = pluginManager.listRegistry();
   const regMap = new Map(registry.map((r) => [r.id, r]));
 
-  const rows = discovered.map((d) => {
+  // Transform plugin data for React component
+  const plugins: Plugin[] = discovered.map((d) => {
     const manifest = d.manifest;
     const id = manifest?.name ?? d.name;
     const reg = id ? regMap.get(id) : undefined;
-    const status = reg?.status ?? 'not installed';
-    const statusClass =
-      String(status) === 'active' ? 'status-active' :
-      String(status) === 'installed' ? 'status-installed' :
-      String(status) === 'inactive' ? 'status-inactive' : '';
+    const status = reg?.status ?? 'inactive';
 
-    const actions = [] as string[];
-    if (!reg && manifest && manifest.name) {
-      actions.push(`<form method="post" action="/admin/plugins/${escapeHtml(manifest.name)}/install"><button>Install</button></form>`);
-    }
-    if (reg && String(reg.status) !== 'active') {
-      actions.push(`<form method="post" action="/admin/plugins/${escapeHtml(reg.id)}/activate"><button>Activate</button></form>`);
-    }
-    if (reg && String(reg.status) === 'active') {
-      actions.push(`<form method="post" action="/admin/plugins/${escapeHtml(reg.id)}/deactivate"><button>Deactivate</button></form>`);
-    }
-    if (reg) {
-      actions.push(`<form method="post" action="/admin/plugins/${escapeHtml(reg.id)}/uninstall" onsubmit="return confirm('Uninstall plugin?');"><button>Uninstall</button></form>`);
-    }
-
-    return `<tr>
-      <td>${escapeHtml(manifest?.displayName ?? id)}</td>
-      <td>${escapeHtml(manifest?.version ?? '-')}</td>
-      <td>${escapeHtml(manifest?.description ?? '')}</td>
-      <td><span class="badge ${statusClass}">${escapeHtml(String(status))}</span></td>
-      <td class="actions">${actions.join('')}</td>
-    </tr>`;
+    return {
+      id: id,
+      name: manifest?.displayName ?? id,
+      version: manifest?.version,
+      description: manifest?.description,
+      author: (manifest as any)?.author?.name,
+      status: String(status) === 'not installed' ? 'inactive' : 
+              (String(status) as 'active' | 'installed' | 'inactive' | 'error')
+    };
   });
-
-  const body = `
-    <p>Manage discovered plugins in the <code>plugins/</code> directory. Use the actions to install, activate, deactivate and uninstall.</p>
-    <table>
-      <thead>
-        <tr><th>Name</th><th>Version</th><th>Description</th><th>Status</th><th>Actions</th></tr>
-      </thead>
-      <tbody>
-        ${rows.join('\n')}
-      </tbody>
-    </table>
-  `;
 
   const requestWithCSRF = req as unknown as { csrfToken?: () => string };
   const csrfToken = requestWithCSRF.csrfToken ? requestWithCSRF.csrfToken() : undefined;
-  res.type('html').send(layout('Plugin Management', body, csrfToken));
+
+  // Render React component using SSR
+  const component = React.createElement(PluginManagement, { 
+    plugins, 
+    csrfToken 
+  });
+
+  const html = renderReactSSR(component, {
+    title: 'Plugin Management',
+    csrfToken
+  });
+
+  res.type('html').send(html);
 });
 
 adminPluginsRouter.post('/:id/install', csrfProtection, (req, res): void => {

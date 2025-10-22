@@ -30,50 +30,33 @@ const MIME_TO_EXTENSIONS: Record<string, string[]> = {
   'text/csv': ['.csv'],
 };
 
-// Generate allowed extensions from MIME types
+// Generate allowed extensions from MIME types (strict - no derivation)
 function generateAllowedExtensions(mimeTypes: string[]): Set<string> {
   const extensions = new Set<string>();
-  
+
   for (const mimeType of mimeTypes) {
     const normalizedMime = mimeType.toLowerCase().trim();
     const exts = MIME_TO_EXTENSIONS[normalizedMime];
-    
+
     if (exts) {
-      // Use predefined mappings
+      // Use predefined mappings only
       exts.forEach(ext => extensions.add(ext));
     } else {
-      // Derive extension from MIME type subtype
-      const parts = normalizedMime.split('/');
-      if (parts.length === 2) {
-        const [type, subtype] = parts.map(p => p.trim());
-        if (!type || !subtype) {
-          throw new Error(
-            `Invalid MIME type format: "${mimeType}". ` +
-            `Both type and subtype must be non-empty strings. ` +
-            `Expected format: "type/subtype" (e.g., "video/mp4", "image/jpeg"). ` +
-            `Please check your ALLOWED_FILE_TYPES configuration.`
-          );
-        }
-        // Handle compound subtypes (e.g., 'vnd.ms-excel' -> 'excel')
-        const extensionBase = subtype.split('.').pop() || subtype;
-        const derivedExt = `.${extensionBase}`;
-        extensions.add(derivedExt);
-      } else {
-        // Invalid MIME type format - fail fast with clear error
-        throw new Error(
-          `Invalid MIME type format: "${mimeType}". ` +
-          `Expected format: "type/subtype" (e.g., "video/mp4", "image/jpeg"). ` +
-          `Please check your ALLOWED_FILE_TYPES configuration.`
-        );
-      }
+      // Reject unknown MIME types - do not derive extensions for security
+      throw new Error(
+        `Unsupported MIME type: "${mimeType}". ` +
+        `This MIME type is not in the predefined safe list. ` +
+        `Supported MIME types are: ${Object.keys(MIME_TO_EXTENSIONS).join(', ')}. ` +
+        `Please update MIME_TO_EXTENSIONS if you need to support this type.`
+      );
     }
   }
-  
+
   // If no MIME types configured, use safe defaults
   if (extensions.size === 0) {
     ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'].forEach(ext => extensions.add(ext));
   }
-  
+
   return extensions;
 }
 
@@ -175,17 +158,40 @@ export async function sniffAndValidateFile(filePath: string, originalName: strin
 
       const ext = path.extname(originalName).toLowerCase();
 
+      // File type couldn't be detected - reject for safety
       if (!detectedMime) {
-        return { valid: false, reason: 'Unable to detect file type' };
+        return {
+          valid: false,
+          reason: 'Unable to detect file type from content. File may be corrupted or unsupported.'
+        };
       }
 
+      // Check if detected MIME type is in allowed list
       if (!ALLOWED_FILE_TYPES.includes(detectedMime)) {
-        return { valid: false, detectedMime, reason: 'MIME not allowed' };
+        return {
+          valid: false,
+          detectedMime,
+          reason: `Detected MIME type "${detectedMime}" is not in allowed types list`
+        };
       }
 
-      const allowedExts = MIME_TO_EXTENSIONS[detectedMime] || [];
-      if (allowedExts.length > 0 && !allowedExts.includes(ext)) {
-        return { valid: false, detectedMime, reason: 'Extension does not match content' };
+      // Verify extension matches detected content type
+      const allowedExts = MIME_TO_EXTENSIONS[detectedMime];
+      if (!allowedExts) {
+        // MIME type is allowed but not in our mapping - this shouldn't happen due to strict resolution
+        return {
+          valid: false,
+          detectedMime,
+          reason: `Internal error: No extension mapping for MIME type "${detectedMime}"`
+        };
+      }
+
+      if (!allowedExts.includes(ext)) {
+        return {
+          valid: false,
+          detectedMime,
+          reason: `File extension "${ext}" does not match detected content type "${detectedMime}". Expected one of: ${allowedExts.join(', ')}`
+        };
       }
 
       return { valid: true, detectedMime };

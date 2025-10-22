@@ -21,8 +21,9 @@ router.get('/', requireCapability(Capability.USER_VIEW), async (req: Authenticat
       active = '',
     } = req.query;
 
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
+    // Validate and sanitize pagination parameters
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 10));
     const offset = (pageNum - 1) * limitNum;
 
     let whereClause = 'WHERE 1=1';
@@ -72,13 +73,15 @@ router.get('/', requireCapability(Capability.USER_VIEW), async (req: Authenticat
       [...params, limitNum, offset]
     );
 
+    const totalPages = limitNum > 0 ? Math.ceil(total / limitNum) : 0;
+
     res.json({
       users: result.rows,
       pagination: {
         page: pageNum,
         limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limitNum),
+        totalPages,
       },
     });
   } catch (error) {

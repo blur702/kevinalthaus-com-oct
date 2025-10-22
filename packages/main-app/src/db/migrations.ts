@@ -1,10 +1,18 @@
 import { query, transaction } from './index';
 import { PoolClient } from 'pg';
 
+// Advisory lock ID for migrations (arbitrary number, must be consistent)
+const MIGRATION_LOCK_ID = 1234567890;
+
 export async function runMigrations(): Promise<void> {
   console.log('[Migrations] Running database migrations...');
 
   try {
+    // Acquire advisory lock to prevent concurrent migrations
+    console.log('[Migrations] Acquiring migration lock...');
+    await query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
+    console.log('[Migrations] Migration lock acquired');
+
     // Create migrations tracking table
     await query(`
       CREATE TABLE IF NOT EXISTS migrations (
@@ -140,6 +148,15 @@ export async function runMigrations(): Promise<void> {
   } catch (error) {
     console.error('[Migrations] Migration failed:', error);
     throw error;
+  } finally {
+    // Release advisory lock
+    try {
+      await query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
+      console.log('[Migrations] Migration lock released');
+    } catch (unlockError) {
+      console.error('[Migrations] Failed to release migration lock:', unlockError);
+      // Don't throw here, as the lock will be auto-released when connection closes
+    }
   }
 }
 

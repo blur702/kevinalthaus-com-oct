@@ -65,16 +65,23 @@ const responseCache = new ResponseCache();
 
 // Response caching middleware for GET requests
 export const cacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
-  if (req.method !== 'GET') {
+  // Skip caching for non-GET requests or authenticated requests
+  if (req.method !== 'GET' || req.headers.authorization) {
     next();
     return;
   }
 
   const cached = responseCache.get(req);
   if (cached) {
-    // Set cached headers
+    // Set cached headers (preserve numeric and array values)
     Object.entries(cached.headers).forEach(([key, value]) => {
-      res.set(key, value);
+      if (typeof value === 'number') {
+        res.set(key, String(value));
+      } else if (Array.isArray(value)) {
+        res.set(key, value.map(String));
+      } else {
+        res.set(key, value);
+      }
     });
     res.set('X-Cache', 'HIT');
     res.json(cached.data);
@@ -155,13 +162,15 @@ export const timingMiddleware = (_req: Request, res: Response, next: NextFunctio
   const start = process.hrtime.bigint();
 
   // Wrap res.end to set header before response is sent
-  const originalEnd = res.end.bind(res) as any;
-  (res as any).end = function(chunk?: any, encodingOrCallback?: any, callback?: any): Response {
+  type EndFunction = typeof res.end;
+  const originalEnd: EndFunction = res.end.bind(res);
+
+  res.end = function(this: Response, ...args: Parameters<EndFunction>): ReturnType<EndFunction> {
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1000000; // Convert to milliseconds
     res.setHeader('X-Response-Time', `${duration.toFixed(2)}ms`);
-    return originalEnd(chunk, encodingOrCallback, callback);
-  };
+    return originalEnd(...args);
+  } as EndFunction;
 
   next();
 };
