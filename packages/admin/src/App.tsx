@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import {
   Box,
   CssBaseline,
@@ -14,6 +14,7 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  Button,
 } from '@mui/material'
 import {
   Menu as MenuIcon,
@@ -22,6 +23,7 @@ import {
   Settings as SettingsIcon,
   Analytics as AnalyticsIcon,
   Article as ArticleIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 
@@ -31,6 +33,13 @@ import Users from './pages/Users.tsx'
 import Content from './pages/Content.tsx'
 import Analytics from './pages/Analytics.tsx'
 import Settings from './pages/Settings.tsx'
+
+// Import auth components and pages
+import ProtectedRoute from './components/ProtectedRoute.tsx'
+import Login from './pages/auth/Login.tsx'
+import Register from './pages/auth/Register.tsx'
+import ResetPassword from './pages/auth/ResetPassword.tsx'
+import { clearTokens } from './lib/auth.ts'
 
 const drawerWidth = 240
 
@@ -51,9 +60,15 @@ const navItems: NavItem[] = [
 const App: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
 
   const handleDrawerToggle = (): void => {
     setMobileOpen(!mobileOpen)
+  }
+
+  const handleLogout = (): void => {
+    clearTokens()
+    navigate('/login')
   }
 
   const drawer = (
@@ -81,9 +96,9 @@ const App: React.FC = () => {
     </div>
   )
 
-  return (
+  // Protected layout component with drawer navigation
+  const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <Box sx={{ display: 'flex' }}>
-      <CssBaseline />
       <AppBar
         position="fixed"
         sx={{
@@ -101,9 +116,16 @@ const App: React.FC = () => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Kevin Althaus - Admin Dashboard
           </Typography>
+          <Button
+            color="inherit"
+            onClick={handleLogout}
+            startIcon={<LogoutIcon />}
+          >
+            Logout
+          </Button>
         </Toolbar>
       </AppBar>
       <Box
@@ -144,15 +166,73 @@ const App: React.FC = () => {
         }}
       >
         <Toolbar />
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/content" element={<Content />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
+        {children}
       </Box>
     </Box>
+  )
+
+  return (
+    <>
+      <CssBaseline />
+      <Routes>
+        {/* Public auth routes - no drawer layout */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Protected admin routes - with drawer layout */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <ProtectedLayout>
+                <Dashboard />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <ProtectedLayout>
+                <Users />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/content"
+          element={
+            <ProtectedRoute>
+              <ProtectedLayout>
+                <Content />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <ProtectedLayout>
+                <Analytics />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <ProtectedLayout>
+                <Settings />
+              </ProtectedLayout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
   )
 }
 
