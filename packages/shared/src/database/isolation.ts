@@ -42,7 +42,7 @@ export const ADMIN_ISOLATION_POLICY: IsolationPolicy = {
   allowedOperations: Object.values(DatabaseOperation),
 };
 
-export interface ResourceQuotas {
+export interface QueryResourceLimits {
   maxConnections: number;
   maxStorageBytes: number;
   maxTablesPerPlugin: number;
@@ -56,6 +56,9 @@ export interface ResourceQuotas {
   maxExecutionTime: number;
 }
 
+/** @deprecated Use QueryResourceLimits instead */
+export type ResourceQuotas = QueryResourceLimits;
+
 export class DatabaseIsolationEnforcer {
   // Pre-compiled regex patterns for better performance
   private static readonly complexityPatterns = {
@@ -68,17 +71,27 @@ export class DatabaseIsolationEnforcer {
   };
 
   constructor(
-    private readonly quotas: ResourceQuotas,
+    private readonly quotas: QueryResourceLimits,
   ) {}
 
-  // Note: This method does NOT enforce maxExecutionTime from ResourceQuotas.
+  // Note: This method does NOT enforce maxExecutionTime from QueryResourceLimits.
   // Execution time limits must be applied at query execution time using database
   // timeout mechanisms (e.g., PostgreSQL's statement_timeout or query cancellation).
   enforceQuotas(
     query: string,
     estimatedRows: number = 1000,
   ): void {
-    const complexity = this.estimateQueryComplexity(query);
+    // Input validation
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      throw new Error('Query parameter cannot be empty or whitespace');
+    }
+
+    if (!Number.isFinite(estimatedRows) || !Number.isInteger(estimatedRows) || estimatedRows <= 0) {
+      throw new Error('Estimated rows must be a finite positive integer greater than zero');
+    }
+
+    const complexity = this.estimateQueryComplexity(trimmedQuery);
 
     if (complexity > this.quotas.maxQueryComplexity) {
       throw new Error(
@@ -93,6 +106,15 @@ export class DatabaseIsolationEnforcer {
     }
   }
 
+  // TODO: The current regex-based approach has significant limitations:
+  // - Cannot distinguish SQL keywords within strings or comments (e.g., 'JOIN' in WHERE clause string)
+  // - Misses cartesian products (missing ON clause in JOINs)
+  // - Does not detect UNION/INTERSECT/EXCEPT operations
+  // - Cannot identify recursive CTEs which are much more expensive
+  // - Does not assess WHERE clause complexity (e.g., function calls, type conversions)
+  // - Misses OR chains that prevent index usage
+  // For production use, replace with a proper SQL parser like node-sql-parser or pgsql-parser
+  // to perform accurate AST-based complexity analysis.
   private estimateQueryComplexity(query: string): number {
     let complexity = 1;
 
@@ -130,7 +152,7 @@ export interface QueryValidationResult {
   complexity: number;
 }
 
-export interface ResourceQuota {
+export interface InfraResourceLimits {
   maxConnections: number;
   maxStorageBytes: number;
   maxTablesPerPlugin: number;
@@ -138,7 +160,10 @@ export interface ResourceQuota {
   maxIndexesPerTable: number;
 }
 
-export const DEFAULT_RESOURCE_QUOTA: ResourceQuota = {
+/** @deprecated Use InfraResourceLimits instead */
+export type ResourceQuota = InfraResourceLimits;
+
+export const DEFAULT_RESOURCE_QUOTA: InfraResourceLimits = {
   maxConnections: 5,
   maxStorageBytes: 100 * 1024 * 1024,
   maxTablesPerPlugin: 20,
@@ -147,14 +172,14 @@ export const DEFAULT_RESOURCE_QUOTA: ResourceQuota = {
 };
 
 export function enforceResourceQuota(
-  quota: ResourceQuota
+  quota: InfraResourceLimits
 ): ResourceQuotaEnforcer {
   return new ResourceQuotaEnforcer(quota);
 }
 
 export class ResourceQuotaEnforcer {
   constructor(
-    private readonly quota: ResourceQuota
+    private readonly quota: InfraResourceLimits
   ) {}
 
   checkConnectionLimit(currentConnections: number): boolean {

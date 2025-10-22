@@ -92,7 +92,7 @@ export async function runMigrations(): Promise<void> {
           value JSONB NOT NULL,
           description TEXT,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_by UUID REFERENCES users(id)
+          updated_by UUID REFERENCES users(id) ON DELETE SET NULL
         )
       `);
     });

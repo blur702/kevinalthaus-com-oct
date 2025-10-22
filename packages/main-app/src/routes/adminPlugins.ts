@@ -245,45 +245,81 @@ adminPluginsRouter.get('/', csrfProtection, (req, res): void => {
 });
 
 adminPluginsRouter.post('/:id/install', csrfProtection, (req, res): void => {
-  pluginManager.install(req.params.id)
+  const pluginId = req.params.id;
+  const validIdPattern = /^[a-z0-9-_]+$/i;
+
+  if (!validIdPattern.test(pluginId)) {
+    logger.warn({ pluginId, route: 'install' }, 'Invalid plugin ID format');
+    res.status(400).send(layout('Invalid Plugin ID', `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`));
+    return;
+  }
+
+  pluginManager.install(pluginId)
     .then(() => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      logger.error({ err: e, pluginId: req.params.id }, 'Plugin install failed');
+      logger.error({ err: e, pluginId }, 'Plugin install failed');
       res.status(400).send(layout('Install Error', `<p>Plugin installation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
 
 adminPluginsRouter.post('/:id/activate', csrfProtection, (req, res): void => {
-  pluginManager.activate(req.params.id)
+  const pluginId = req.params.id;
+  const validIdPattern = /^[a-z0-9-_]+$/i;
+
+  if (!validIdPattern.test(pluginId)) {
+    logger.warn({ pluginId, route: 'activate' }, 'Invalid plugin ID format');
+    res.status(400).send(layout('Invalid Plugin ID', `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`));
+    return;
+  }
+
+  pluginManager.activate(pluginId)
     .then(() => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      logger.error({ err: e, pluginId: req.params.id }, 'Plugin activate failed');
+      logger.error({ err: e, pluginId }, 'Plugin activate failed');
       res.status(400).send(layout('Activate Error', `<p>Plugin activation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
 
 adminPluginsRouter.post('/:id/deactivate', csrfProtection, (req, res): void => {
-  pluginManager.deactivate(req.params.id)
+  const pluginId = req.params.id;
+  const validIdPattern = /^[a-z0-9-_]+$/i;
+
+  if (!validIdPattern.test(pluginId)) {
+    logger.warn({ pluginId, route: 'deactivate' }, 'Invalid plugin ID format');
+    res.status(400).send(layout('Invalid Plugin ID', `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`));
+    return;
+  }
+
+  pluginManager.deactivate(pluginId)
     .then(() => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      logger.error({ err: e, pluginId: req.params.id }, 'Plugin deactivate failed');
+      logger.error({ err: e, pluginId }, 'Plugin deactivate failed');
       res.status(400).send(layout('Deactivate Error', `<p>Plugin deactivation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
 
 adminPluginsRouter.post('/:id/uninstall', csrfProtection, (req, res): void => {
-  pluginManager.uninstall(req.params.id)
+  const pluginId = req.params.id;
+  const validIdPattern = /^[a-z0-9-_]+$/i;
+
+  if (!validIdPattern.test(pluginId)) {
+    logger.warn({ pluginId, route: 'uninstall' }, 'Invalid plugin ID format');
+    res.status(400).send(layout('Invalid Plugin ID', `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`));
+    return;
+  }
+
+  pluginManager.uninstall(pluginId)
     .then(() => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      logger.error({ err: e, pluginId: req.params.id }, 'Plugin uninstall failed');
+      logger.error({ err: e, pluginId }, 'Plugin uninstall failed');
       res.status(400).send(layout('Uninstall Error', `<p>Plugin uninstall failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });

@@ -1,12 +1,13 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Grid,
   Card,
   CardContent,
   Typography,
-
   Chip,
+  CircularProgress,
+  Alert,
 } from '@mui/material'
 import {
   TrendingUp,
@@ -14,6 +15,7 @@ import {
   Article,
   Visibility,
 } from '@mui/icons-material'
+import api from '../lib/api'
 
 interface StatCardProps {
   title: string
@@ -66,9 +68,24 @@ const StatCard: React.FC<StatCardProps> = ({
   </Card>
 )
 
+interface DashboardStat {
+  id: string
+  title: string
+  value: string | number
+  change?: string
+  icon: React.ReactNode
+  color: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+}
+
 const Dashboard: React.FC = () => {
-  const stats = [
+  const [stats, setStats] = useState<DashboardStat[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fallback mock data
+  const mockStats: DashboardStat[] = [
     {
+      id: 'total-users',
       title: 'Total Users',
       value: '2,543',
       change: '+12%',
@@ -76,6 +93,7 @@ const Dashboard: React.FC = () => {
       color: 'primary' as const,
     },
     {
+      id: 'page-views',
       title: 'Page Views',
       value: '45,231',
       change: '+8%',
@@ -83,6 +101,7 @@ const Dashboard: React.FC = () => {
       color: 'success' as const,
     },
     {
+      id: 'articles',
       title: 'Articles',
       value: '128',
       change: '+5%',
@@ -90,6 +109,7 @@ const Dashboard: React.FC = () => {
       color: 'warning' as const,
     },
     {
+      id: 'growth',
       title: 'Growth',
       value: '23.5%',
       change: '+2.1%',
@@ -97,6 +117,90 @@ const Dashboard: React.FC = () => {
       color: 'secondary' as const,
     },
   ]
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const fetchStats = async (): Promise<void> => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const response = await api.get<{
+          totalUsers?: number
+          pageViews?: number
+          articles?: number
+          growth?: number
+          changes?: {
+            users?: string
+            views?: string
+            articles?: string
+            growth?: string
+          }
+        }>('/api/dashboard/stats', {
+          signal: controller.signal,
+        })
+
+        const data = response.data
+
+        // Map API response to stat cards with icons and colors
+        const fetchedStats: DashboardStat[] = [
+          {
+            id: 'total-users',
+            title: 'Total Users',
+            value: data.totalUsers?.toLocaleString() ?? mockStats[0].value,
+            change: data.changes?.users ?? mockStats[0].change,
+            icon: <People />,
+            color: 'primary' as const,
+          },
+          {
+            id: 'page-views',
+            title: 'Page Views',
+            value: data.pageViews?.toLocaleString() ?? mockStats[1].value,
+            change: data.changes?.views ?? mockStats[1].change,
+            icon: <Visibility />,
+            color: 'success' as const,
+          },
+          {
+            id: 'articles',
+            title: 'Articles',
+            value: data.articles?.toLocaleString() ?? mockStats[2].value,
+            change: data.changes?.articles ?? mockStats[2].change,
+            icon: <Article />,
+            color: 'warning' as const,
+          },
+          {
+            id: 'growth',
+            title: 'Growth',
+            value: data.growth ? `${data.growth}%` : mockStats[3].value,
+            change: data.changes?.growth ?? mockStats[3].change,
+            icon: <TrendingUp />,
+            color: 'secondary' as const,
+          },
+        ]
+
+        setStats(fetchedStats)
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          // Request was cancelled, don't update state
+          return
+        }
+        console.error('Failed to fetch dashboard stats:', err)
+        setError('Failed to load dashboard statistics')
+        // Fall back to mock data on error
+        setStats(mockStats)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void fetchStats()
+
+    // Cleanup: abort request if component unmounts
+    return () => {
+      controller.abort()
+    }
+  }, [])
 
   return (
     <Box>
@@ -107,14 +211,27 @@ const Dashboard: React.FC = () => {
         Welcome back! Here's what's happening with your website.
       </Typography>
 
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="warning" sx={{ mb: 4 }}>
+          {error}. Showing fallback data.
+        </Alert>
+      )}
+
       {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {stats.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <StatCard {...stat} />
-          </Grid>
-        ))}
-      </Grid>
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" sx={{ mb: 4, minHeight: 200 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {stats.map((stat) => (
+            <Grid item xs={12} sm={6} md={3} key={stat.id}>
+              <StatCard {...stat} />
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
       {/* Additional Content */}
       <Grid container spacing={3}>

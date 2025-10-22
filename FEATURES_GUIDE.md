@@ -7,24 +7,24 @@
 ### ✅ Fully Implemented Features (12/20)
 
 1. **Authentication System** ✅
-   - Location: [packages/main-app/src/auth/](packages/main-app/src/auth/)
+   - Location: `packages/main-app/src/auth/`
    - Endpoints: `/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`, `/api/auth/logout`, `/api/users/me`
    - JWT-based with refresh token rotation
    - RBAC middleware (`requireRole`, `requireCapability`)
 
 2. **Database Layer** ✅
-   - Location: [packages/main-app/src/db/](packages/main-app/src/db/)
+   - Location: `packages/main-app/src/db/`
    - PostgreSQL with connection pooling
    - Automated migrations on startup
    - Tables: users, refresh_tokens, plugin_registry, system_settings, audit_log, plugin_kv_store
 
 3. **User Management API** ✅
-   - Location: [packages/main-app/src/users/](packages/main-app/src/users/)
+   - Location: `packages/main-app/src/users/`
    - Full CRUD with pagination, search, filters
    - RBAC enforcement (admin-only create/update/delete)
 
 4. **API Gateway Security** ✅
-   - Location: [packages/api-gateway/src/index.ts](packages/api-gateway/src/index.ts)
+   - Location: `packages/api-gateway/src/index.ts`
    - JWT verification for protected routes
    - User context headers forwarding
    - Rate limiting (10 req/15min for auth, 500 req/15min general)
@@ -61,7 +61,7 @@
     - 30-day expiration
 
 11. **Structured Logging** ✅
-    - Location: [packages/shared/src/utils/logger.ts](packages/shared/src/utils/logger.ts)
+    - Location: `packages/shared/src/utils/logger.ts`
     - JSON format with service, level, timestamp, requestId
     - Log levels: DEBUG, INFO, WARN, ERROR
     - Request ID middleware included

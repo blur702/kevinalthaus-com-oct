@@ -19,7 +19,7 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
 
 ### High-Level Architecture
 
-```
+```text
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Admin Panel   │    │   Mobile App    │
 │   (React)       │    │   (React)       │    │   (Future)      │

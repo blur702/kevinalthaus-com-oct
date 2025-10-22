@@ -379,7 +379,7 @@ router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
       await client.query(
         `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip)
          VALUES ($1, $2, $3, $4)`,
-        [user.id, hashSHA256(newRefreshToken), expiresAt, req.ip]
+        [user.id, hashSHA256(newRefreshToken), expiresAt, getClientIp(req)]
       );
 
       // Generate new access token

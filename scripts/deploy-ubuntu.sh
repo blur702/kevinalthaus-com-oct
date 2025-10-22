@@ -64,7 +64,30 @@ if ! command -v docker &> /dev/null; then
     apt-get install -y ca-certificates curl gnupg lsb-release
 
     mkdir -p /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+    # Download Docker GPG key and verify fingerprint
+    log "Downloading and verifying Docker GPG key..."
+    TEMP_GPG_FILE=$(mktemp)
+    trap "rm -f $TEMP_GPG_FILE" EXIT
+
+    if ! curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o "$TEMP_GPG_FILE"; then
+        error "Failed to download Docker GPG key"
+    fi
+
+    # Compute fingerprint from downloaded key
+    ACTUAL_FINGERPRINT=$(gpg --with-colons --import-options show-only --import "$TEMP_GPG_FILE" 2>/dev/null | awk -F: '/fpr:/ {print $10; exit}')
+    EXPECTED_FINGERPRINT="9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
+
+    if [ "$ACTUAL_FINGERPRINT" != "$EXPECTED_FINGERPRINT" ]; then
+        rm -f "$TEMP_GPG_FILE"
+        error "Docker GPG key fingerprint mismatch!\nExpected: $EXPECTED_FINGERPRINT\nActual: $ACTUAL_FINGERPRINT\nThis could indicate a security compromise. Aborting installation."
+    fi
+
+    log "✓ Docker GPG key fingerprint verified: $ACTUAL_FINGERPRINT"
+
+    # Dearmor and install the verified key
+    gpg --dearmor < "$TEMP_GPG_FILE" > /etc/apt/keyrings/docker.gpg
+    rm -f "$TEMP_GPG_FILE"
 
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
     $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
@@ -123,8 +146,57 @@ fi
 
 # Copy application files
 log "Copying application files..."
+
+# Verify APP_DIR exists and is not empty (safety check before rsync --delete)
+if [ ! -d "$APP_DIR" ]; then
+    error "APP_DIR does not exist: $APP_DIR"
+fi
+
+# Check if we're in the correct source directory
+if [ ! -f "./docker-compose.yml" ] || [ ! -f "./package.json" ]; then
+    error "Current directory does not appear to be the kevinalthaus application root. Aborting rsync to prevent data loss."
+fi
+
+# Perform dry-run first to show what would be changed
+log "Performing rsync dry-run to preview changes..."
+RSYNC_DRY_RUN=$(mktemp)
+rsync -av --dry-run --delete --exclude='.git' --exclude='node_modules' --exclude='.env' . "$APP_DIR/" > "$RSYNC_DRY_RUN" 2>&1
+
+# Check if anything would be deleted
+DELETED_FILES=$(grep "deleting" "$RSYNC_DRY_RUN" | head -20)
+TOTAL_DELETED=$(grep -c "deleting" "$RSYNC_DRY_RUN" || echo "0")
+
+if [ "$TOTAL_DELETED" -gt 0 ]; then
+    warn "rsync --delete will remove $TOTAL_DELETED file(s) from $APP_DIR"
+    echo "$DELETED_FILES"
+    if [ "$TOTAL_DELETED" -gt 20 ]; then
+        warn "... and $(($TOTAL_DELETED - 20)) more files"
+    fi
+fi
+
+# Show summary of changes
+echo ""
+log "Rsync dry-run summary:"
+grep -E "^(sending|deleting|total size)" "$RSYNC_DRY_RUN" || echo "No significant changes"
+rm -f "$RSYNC_DRY_RUN"
+echo ""
+
+# Prompt for confirmation unless in non-interactive mode
+if [ "${FORCE:-0}" != "1" ] && [ "${CI:-false}" != "true" ]; then
+    read -p "Proceed with rsync? This will sync files and delete removed files in $APP_DIR (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        error "Rsync cancelled by user"
+    fi
+else
+    log "Non-interactive mode (FORCE=1 or CI=true), proceeding with rsync..."
+fi
+
+# Perform actual rsync
+log "Syncing application files..."
 # --delete flag removes files in destination that don't exist in source
 rsync -av --delete --exclude='.git' --exclude='node_modules' --exclude='.env' . "$APP_DIR/"
+log "✓ Application files synced successfully"
 
 cd "$APP_DIR"
 

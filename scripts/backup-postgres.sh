@@ -14,7 +14,6 @@ RETENTION_DAYS=30
 
 # Create backup directory
 mkdir -p "$BACKUP_DIR"
-mkdir -p "$BACKUP_DIR/wal"
 
 # Backup filename
 BACKUP_FILE="$BACKUP_DIR/backup_${POSTGRES_DB}_${TIMESTAMP}.sql.gz"

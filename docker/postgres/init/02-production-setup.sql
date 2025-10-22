@@ -187,8 +187,13 @@ BEGIN
 END $$;
 
 -- Set autovacuum for refresh_tokens (frequently updated)
-ALTER TABLE refresh_tokens SET (autovacuum_vacuum_scale_factor = 0.1);
-ALTER TABLE refresh_tokens SET (autovacuum_analyze_scale_factor = 0.05);
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'refresh_tokens') THEN
+        ALTER TABLE refresh_tokens SET (autovacuum_vacuum_scale_factor = 0.1);
+        ALTER TABLE refresh_tokens SET (autovacuum_analyze_scale_factor = 0.05);
+    END IF;
+END $$;
 
 -- ----------------------------------------
 -- ENABLE QUERY STATISTICS

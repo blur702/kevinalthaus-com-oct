@@ -150,19 +150,64 @@ wait_for_health() {
 
         # Check if all services are healthy or running
         local all_healthy=true
-        local service_count=$(echo "$status" | grep -c "\"Name\"" || echo "0")
+        local unhealthy_count=0
+        local total_count=0
 
-        if [ "$service_count" -eq 0 ]; then
+        # Check if jq is available for JSON parsing
+        if command -v jq &> /dev/null; then
+            # Use jq to parse JSON and check health status
+            while IFS= read -r line; do
+                if [ -z "$line" ]; then
+                    continue
+                fi
+
+                ((total_count++))
+
+                # Get health status (prefer Health.Status, fallback to State)
+                local health=$(echo "$line" | jq -r '.Health // ""' 2>/dev/null)
+                local state=$(echo "$line" | jq -r '.State // ""' 2>/dev/null)
+                local name=$(echo "$line" | jq -r '.Name // "unknown"' 2>/dev/null)
+
+                if [ "$health" = "healthy" ] || [ "$state" = "running" ]; then
+                    # Container is healthy or running
+                    continue
+                else
+                    # Container is not healthy
+                    all_healthy=false
+                    ((unhealthy_count++))
+                fi
+            done <<< "$status"
+        else
+            # Fallback: use grep/awk to parse JSON
+            total_count=$(echo "$status" | grep -c '"Name"' || echo "0")
+
+            # Count containers that are not healthy or running
+            # Look for "Health":"healthy" or "State":"running"
+            local healthy_or_running=$(echo "$status" | grep -c -E '("Health":"healthy"|"State":"running")' || echo "0")
+
+            if [ "$total_count" -gt 0 ] && [ "$healthy_or_running" -lt "$total_count" ]; then
+                all_healthy=false
+                unhealthy_count=$((total_count - healthy_or_running))
+            fi
+        fi
+
+        if [ "$total_count" -eq 0 ]; then
             all_healthy=false
         fi
 
-        # Simple check: if we have services and no errors, consider it good
-        if [ "$service_count" -gt 0 ]; then
-            log "Services are running ($service_count containers detected)"
+        # If all services are healthy, break out of loop
+        if [ "$all_healthy" = true ] && [ "$total_count" -gt 0 ]; then
+            log "All services are healthy ($total_count containers)"
             break
         fi
 
-        echo -n "."
+        # Show progress
+        if [ "$unhealthy_count" -gt 0 ]; then
+            echo -n "."
+        else
+            echo -n "."
+        fi
+
         sleep $interval
         ((elapsed+=interval))
     done
@@ -170,7 +215,7 @@ wait_for_health() {
     echo ""
 
     if [ $elapsed -ge $max_wait ]; then
-        warn "Health check timeout reached. Services may still be starting."
+        warn "Health check timeout reached. Some services may still be starting."
         warn "Check logs with: docker compose logs -f"
     else
         success "Services are healthy"
