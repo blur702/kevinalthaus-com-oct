@@ -1,10 +1,7 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
 import os
-import time
-import asyncio
 from functools import lru_cache
 from typing import Dict, Any
 
@@ -16,19 +13,6 @@ app = FastAPI(
 
 # Performance middleware - compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-
-# Response cache for GET requests
-response_cache: Dict[str, Dict[str, Any]] = {}
-CACHE_TTL = 300  # 5 minutes
-MAX_CACHE_SIZE = 1000
-
-def generate_cache_key(request: Request) -> str:
-    """Generate cache key from request"""
-    return f"{request.method}:{request.url.path}:{str(request.query_params)}"
-
-def is_cache_valid(cache_entry: Dict[str, Any]) -> bool:
-    """Check if cache entry is still valid"""
-    return time.time() - cache_entry["timestamp"] < CACHE_TTL
 
 @lru_cache(maxsize=100)
 def get_environment_config() -> Dict[str, Any]:

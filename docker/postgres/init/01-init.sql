@@ -9,5 +9,11 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Plugins will create their own schemas with naming convention: plugin_<pluginname>
 
 -- Optional: Create a monitoring user
--- CREATE ROLE monitor WITH LOGIN PASSWORD 'monitor_password';
--- GRANT pg_monitor TO monitor;
+-- To enable, set MONITOR_PASSWORD environment variable and uncomment:
+-- DO $$
+-- BEGIN
+--   IF current_setting('monitor.password', true) IS NOT NULL THEN
+--     EXECUTE format('CREATE ROLE monitor WITH LOGIN PASSWORD %L', current_setting('monitor.password'));
+--     GRANT pg_monitor TO monitor;
+--   END IF;
+-- END $$;

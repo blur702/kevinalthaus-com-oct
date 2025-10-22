@@ -109,7 +109,6 @@ const Register: React.FC = () => {
         email: formData.email,
         username: formData.username,
         password: formData.password,
-        role: 'admin', // Hardcode role as admin for admin registration
       });
 
       const { accessToken, refreshToken } = response.data;

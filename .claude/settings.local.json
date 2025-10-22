@@ -1,13 +1,25 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell.exe:*)",
       "Bash(sc.exe query:*)",
       "Bash(where:*)",
-      "Bash(docker compose:*)",
-      "Bash(docker run:*)"
+      "Bash(docker compose -f docker-compose.yml up:*)",
+      "Bash(docker compose -f docker-compose.yml down:*)",
+      "Bash(docker compose -f docker-compose.prod.yml up:*)",
+      "Bash(docker compose -f docker-compose.prod.yml down:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(docker compose ps:*)"
     ],
-    "deny": [],
-    "ask": []
+    "deny": [
+      "Bash(powershell.exe:*)",
+      "Bash(docker run --privileged:*)",
+      "Bash(docker exec rm:*)",
+      "Bash(docker exec shutdown:*)"
+    ],
+    "ask": [
+      "Bash(docker run:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker:*)"
+    ]
   }
 }

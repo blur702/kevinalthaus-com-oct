@@ -90,28 +90,30 @@ export class DatabaseIsolationEnforcer {
   private estimateQueryComplexity(query: string): number {
     let complexity = 1;
 
-    // Use a single pass through the query to count all patterns
+    // Multiple pattern matches to assess query complexity
+    // This is not a single-pass algorithm but provides accurate complexity estimation
     const lowerQuery = query.toLowerCase();
-    
-    // Count joins
+
+    // Count joins - each join increases complexity as it multiplies row processing
     complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.join) || []).length * 10;
-    
-    // Count subqueries (higher cost)
+
+    // Count subqueries - nested queries have higher cost due to repeated scans
     complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.subquery) || []).length * 20;
-    
-    // Count aggregates
+
+    // Count aggregates - require full table scans and grouping operations
     complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.aggregate) || []).length * 5;
-    
-    // Count wildcards
+
+    // Count wildcards - selecting all columns increases I/O and memory usage
     complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.wildcard) || []).length * 3;
-    
-    // Count window functions (high cost)
+
+    // Count window functions - require sorting and partitioning operations
     complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.window) || []).length * 15;
-    
-    // Count CTEs
+
+    // Count CTEs - Common Table Expressions add temporary result set overhead
     complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.cte) || []).length * 8;
 
-    return Math.min(complexity, 1000); // Cap at reasonable maximum
+    // Cap at configured maximum to prevent integer overflow
+    return Math.min(complexity, this.quotas.maxQueryComplexity);
   }
 }
 

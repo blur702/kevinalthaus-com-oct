@@ -52,6 +52,7 @@ services:
     restart: always
     environment:
       NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET}
     volumes:
       - /app/node_modules
     logging:
@@ -80,6 +81,8 @@ services:
     restart: always
     environment:
       NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
     volumes:
       - /app/node_modules
       - ./uploads:/app/uploads

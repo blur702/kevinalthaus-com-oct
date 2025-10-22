@@ -50,6 +50,25 @@ async function gracefulShutdown(signal: string): Promise<void> {
     process.exit(1);
   }, SHUTDOWN_TIMEOUT);
 
+  // Check if server exists before attempting to close
+  if (!server) {
+    logger.warn('Server not initialized, skipping server.close()');
+
+    // Close database pool directly
+    closePool()
+      .then(() => {
+        logger.info('Database pool closed');
+        clearTimeout(shutdownTimer);
+        process.exit(0);
+      })
+      .catch((dbError) => {
+        logger.error('Error closing database pool', dbError as Error);
+        clearTimeout(shutdownTimer);
+        process.exit(1);
+      });
+    return;
+  }
+
   server.close((err) => {
     if (err) {
       logger.error('Error during server shutdown', err);

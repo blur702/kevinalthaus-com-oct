@@ -10,8 +10,17 @@
 -- ----------------------------------------
 
 -- Create read-only monitoring role for health checks
--- NOTE: Set password after deployment: ALTER ROLE monitoring WITH PASSWORD '<strong-password>';
-CREATE ROLE monitoring WITH LOGIN;
+-- Password must be provided via MONITORING_PASSWORD environment variable
+DO $$
+DECLARE
+  monitoring_pass TEXT;
+BEGIN
+  monitoring_pass := current_setting('kevinalthaus.monitoring_password', true);
+  IF monitoring_pass IS NULL OR monitoring_pass = '' THEN
+    RAISE EXCEPTION 'MONITORING_PASSWORD environment variable must be set for production';
+  END IF;
+  EXECUTE format('CREATE ROLE monitoring WITH LOGIN PASSWORD %L', monitoring_pass);
+END $$;
 GRANT CONNECT ON DATABASE kevinalthaus TO monitoring;
 GRANT USAGE ON SCHEMA public TO monitoring;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO monitoring;
@@ -20,8 +29,17 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO monitoring;
 GRANT pg_monitor TO monitoring;
 
 -- Create application role with specific permissions (not using superuser)
--- NOTE: Set password after deployment: ALTER ROLE app_user WITH PASSWORD '<strong-password>';
-CREATE ROLE app_user WITH LOGIN;
+-- Password must be provided via APP_USER_PASSWORD environment variable
+DO $$
+DECLARE
+  app_user_pass TEXT;
+BEGIN
+  app_user_pass := current_setting('kevinalthaus.app_user_password', true);
+  IF app_user_pass IS NULL OR app_user_pass = '' THEN
+    RAISE EXCEPTION 'APP_USER_PASSWORD environment variable must be set for production';
+  END IF;
+  EXECUTE format('CREATE ROLE app_user WITH LOGIN PASSWORD %L', app_user_pass);
+END $$;
 GRANT CONNECT ON DATABASE kevinalthaus TO app_user;
 GRANT USAGE, CREATE ON SCHEMA public TO app_user;
 

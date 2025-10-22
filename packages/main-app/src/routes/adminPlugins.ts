@@ -12,7 +12,7 @@ export const adminPluginsRouter = express.Router();
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const CSRF_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
-const CSRF_SECRET = process.env.SESSION_SECRET || 'development_only_insecure_csrf_secret';
+const CSRF_SECRET = process.env.CSRF_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'development_only_insecure_csrf_secret');
 
 function signCsrf(userId: string, nonce: string, ts: number): string {
   const payload = `${userId}:${nonce}:${ts}`;
@@ -87,7 +87,7 @@ function clearCsrfCookie(res: express.Response): void {
 function csrfProtection(req: express.Request, res: express.Response, next: express.NextFunction): void {
   const authReq = req as AuthenticatedRequest;
   if (!authReq.user || !authReq.user.userId) {
-    res.status(401).json({ error: 'Authentication required for CSRF protection' });
+    res.status(401).type('html').send(layout('Authentication Required', '<p>You must be authenticated to access this page.</p><p><a href="/admin/plugins">Back to Plugins</a></p>'));
     return;
   }
   const userId = authReq.user.userId;

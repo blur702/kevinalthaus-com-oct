@@ -107,8 +107,9 @@ export function sanitizePluginConfig(config: Record<string, unknown>): Record<st
   for (const [key, value] of Object.entries(config)) {
     const sanitizedKey = sanitizeDatabaseIdentifier(key);
 
-    // Check for key collision
-    if (sanitized[sanitizedKey] !== undefined) {
+    // Check for key collision using Map to properly detect all collisions
+    // (checking sanitized[key] !== undefined fails when first value is undefined)
+    if (keyMapping.has(sanitizedKey)) {
       const originalKey = keyMapping.get(sanitizedKey);
       throw new ConfigKeyCollisionError(
         `Configuration key collision: "${key}" and "${originalKey}" both normalize to "${sanitizedKey}"`,

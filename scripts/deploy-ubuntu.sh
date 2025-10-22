@@ -127,6 +127,34 @@ rsync -av --exclude='.git' --exclude='node_modules' --exclude='.env' . "$APP_DIR
 
 cd "$APP_DIR"
 
+# Validate .env file for security issues
+log "Validating .env file for security issues..."
+if [ -f "$APP_DIR/.env" ]; then
+    # Check for common placeholder patterns
+    if grep -qE "(CHANGE_ME|your_|<.*>|placeholder|example)" "$APP_DIR/.env"; then
+        error "Found placeholder values in .env file. Please replace all placeholders with actual values before deployment."
+    fi
+
+    # Source the .env file and check required variables
+    set -a
+    source "$APP_DIR/.env"
+    set +a
+
+    # Validate JWT_SECRET
+    if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" = "" ]; then
+        error "JWT_SECRET is missing or empty in .env file. Generate one with: openssl rand -hex 32"
+    fi
+
+    # Validate POSTGRES_PASSWORD
+    if [ -z "$POSTGRES_PASSWORD" ] || [ "$POSTGRES_PASSWORD" = "" ]; then
+        error "POSTGRES_PASSWORD is missing or empty in .env file. Generate one with: openssl rand -hex 32"
+    fi
+
+    log "✓ Environment file validation passed"
+else
+    error ".env file not found at $APP_DIR/.env"
+fi
+
 # Build Docker images
 log "Building Docker images..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml build

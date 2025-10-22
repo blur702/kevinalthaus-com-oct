@@ -5,7 +5,7 @@
 set -e
 
 BACKUP_FILE="$1"
-CONTAINER_NAME="kevinalthaus-postgres-1"
+CONTAINER_NAME="${CONTAINER_NAME:-kevinalthaus-postgres-1}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-kevinalthaus}"
 

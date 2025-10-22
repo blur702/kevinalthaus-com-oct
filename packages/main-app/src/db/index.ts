@@ -1,6 +1,16 @@
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
+import crypto from 'crypto';
 
 const useConnString = !!process.env.DATABASE_URL;
+
+// Validate database password when not using connection string
+if (!useConnString && !process.env.POSTGRES_PASSWORD) {
+  throw new Error(
+    'POSTGRES_PASSWORD environment variable is required when not using DATABASE_URL. ' +
+    'Please set POSTGRES_PASSWORD in your .env file or provide a DATABASE_URL connection string.'
+  );
+}
+
 const pool = new Pool(
   useConnString
     ? {
@@ -37,21 +47,25 @@ export async function query<T extends QueryResultRow = any>(
   params?: unknown[]
 ): Promise<QueryResult<T>> {
   const start = Date.now();
+  // Generate query fingerprint for correlation without exposing sensitive data
+  const queryHash = crypto.createHash('sha256').update(text).digest('hex').substring(0, 12);
+
   try {
     const result = await pool.query<T>(text, params);
     const duration = Date.now() - start;
     console.log('[DB] Query executed', {
-      text: text.substring(0, 100),
+      queryHash,
       duration: `${duration}ms`,
-      rows: result.rowCount,
+      rowCount: result.rowCount,
     });
     return result;
   } catch (error) {
     const duration = Date.now() - start;
+    const sanitizedError = error instanceof Error ? error.message : 'Unknown error';
     console.error('[DB] Query error', {
-      text: text.substring(0, 100),
+      queryHash,
       duration: `${duration}ms`,
-      error,
+      error: sanitizedError,
     });
     throw error;
   }

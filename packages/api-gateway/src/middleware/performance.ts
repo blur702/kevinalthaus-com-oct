@@ -14,7 +14,13 @@ class ResponseCache {
   private defaultTTL = 300000; // 5 minutes
 
   private generateKey(req: Request): string {
-    return `${req.method}:${req.originalUrl}:${JSON.stringify(req.query)}`;
+    // Sort query parameters to ensure consistent cache keys
+    const sortedQuery: Record<string, unknown> = {};
+    const keys = Object.keys(req.query).sort();
+    for (const key of keys) {
+      sortedQuery[key] = req.query[key];
+    }
+    return `${req.method}:${req.originalUrl}:${JSON.stringify(sortedQuery)}`;
   }
 
   get(req: Request): CacheEntry | null {
@@ -82,6 +88,12 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
       Object.entries(res.getHeaders()).forEach(([key, value]) => {
         if (typeof value === 'string') {
           headers[key] = value;
+        } else if (typeof value === 'number') {
+          headers[key] = String(value);
+        } else if (Array.isArray(value)) {
+          headers[key] = value.join(', ');
+        } else if (value != null) {
+          headers[key] = String(value);
         }
       });
       responseCache.set(req, data, headers);
@@ -128,13 +140,16 @@ export const rateLimitMiddleware = rateLimit({
 // Request/Response timing middleware
 export const timingMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   const start = process.hrtime.bigint();
-  
-  res.on('finish', () => {
+
+  // Wrap res.end to set header before response is sent
+  const originalEnd = res.end;
+  res.end = function(...args: unknown[]): Response {
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1000000; // Convert to milliseconds
-    res.set('X-Response-Time', `${duration.toFixed(2)}ms`);
-  });
-  
+    res.setHeader('X-Response-Time', `${duration.toFixed(2)}ms`);
+    return originalEnd.apply(res, args as never[]);
+  };
+
   next();
 };
 

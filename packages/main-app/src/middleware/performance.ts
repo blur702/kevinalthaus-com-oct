@@ -71,7 +71,7 @@ class ResponseCache {
 const responseCache = new ResponseCache();
 
 // Response caching middleware for GET requests
-export const cacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const cacheMiddleware = (req: Request, res: Response, next: NextFunction) => {
   if (req.method !== 'GET') {
     return next();
   }
@@ -141,13 +141,20 @@ export const rateLimitMiddleware = rateLimit({
 // Request/Response timing middleware
 export const timingMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   const start = process.hrtime.bigint();
-  
-  res.on('finish', () => {
+
+  // Store original res.end
+  const originalEnd = res.end.bind(res);
+
+  // Override res.end to set timing header before headers are sent
+  res.end = function(...args: any[]) {
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1000000; // Convert to milliseconds
-    res.set('X-Response-Time', `${duration.toFixed(2)}ms`);
-  });
-  
+    res.setHeader('X-Response-Time', `${duration.toFixed(2)}ms`);
+
+    // Call original res.end with original arguments
+    return originalEnd.apply(res, args);
+  } as typeof res.end;
+
   next();
 };
 

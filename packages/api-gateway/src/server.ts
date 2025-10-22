@@ -2,10 +2,29 @@ import app from './index';
 import { Server } from 'http';
 import { createLogger, LogLevel } from '@monorepo/shared';
 
+// Validate and extract log level from environment
+function getLogLevel(): LogLevel {
+  const envLevel = process.env.LOG_LEVEL;
+  const validLevels = Object.values(LogLevel);
+  if (envLevel && validLevels.includes(envLevel as LogLevel)) {
+    return envLevel as LogLevel;
+  }
+  return LogLevel.INFO;
+}
+
+// Validate and extract log format from environment
+function getLogFormat(): 'json' | 'text' {
+  const envFormat = process.env.LOG_FORMAT;
+  if (envFormat === 'json' || envFormat === 'text') {
+    return envFormat;
+  }
+  return 'text';
+}
+
 const logger = createLogger({
-  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
+  level: getLogLevel(),
   service: 'api-gateway',
-  format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
+  format: getLogFormat(),
 });
 
 const PORT = process.env.API_GATEWAY_PORT || process.env.PORT || 3000;

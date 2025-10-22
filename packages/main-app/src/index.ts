@@ -32,6 +32,9 @@ const logger = createLogger({
 
 const app = express();
 
+// Enable trust proxy to get real client IP from X-Forwarded-For
+app.set('trust proxy', true);
+
 // Initialize upload directory
 void (async () => {
   try {

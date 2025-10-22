@@ -14,7 +14,9 @@ interface ExpressRouter {
   stack: unknown[];
 }
 
-const router = app._router as ExpressRouter | undefined;
+// Intentional use of private API (_router) for demo/debugging purposes only
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+const router = (app as any)._router as ExpressRouter | undefined;
 console.log('🛣️  App has', router?.stack?.length ?? 0, 'registered routes');
 /* eslint-enable no-console */
 

@@ -21,6 +21,9 @@ if (!JWT_SECRET) {
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const REFRESH_TOKEN_EXPIRES_DAYS = 30;
 
+// Dummy hash for timing attack prevention - valid bcrypt hash format
+const DUMMY_PASSWORD_HASH = '$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+
 interface TokenPayload {
   userId: string;
   email: string;
@@ -29,6 +32,17 @@ interface TokenPayload {
 
 interface AuthenticatedRequest extends Request {
   user?: TokenPayload;
+}
+
+// Helper function to extract real client IP from proxied requests
+function getClientIp(req: Request): string | undefined {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // X-Forwarded-For can be comma-separated list, take first value
+    const ips = typeof forwardedFor === 'string' ? forwardedFor.split(',') : forwardedFor;
+    return ips[0].trim();
+  }
+  return req.ip;
 }
 
 // Generate JWT token
@@ -62,19 +76,30 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
       return;
     }
 
-    if (role && !Object.values(Role).includes(role as Role)) {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: 'Invalid role specified',
-      });
-      return;
-    }
-
     // Validate required fields
     if (!email || !username || !password) {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Email, username, and password are required',
+      });
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid email format',
+      });
+      return;
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Password must be at least 8 characters long',
       });
       return;
     }
@@ -118,7 +143,7 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
     await query(
       `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip)
        VALUES ($1, $2, $3, $4)`,
-      [user.id, hashSHA256(refreshToken), expiresAt, req.ip]
+      [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req)]
     );
 
     res.status(201).json({
@@ -189,7 +214,15 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
       is_active: boolean;
     }>('SELECT * FROM users WHERE email = $1', [email]);
 
-    if (result.rows.length === 0) {
+    const user = result.rows.length > 0 ? result.rows[0] : null;
+
+    // Always perform password verification to prevent timing attacks
+    // Use dummy hash when user not found or inactive
+    const hashToVerify = (user && user.is_active) ? user.password_hash : DUMMY_PASSWORD_HASH;
+    const isValid = await verifyPassword(password, hashToVerify);
+
+    // Check if user exists and is active
+    if (!user) {
       res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid credentials',
@@ -197,19 +230,15 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
       return;
     }
 
-    const user = result.rows[0];
-
     if (!user.is_active) {
-      res.status(403).json({
-        error: 'Forbidden',
-        message: 'Account is inactive',
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid credentials',
       });
       return;
     }
 
-    // Verify password
-    const isValid = await verifyPassword(password, user.password_hash);
-
+    // Check password validity
     if (!isValid) {
       res.status(401).json({
         error: 'Unauthorized',
@@ -238,7 +267,7 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
     await query(
       `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip)
        VALUES ($1, $2, $3, $4)`,
-      [user.id, hashSHA256(refreshToken), expiresAt, req.ip]
+      [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req)]
     );
 
     res.json({
