@@ -53,6 +53,19 @@ class ResponseCache {
   clear(): void {
     this.cache.clear();
   }
+
+  clearByPrefix(prefix: string): number {
+    let cleared = 0;
+    const normalized = prefix.startsWith('/') ? prefix : `/${prefix}`;
+    for (const key of Array.from(this.cache.keys())) {
+      // keys are METHOD:URL:QUERY...; match URL prefix for GETs
+      if (key.startsWith(`GET:${normalized}`)) {
+        this.cache.delete(key);
+        cleared++;
+      }
+    }
+    return cleared;
+  }
 }
 
 const responseCache = new ResponseCache();
@@ -164,4 +177,9 @@ export const keepAliveMiddleware = (_req: Request, res: Response, next: NextFunc
 // Clear cache utility (for admin endpoints)
 export const clearCache = (): void => {
   responseCache.clear();
+};
+
+// More granular invalidation by URL prefix for write operations
+export const invalidateCacheByPrefix = (prefix: string): number => {
+  return responseCache.clearByPrefix(prefix);
 };

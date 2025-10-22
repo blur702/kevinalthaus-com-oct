@@ -1,21 +1,36 @@
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
-const pool = new Pool({
-  host: process.env.POSTGRES_HOST || 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  database: process.env.POSTGRES_DB || 'kevinalthaus',
-  user: process.env.POSTGRES_USER || 'postgres',
-  password: process.env.POSTGRES_PASSWORD,
-  min: 2,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 30000,
-});
+const useConnString = !!process.env.DATABASE_URL;
+const pool = new Pool(
+  useConnString
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        min: 2,
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 30000,
+      }
+    : {
+        host: process.env.POSTGRES_HOST || 'localhost',
+        port: parseInt(process.env.POSTGRES_PORT || '5432'),
+        database: process.env.POSTGRES_DB || 'kevinalthaus',
+        user: process.env.POSTGRES_USER || 'postgres',
+        password: process.env.POSTGRES_PASSWORD,
+        min: 2,
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 30000,
+      }
+);
 
 // Handle pool errors
 pool.on('error', (err) => {
   console.error('[DB] Unexpected pool error:', err);
 });
+
+if (process.env.NODE_ENV === 'development') {
+  console.info('[DB] Using', useConnString ? 'DATABASE_URL' : 'individual env vars', 'for database configuration');
+}
 
 export async function query<T extends QueryResultRow = any>(
   text: string,

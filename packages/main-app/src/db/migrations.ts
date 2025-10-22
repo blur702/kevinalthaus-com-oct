@@ -14,6 +14,9 @@ export async function runMigrations(): Promise<void> {
     `);
 
     // Run migrations in order
+    await runMigration('00-enable-pgcrypto', async () => {
+      await query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
+    });
     await runMigration('01-create-users-table', async () => {
       await query(`
         CREATE TABLE IF NOT EXISTS users (

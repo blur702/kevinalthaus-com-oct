@@ -158,3 +158,40 @@ export async function ensureUploadDirectory(): Promise<void> {
     throw new Error(`Failed to create upload directory: ${(error as Error).message}`);
   }
 }
+
+// Magic-byte/content sniffing with dynamic import to support ESM-only dependency
+export async function sniffAndValidateFile(filePath: string, originalName: string): Promise<{ valid: boolean; detectedMime?: string; reason?: string }>{
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const fd = await fs.open(filePath, 'r');
+    try {
+      const { buffer } = await fd.read(Buffer.alloc(4100), 0, 4100, 0);
+      // Lazy import to avoid ESM/CommonJS interop issues at load time
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { fileTypeFromBuffer } = await import('file-type');
+      const type = await fileTypeFromBuffer(buffer);
+      const detectedMime = type?.mime;
+
+      const ext = path.extname(originalName).toLowerCase();
+
+      if (!detectedMime) {
+        return { valid: false, reason: 'Unable to detect file type' };
+      }
+
+      if (!ALLOWED_FILE_TYPES.includes(detectedMime)) {
+        return { valid: false, detectedMime, reason: 'MIME not allowed' };
+      }
+
+      const allowedExts = MIME_TO_EXTENSIONS[detectedMime] || [];
+      if (allowedExts.length > 0 && !allowedExts.includes(ext)) {
+        return { valid: false, detectedMime, reason: 'Extension does not match content' };
+      }
+
+      return { valid: true, detectedMime };
+    } finally {
+      await fd.close();
+    }
+  } catch (err) {
+    return { valid: false, reason: (err as Error).message };
+  }
+}

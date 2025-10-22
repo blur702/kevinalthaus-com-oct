@@ -1,14 +1,53 @@
 import app from './index';
-// import { logger } from '@monorepo/shared';
+import { Server } from 'http';
+import { createLogger, LogLevel } from '@monorepo/shared';
 
-// Simple console logger
-const logger = {
-  info: (message: string, ...args: any[]) => console.log(`[INFO] ${message}`, ...args)
-};
+const logger = createLogger({
+  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
+  service: 'api-gateway',
+  format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
+});
 
 const PORT = process.env.API_GATEWAY_PORT || process.env.PORT || 3000;
+const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
-// Start server
-app.listen(PORT, () => {
-  logger.info(`API Gateway server running on port ${PORT}`);
+let server: Server;
+
+server = app
+  .listen(PORT, () => {
+    logger.info(`API Gateway server running on port ${PORT}`);
+  })
+  .on('error', (err: Error) => {
+    logger.error('Failed to start API Gateway', err);
+    process.exit(1);
+  });
+
+async function gracefulShutdown(signal: string) {
+  logger.info(`Received ${signal}. Shutting down API Gateway...`);
+  const timer = setTimeout(() => {
+    logger.warn('Forcing API Gateway shutdown due to timeout');
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT);
+
+  server.close((err?: Error) => {
+    if (err) {
+      logger.error('Error closing API Gateway server', err);
+      clearTimeout(timer);
+      process.exit(1);
+    }
+    clearTimeout(timer);
+    logger.info('API Gateway shutdown complete');
+    process.exit(0);
+  });
+}
+
+process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception in API Gateway', err);
+  void gracefulShutdown('uncaughtException');
+});
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled Rejection in API Gateway', new Error(String(reason)));
+  void gracefulShutdown('unhandledRejection');
 });

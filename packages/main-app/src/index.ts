@@ -20,13 +20,15 @@ import { ensureUploadDirectory } from './middleware/upload';
 import { discoverPlugins } from './plugins';
 import { pluginManager } from './plugins/manager';
 import { adminPluginsRouter } from './routes/adminPlugins';
+import { createLogger, LogLevel } from '@monorepo/shared';
+import { asyncHandler } from './utils/asyncHandler';
+import { requestIdMiddleware } from './middleware/requestId';
 
-// Simple console logger until shared package is available
-const logger = {
-  info: (message: string, ...args: unknown[]) => console.log(`[INFO] ${message}`, ...args),
-  error: (message: string, ...args: unknown[]) => console.error(`[ERROR] ${message}`, ...args),
-  warn: (message: string, ...args: unknown[]) => console.warn(`[WARN] ${message}`, ...args)
-};
+const logger = createLogger({
+  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
+  service: 'main-app',
+  format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
+});
 
 const app = express();
 
@@ -36,7 +38,7 @@ void (async () => {
     await ensureUploadDirectory();
     logger.info('Upload directory initialized');
   } catch (error) {
-    logger.error('Failed to initialize upload directory:', error);
+    logger.error('Failed to initialize upload directory:', error as Error);
   }
 })();
 
@@ -48,6 +50,7 @@ const corsOrigins = process.env.CORS_ORIGIN
 const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
 
 // Performance and security middleware (order matters)
+app.use(requestIdMiddleware);
 app.use(timingMiddleware);
 app.use(compressionMiddleware);
 app.use(rateLimitMiddleware);
@@ -90,15 +93,15 @@ if (Object.keys(helmetConfig).length > 0) {
 app.use(securityHeadersMiddleware);
 app.use(keepAliveMiddleware);
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || corsOrigins.includes('*') || corsOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: corsCredentials,
+  cors((req, callback) => {
+    const allowAll = corsOrigins.includes('*');
+    if (allowAll) {
+      callback(null, { origin: '*', credentials: false });
+      return;
+    }
+    const origin = req.header('Origin');
+    const isAllowed = !origin || corsOrigins.includes(origin);
+    callback(null, { origin: isAllowed, credentials: corsCredentials });
   })
 );
 app.use(morgan('combined'));
@@ -109,7 +112,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cacheMiddleware);
 
 // Health check endpoints
-app.get('/health', async (_req, res) => {
+app.get('/health', asyncHandler(async (_req, res) => {
   const dbHealthy = await healthCheck();
   const status = dbHealthy ? 'healthy' : 'degraded';
 
@@ -123,20 +126,20 @@ app.get('/health', async (_req, res) => {
       database: dbHealthy ? 'healthy' : 'unhealthy',
     },
   });
-});
+}));
 
 app.get('/health/live', (_req, res) => {
   res.json({ status: 'alive' });
 });
 
-app.get('/health/ready', async (_req, res) => {
+app.get('/health/ready', asyncHandler(async (_req, res) => {
   const dbHealthy = await healthCheck();
   if (dbHealthy) {
     res.json({ status: 'ready' });
   } else {
     res.status(503).json({ status: 'not ready' });
   }
-});
+}));
 
 // Root endpoint
 app.get('/', (_req, res) => {
@@ -161,10 +164,9 @@ void (async () => {
   try {
     await discoverPlugins(app);
   } catch (e) {
-    logger.error('Plugin discovery failed:', {
+    logger.error('Plugin discovery failed', e as Error, {
       message: (e as Error).message,
       stack: (e as Error).stack,
-      error: e
     });
     // Consider exiting if plugin discovery is critical for your application
     // process.exit(1);
@@ -182,8 +184,7 @@ app.use('*', (req, res) => {
 
 // Global error handling middleware - must be last
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  logger.error('Unhandled error:', {
-    error: err.message,
+  logger.error('Unhandled error', err, {
     stack: err.stack,
     url: req.url,
     method: req.method

@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { query, transaction } from '../db';
 import { hashPassword, verifyPassword, hashSHA256 } from '@monorepo/shared';
 import { Role } from '@monorepo/shared';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
@@ -48,7 +49,7 @@ interface RegisterRequest {
 }
 
 // POST /api/auth/register
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, username, password, role = 'viewer' } = req.body as RegisterRequest;
 
@@ -75,6 +76,7 @@ router.post('/register', async (req: Request, res: Response) => {
         error: 'Bad Request',
         message: 'Email, username, and password are required',
       });
+      return;
     }
 
     // Validate role
@@ -148,7 +150,7 @@ router.post('/register', async (req: Request, res: Response) => {
       message: 'Failed to register user',
     });
   }
-});
+}));
 
 interface LoginRequest {
   email: string;
@@ -156,7 +158,7 @@ interface LoginRequest {
 }
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body as LoginRequest;
 
@@ -257,14 +259,14 @@ router.post('/login', async (req: Request, res: Response) => {
       message: 'Failed to login',
     });
   }
-});
+}));
 
 interface RefreshRequest {
   refreshToken: string;
 }
 
 // POST /api/auth/refresh
-router.post('/refresh', async (req: Request, res: Response) => {
+router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body as RefreshRequest;
 
@@ -377,14 +379,14 @@ router.post('/refresh', async (req: Request, res: Response) => {
       message: 'Failed to refresh token',
     });
   }
-});
+}));
 
 interface LogoutRequest {
   refreshToken?: string;
 }
 
 // POST /api/auth/logout
-router.post('/logout', async (req: Request, res: Response) => {
+router.post('/logout', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body as LogoutRequest;
 
@@ -412,7 +414,7 @@ router.post('/logout', async (req: Request, res: Response) => {
       message: 'Failed to logout',
     });
   }
-});
+}));
 
 // GET /api/users/me
 router.get('/me', authMiddleware, (req: AuthenticatedRequest, res: Response) => {

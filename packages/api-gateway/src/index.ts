@@ -13,10 +13,20 @@ import {
   keepAliveMiddleware,
   cacheMiddleware
 } from './middleware/performance';
+import { requestIdMiddleware } from './middleware/requestId';
 
 const app = express();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme_generate_secure_random_string';
+// Enforce JWT secret handling
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV !== 'development') {
+    throw new Error('JWT_SECRET is required for API Gateway in non-development environments');
+  }
+  JWT_SECRET = 'development_only_insecure_key_do_not_use_in_prod';
+  // eslint-disable-next-line no-console
+  console.warn('[Gateway] WARNING: Using development-only JWT secret. Set JWT_SECRET for production.');
+}
 const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3001';
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 
@@ -31,6 +41,7 @@ const corsOrigins = process.env.CORS_ORIGIN
 const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
 
 // Performance and security middleware (order matters)
+app.use(requestIdMiddleware);
 app.use(timingMiddleware);
 app.use(compressionMiddleware);
 
@@ -72,15 +83,15 @@ if (Object.keys(helmetOptions).length > 0) {
 app.use(securityHeadersMiddleware);
 app.use(keepAliveMiddleware);
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || corsOrigins.includes('*') || corsOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: corsCredentials,
+  cors((req, callback) => {
+    const allowAll = corsOrigins.includes('*');
+    if (allowAll) {
+      callback(null, { origin: '*', credentials: false });
+      return;
+    }
+    const origin = req.header('Origin');
+    const isAllowed = !origin || corsOrigins.includes(origin);
+    callback(null, { origin: isAllowed, credentials: corsCredentials });
   })
 );
 app.use(morgan('combined'));
@@ -140,8 +151,18 @@ app.get('/health/live', (_req, res) => {
   res.json({ status: 'alive' });
 });
 
-app.get('/health/ready', (_req, res) => {
-  res.json({ status: 'ready' });
+// Readiness should probe downstream dependencies
+app.get('/health/ready', async (_req, res) => {
+  try {
+    const mainAppResponse = await fetch(`${MAIN_APP_URL}/health`);
+    if (!mainAppResponse.ok) {
+      res.status(503).json({ status: 'not ready', dependencies: { mainApp: 'unhealthy' } });
+      return;
+    }
+    res.json({ status: 'ready', dependencies: { mainApp: 'healthy' } });
+  } catch {
+    res.status(503).json({ status: 'not ready', dependencies: { mainApp: 'unhealthy' } });
+  }
 });
 
 // Root endpoint
@@ -168,7 +189,7 @@ function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {
   const token = authHeader.substring(7);
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as {
+    const decoded = jwt.verify(token, JWT_SECRET!) as {
       userId: string;
       email: string;
       role: string;
@@ -206,7 +227,12 @@ function createSecureProxy(target: string, pathRewrite?: Record<string, string>)
       proxyReq.setHeader('X-Forwarded-Host', req.get('Host') || '');
       proxyReq.setHeader('X-Real-IP', req.ip || '');
 
-      // Forward user context headers if they exist
+      // Drop any incoming spoofed X-User-* headers from clients
+      proxyReq.removeHeader('X-User-Id');
+      proxyReq.removeHeader('X-User-Role');
+      proxyReq.removeHeader('X-User-Email');
+
+      // Forward user context headers only from verified JWT middleware
       if (req.headers['x-user-id']) {
         proxyReq.setHeader('X-User-Id', req.headers['x-user-id'] as string);
       }
@@ -219,6 +245,14 @@ function createSecureProxy(target: string, pathRewrite?: Record<string, string>)
     },
   };
 }
+
+// Upstream safety: strip any X-User-* headers early to avoid accidental use
+app.use((req, _res, next) => {
+  delete req.headers['x-user-id'];
+  delete req.headers['x-user-role'];
+  delete req.headers['x-user-email'];
+  next();
+});
 
 // Auth routes (no JWT required, but stricter rate limiting)
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument

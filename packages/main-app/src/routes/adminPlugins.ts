@@ -1,72 +1,107 @@
 import express from 'express';
-import { randomBytes } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 import { pluginManager } from '../plugins/manager';
 import { AuthenticatedRequest } from '../auth';
 
 export const adminPluginsRouter = express.Router();
 
-// Extend Request interface for CSRF token
-interface RequestWithCSRF extends AuthenticatedRequest {
-  csrfToken?: () => string;
+// CSRF protection using HMAC-signed, expiring double-submit cookie tokens.
+// Note: For multi-instance deployments, prefer a shared store (e.g., Redis) for nonce tracking
+// to prevent replay across instances. This implementation rotates the token after successful POST.
+
+const CSRF_COOKIE_NAME = 'csrf_token';
+const CSRF_HEADER_NAME = 'x-csrf-token';
+const CSRF_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
+const CSRF_SECRET = process.env.SESSION_SECRET || 'development_only_insecure_csrf_secret';
+
+function signCsrf(userId: string, nonce: string, ts: number): string {
+  const payload = `${userId}:${nonce}:${ts}`;
+  const mac = createHmac('sha256', CSRF_SECRET).update(payload).digest('hex');
+  return `${payload}:${mac}`;
 }
 
-interface RequestBodyWithCSRF {
-  _csrf?: string;
-  [key: string]: unknown;
+function verifyCsrf(token: string, userId: string): boolean {
+  const parts = token.split(':');
+  if (parts.length !== 4) return false;
+  const [uid, nonce, tsStr, mac] = parts;
+  if (uid !== userId) return false;
+  const ts = Number(tsStr);
+  if (!Number.isFinite(ts) || ts <= 0) return false;
+  if (Date.now() - ts > CSRF_MAX_AGE_MS) return false;
+  const expected = createHmac('sha256', CSRF_SECRET).update(`${uid}:${nonce}:${ts}`).digest('hex');
+  return mac === expected;
 }
 
-// User session-based CSRF storage (keyed by userId from auth)
-const csrfTokens = new Map<string, { token: string; expires: number }>();
+function getCookie(req: express.Request, name: string): string | undefined {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) return undefined;
+  const cookies = cookieHeader.split(';').map((c) => c.trim());
+  for (const c of cookies) {
+    const [k, v] = c.split('=');
+    if (k === name) return decodeURIComponent(v || '');
+  }
+  return undefined;
+}
 
-function generateCSRFToken(): string {
-  return randomBytes(32).toString('hex');
+function setCsrfCookie(res: express.Response, value: string): void {
+  res.cookie(CSRF_COOKIE_NAME, value, {
+    httpOnly: false, // double-submit requires JS visibility
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: CSRF_MAX_AGE_MS,
+    path: '/'
+  });
+}
+
+function clearCsrfCookie(res: express.Response): void {
+  res.cookie(CSRF_COOKIE_NAME, '', {
+    httpOnly: false,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 0,
+    path: '/'
+  });
 }
 
 function csrfProtection(req: express.Request, res: express.Response, next: express.NextFunction): void {
   const authReq = req as AuthenticatedRequest;
-  
   if (!authReq.user || !authReq.user.userId) {
     res.status(401).json({ error: 'Authentication required for CSRF protection' });
     return;
   }
-
   const userId = authReq.user.userId;
 
   if (req.method === 'GET') {
-    // Lazy cleanup: remove any existing expired token before generating new one
-    const existingToken = csrfTokens.get(userId);
-    if (existingToken && existingToken.expires < Date.now()) {
-      csrfTokens.delete(userId);
-    }
-    
-    // Generate token for GET requests
-    const token = generateCSRFToken();
-    csrfTokens.set(userId, { token, expires: Date.now() + 3600000 }); // 1 hour
-    (req as RequestWithCSRF).csrfToken = () => token;
+    const nonce = randomBytes(16).toString('hex');
+    const ts = Date.now();
+    const token = signCsrf(userId, nonce, ts);
+    setCsrfCookie(res, token);
+    (req as unknown as { csrfToken?: () => string }).csrfToken = () => token;
     next();
-  } else if (req.method === 'POST') {
-    // Verify token for POST requests
-    const body = req.body as RequestBodyWithCSRF;
-    const submittedToken = (typeof body._csrf === 'string' ? body._csrf : undefined) || 
-                          (typeof req.headers['x-csrf-token'] === 'string' ? req.headers['x-csrf-token'] : undefined);
-    const stored = csrfTokens.get(userId);
-    
-    // Lazy cleanup: remove expired token immediately when detected
-    if (stored && stored.expires < Date.now()) {
-      csrfTokens.delete(userId);
-    }
-    
-    // Validate token (after potential cleanup)
-    const validStored = csrfTokens.get(userId);
-    if (!validStored || !submittedToken || validStored.token !== submittedToken) {
+    return;
+  }
+
+  if (req.method === 'POST') {
+    const headerToken = typeof req.headers[CSRF_HEADER_NAME] === 'string' ? (req.headers[CSRF_HEADER_NAME] as string) : undefined;
+    const bodyToken = typeof (req.body as Record<string, unknown>)?._csrf === 'string' ? ((req.body as Record<string, unknown>)?._csrf as string) : undefined;
+    const cookieToken = getCookie(req, CSRF_COOKIE_NAME);
+    const submitted = headerToken || bodyToken;
+
+    if (!submitted || !cookieToken || submitted !== cookieToken || !verifyCsrf(submitted, userId)) {
       res.status(403).json({ error: 'Invalid CSRF token' });
       return;
     }
-    
+
+    // Rotate token after successful validation
+    clearCsrfCookie(res);
+    const newNonce = randomBytes(16).toString('hex');
+    const newToken = signCsrf(userId, newNonce, Date.now());
+    setCsrfCookie(res, newToken);
     next();
-  } else {
-    next();
+    return;
   }
+
+  next();
 }
 
 // HTML escape function to prevent XSS
@@ -177,7 +212,7 @@ adminPluginsRouter.get('/', csrfProtection, (req, res): void => {
     </table>
   `;
 
-  const requestWithCSRF = req as RequestWithCSRF;
+  const requestWithCSRF = req as unknown as { csrfToken?: () => string };
   const csrfToken = requestWithCSRF.csrfToken ? requestWithCSRF.csrfToken() : undefined;
   res.type('html').send(layout('Plugin Management', body, csrfToken));
 });
@@ -225,4 +260,3 @@ adminPluginsRouter.post('/:id/uninstall', csrfProtection, (req, res): void => {
       res.status(400).send(layout('Uninstall Error', `<p>Plugin uninstall failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
-
