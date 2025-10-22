@@ -86,8 +86,15 @@ export async function transaction<T>(
     await client.query('COMMIT');
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
+    const originalError = error;
+    try {
+      await client.query('ROLLBACK');
+    } catch (rbErr) {
+      // Log rollback error but do not mask the original
+      // eslint-disable-next-line no-console
+      console.error('[DB] ROLLBACK failed', rbErr);
+    }
+    throw originalError;
   } finally {
     client.release();
   }

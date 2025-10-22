@@ -5,10 +5,24 @@ import { closePool } from './db';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { ensureUploadDirectory } from './middleware/upload';
 
+function getLogLevel(): LogLevel {
+  const envLevel = process.env.LOG_LEVEL;
+  const valid = Object.values(LogLevel);
+  if (envLevel && valid.includes(envLevel as LogLevel)) {
+    return envLevel as LogLevel;
+  }
+  return LogLevel.INFO;
+}
+
+function getLogFormat(): 'json' | 'text' {
+  const envFormat = process.env.LOG_FORMAT;
+  return envFormat === 'json' || envFormat === 'text' ? envFormat : 'text';
+}
+
 const logger = createLogger({
-  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
+  level: getLogLevel(),
   service: 'main-app',
-  format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
+  format: getLogFormat(),
 });
 
 const PORT = process.env.MAIN_APP_PORT || process.env.PORT || 3001;

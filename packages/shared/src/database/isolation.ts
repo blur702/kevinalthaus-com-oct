@@ -304,8 +304,13 @@ export class DatabaseIsolationEnforcer {
       complexity += whereFunctions * this.weights.whereFunction;
 
       return Math.min(complexity, Number.MAX_SAFE_INTEGER);
-    } catch {
-      // If parsing fails, conservatively treat as very complex to protect resources
+    } catch (err) {
+      // If parsing fails, log details for debugging, then conservatively treat as very complex
+      // eslint-disable-next-line no-console
+      console.error('[Isolation] SQL parse failed; treating as max complexity', {
+        error: err instanceof Error ? err.message : String(err),
+        query,
+      });
       return Number.MAX_SAFE_INTEGER;
     }
   }

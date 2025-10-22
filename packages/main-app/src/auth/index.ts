@@ -72,13 +72,12 @@ interface RegisterRequest {
   email: string;
   username: string;
   password: string;
-  role?: Role;
 }
 
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { email, username, password, role = 'viewer' } = req.body as RegisterRequest;
+    const { email, username, password } = req.body as RegisterRequest;
 
     // Validate input types
     if (typeof email !== 'string' || typeof username !== 'string' || typeof password !== 'string') {
@@ -117,14 +116,8 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
       return;
     }
 
-    // Validate role
-    if (!Object.values(Role).includes(role as Role)) {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: 'Invalid role',
-      });
-      return;
-    }
+    // Role assignment is enforced server-side; ignore any client-provided role
+    const role: Role = Role.VIEWER;
 
     // Hash password
     const password_hash = await hashPassword(password);

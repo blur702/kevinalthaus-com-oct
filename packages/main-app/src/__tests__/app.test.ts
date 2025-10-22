@@ -1,5 +1,7 @@
 import request from 'supertest';
 import app from '../index';
+import { closePool } from '../db';
+import { getServer } from '../server';
 
 interface HealthResponse {
   status: string;
@@ -10,6 +12,24 @@ interface HealthResponse {
 }
 
 describe('Main App', () => {
+  beforeAll(async () => {
+    // Ensure DB is reachable (health check path will initialize pool)
+    // Optionally add other init steps here
+    await request(app).get('/health');
+  });
+
+  afterAll(async () => {
+    // Close DB pool and stop server if running to avoid open handles
+    try {
+      await closePool();
+    } catch {}
+    const server = getServer?.();
+    if (server) {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+    jest.clearAllTimers();
+    jest.clearAllMocks();
+  });
   describe('GET /health', () => {
     it('should return health status', async () => {
       const response = await request(app)

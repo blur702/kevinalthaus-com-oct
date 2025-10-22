@@ -393,7 +393,7 @@ Revoke refresh token.
 Get current user (requires JWT).
 
 **Headers:**
-```
+```http
 Authorization: Bearer jwt_token
 ```
 

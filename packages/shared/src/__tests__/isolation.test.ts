@@ -44,5 +44,37 @@ describe('DatabaseIsolationEnforcer.estimateQueryComplexity', () => {
     const q = `SELECT * FROM users WHERE LOWER(email) = 'a' OR UPPER(name) = 'b'`;
     expect(() => enforcer.enforceQuotas(q, 1)).not.toThrow();
   });
-});
 
+  it('enforces complexity for multi-join queries with tight limit', () => {
+    const tightLimits = {
+      maxQueryComplexity: 10,
+      maxQueryRows: Number.MAX_SAFE_INTEGER,
+      maxExecutionTime: 30000,
+    };
+    const enforcer = new DatabaseIsolationEnforcer(tightLimits);
+    const multiJoin = `SELECT * FROM a JOIN b ON a.id=b.a_id JOIN c ON b.id=c.b_id`;
+    expect(() => enforcer.enforceQuotas(multiJoin, 1)).toThrow(/complexity/i);
+  });
+
+  it('throws when complexity exceeds limit for a deliberately complex query', () => {
+    const veryTight = {
+      maxQueryComplexity: 5,
+      maxQueryRows: Number.MAX_SAFE_INTEGER,
+      maxExecutionTime: 30000,
+    };
+    const enforcer = new DatabaseIsolationEnforcer(veryTight);
+    const q = `WITH RECURSIVE t(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM t WHERE n < 3) SELECT * FROM t UNION SELECT 99`;
+    expect(() => enforcer.enforceQuotas(q, 1)).toThrow(/complexity.*exceeds limit/i);
+  });
+
+  it('throws when estimated rows exceed limit', () => {
+    const rowTight = {
+      maxQueryComplexity: Number.MAX_SAFE_INTEGER,
+      maxQueryRows: 10,
+      maxExecutionTime: 30000,
+    };
+    const enforcer = new DatabaseIsolationEnforcer(rowTight);
+    const q = `SELECT * FROM users`;
+    expect(() => enforcer.enforceQuotas(q, 100)).toThrow(/rows.*exceeds limit/i);
+  });
+});

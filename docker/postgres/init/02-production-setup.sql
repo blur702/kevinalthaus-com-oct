@@ -19,7 +19,9 @@ BEGIN
   IF monitoring_pass IS NULL OR monitoring_pass = '' THEN
     RAISE EXCEPTION 'MONITORING_PASSWORD environment variable must be set for production';
   END IF;
-  EXECUTE format('CREATE ROLE monitoring WITH LOGIN PASSWORD %L', monitoring_pass);
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'monitoring') THEN
+    EXECUTE format('CREATE ROLE monitoring WITH LOGIN PASSWORD %L', monitoring_pass);
+  END IF;
 END $$;
 GRANT CONNECT ON DATABASE kevinalthaus TO monitoring;
 GRANT USAGE ON SCHEMA public TO monitoring;
@@ -38,7 +40,9 @@ BEGIN
   IF app_user_pass IS NULL OR app_user_pass = '' THEN
     RAISE EXCEPTION 'APP_USER_PASSWORD environment variable must be set for production';
   END IF;
-  EXECUTE format('CREATE ROLE app_user WITH LOGIN PASSWORD %L', app_user_pass);
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN
+    EXECUTE format('CREATE ROLE app_user WITH LOGIN PASSWORD %L', app_user_pass);
+  END IF;
 END $$;
 GRANT CONNECT ON DATABASE kevinalthaus TO app_user;
 GRANT USAGE, CREATE ON SCHEMA public TO app_user;

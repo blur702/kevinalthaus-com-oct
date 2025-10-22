@@ -68,7 +68,7 @@ if ! command -v docker &> /dev/null; then
     # Download Docker GPG key and verify fingerprint
     log "Downloading and verifying Docker GPG key..."
     TEMP_GPG_FILE=$(mktemp)
-    trap "rm -f $TEMP_GPG_FILE" EXIT
+    trap 'rm -f "$TEMP_GPG_FILE"' EXIT
 
     if ! curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o "$TEMP_GPG_FILE"; then
         error "Failed to download Docker GPG key"

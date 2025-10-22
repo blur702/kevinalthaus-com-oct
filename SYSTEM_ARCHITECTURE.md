@@ -44,10 +44,13 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
           │                     │                    │
           └─────────────────────┼────────────────────┘
                                 │
-                    ┌───────────┴───────────┐
-                    │    PostgreSQL         │
-                    │    Port 5432          │
-                    └───────────────────────┘
+                 ┌──────────────┴──────────────┐
+                 │                             │
+        ┌────────┴────────┐          ┌─────────┴─────────┐
+        │   PostgreSQL     │          │      Redis        │
+        │   Port 5432      │          │   Port 6379       │
+        │ (Primary DB)     │          │ (Caching/Sessions)│
+        └──────────────────┘          └───────────────────┘
 ```
 
 ### Technology Stack

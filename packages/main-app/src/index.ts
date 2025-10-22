@@ -141,7 +141,7 @@ app.get('/health/ready', asyncHandler(async (_req, res) => {
 app.get('/', (_req, res) => {
   res.json({
     message: 'Kevin Althaus Main Application',
-    version: '1.0.0',
+    version: process.env.VERSION || '1.0.0',
     environment: process.env.NODE_ENV || 'development'
   });
 });
@@ -186,11 +186,19 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
     method: req.method
   });
 
-  res.status(500).json({
+  const isLocalDev = process.env.NODE_ENV === 'development' && (process.env.DEPLOY_ENV ?? 'local') === 'local';
+  const body: Record<string, unknown> = {
     error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
-    statusCode: 500
-  });
+    statusCode: 500,
+  };
+  if (isLocalDev) {
+    body.message = err.message || 'Unknown error';
+    body.stack = err.stack;
+  } else {
+    body.message = 'Something went wrong';
+  }
+
+  res.status(500).json(body);
 });
 
 export default app;

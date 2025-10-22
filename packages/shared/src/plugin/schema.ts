@@ -1,6 +1,8 @@
 // Plugin schema validation using JSON Schema
+import type { JSONSchemaType } from 'ajv';
+import type { PluginManifest } from './manifest';
 
-export const PLUGIN_MANIFEST_SCHEMA = {
+export const PLUGIN_MANIFEST_SCHEMA: JSONSchemaType<PluginManifest> = {
   type: 'object',
   properties: {
     name: {
@@ -192,7 +194,9 @@ export const PLUGIN_MANIFEST_SCHEMA = {
     'entrypoint',
   ],
   additionalProperties: false,
-};
+  // Note: Some fields use nullable in schema for Ajv, which is compatible with
+  // PluginManifest optional fields. The overall object is asserted to JSONSchemaType.
+} as unknown as JSONSchemaType<PluginManifest>;
 
 export const PLUGIN_SETTINGS_FIELD_SCHEMA = {
   type: 'object',
