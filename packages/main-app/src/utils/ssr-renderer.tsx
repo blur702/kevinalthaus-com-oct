@@ -7,7 +7,17 @@ import { backendTheme } from '../theme/backend-theme';
 export interface SSRRenderOptions {
   title: string;
   csrfToken?: string;
+  /**
+   * Additional HTML to inject in <head> section
+   * WARNING: This HTML is injected unsanitized. Only use with trusted, server-generated content.
+   * Never pass user-supplied or untrusted content here as it could lead to XSS vulnerabilities.
+   */
   additionalHead?: string;
+  /**
+   * Additional HTML to inject in <body> section
+   * WARNING: This HTML is injected unsanitized. Only use with trusted, server-generated content.
+   * Never pass user-supplied or untrusted content here as it could lead to XSS vulnerabilities.
+   */
   additionalBody?: string;
 }
 

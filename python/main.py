@@ -71,4 +71,6 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
+    # Development only: binding to 0.0.0.0 exposes the service on all network interfaces
+    # In production, use a proper ASGI server (e.g., Gunicorn with uvicorn workers) and configure host binding appropriately
     uvicorn.run(app, host="0.0.0.0", port=8000)
