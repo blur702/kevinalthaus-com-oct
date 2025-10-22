@@ -29,8 +29,9 @@ if ! docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" >/dev/null 2>&1 ||
 fi
 
 # Create backup using temporary file to avoid empty backups on failure
+# Note: -t flag removed to prevent TTY control characters from corrupting the binary dump
 TEMP_FILE="${BACKUP_FILE}.tmp"
-docker exec -t "$CONTAINER_NAME" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "$TEMP_FILE"
+docker exec "$CONTAINER_NAME" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "$TEMP_FILE"
 
 # Move to final location only on success
 mv "$TEMP_FILE" "$BACKUP_FILE"

@@ -1,4 +1,5 @@
-import { query } from './index';
+import { query, transaction } from './index';
+import { PoolClient } from 'pg';
 
 export async function runMigrations(): Promise<void> {
   console.log('[Migrations] Running database migrations...');
@@ -14,11 +15,11 @@ export async function runMigrations(): Promise<void> {
     `);
 
     // Run migrations in order
-    await runMigration('00-enable-pgcrypto', async () => {
-      await query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
+    await runMigration('00-enable-pgcrypto', async (client: PoolClient) => {
+      await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
     });
-    await runMigration('01-create-users-table', async () => {
-      await query(`
+    await runMigration('01-create-users-table', async (client: PoolClient) => {
+      await client.query(`
         CREATE TABLE IF NOT EXISTS users (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           email VARCHAR(255) UNIQUE NOT NULL,
@@ -33,15 +34,15 @@ export async function runMigrations(): Promise<void> {
       `);
 
       // Create indexes
-      await query(`
+      await client.query(`
         CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
         CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
         CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
       `);
     });
 
-    await runMigration('02-create-refresh-tokens-table', async () => {
-      await query(`
+    await runMigration('02-create-refresh-tokens-table', async (client: PoolClient) => {
+      await client.query(`
         CREATE TABLE IF NOT EXISTS refresh_tokens (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -54,14 +55,14 @@ export async function runMigrations(): Promise<void> {
         )
       `);
 
-      await query(`
+      await client.query(`
         CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
         CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
       `);
     });
 
-    await runMigration('03-create-plugin-registry-table', async () => {
-      await query(`
+    await runMigration('03-create-plugin-registry-table', async (client: PoolClient) => {
+      await client.query(`
         CREATE TABLE IF NOT EXISTS plugin_registry (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           name VARCHAR(255) UNIQUE NOT NULL,
@@ -78,14 +79,14 @@ export async function runMigrations(): Promise<void> {
         )
       `);
 
-      await query(`
+      await client.query(`
         CREATE INDEX IF NOT EXISTS idx_plugin_registry_name ON plugin_registry(name);
         CREATE INDEX IF NOT EXISTS idx_plugin_registry_status ON plugin_registry(status);
       `);
     });
 
-    await runMigration('04-create-system-settings-table', async () => {
-      await query(`
+    await runMigration('04-create-system-settings-table', async (client: PoolClient) => {
+      await client.query(`
         CREATE TABLE IF NOT EXISTS system_settings (
           key VARCHAR(255) PRIMARY KEY,
           value JSONB NOT NULL,
@@ -96,8 +97,8 @@ export async function runMigrations(): Promise<void> {
       `);
     });
 
-    await runMigration('05-create-audit-log-table', async () => {
-      await query(`
+    await runMigration('05-create-audit-log-table', async (client: PoolClient) => {
+      await client.query(`
         CREATE TABLE IF NOT EXISTS audit_log (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id UUID REFERENCES users(id),
@@ -111,15 +112,15 @@ export async function runMigrations(): Promise<void> {
         )
       `);
 
-      await query(`
+      await client.query(`
         CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
         CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
         CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
       `);
     });
 
-    await runMigration('06-create-plugin-kv-store-table', async () => {
-      await query(`
+    await runMigration('06-create-plugin-kv-store-table', async (client: PoolClient) => {
+      await client.query(`
         CREATE TABLE IF NOT EXISTS plugin_kv_store (
           plugin_id UUID NOT NULL REFERENCES plugin_registry(id) ON DELETE CASCADE,
           key VARCHAR(255) NOT NULL,
@@ -130,7 +131,7 @@ export async function runMigrations(): Promise<void> {
         )
       `);
 
-      await query(`
+      await client.query(`
         CREATE INDEX IF NOT EXISTS idx_plugin_kv_store_plugin_id ON plugin_kv_store(plugin_id);
       `);
     });
@@ -144,7 +145,7 @@ export async function runMigrations(): Promise<void> {
 
 async function runMigration(
   name: string,
-  migration: () => Promise<void>
+  migration: (client: PoolClient) => Promise<void>
 ): Promise<void> {
   const result = await query<{ name: string }>(
     'SELECT name FROM migrations WHERE name = $1',
@@ -157,7 +158,20 @@ async function runMigration(
   }
 
   console.log(`[Migrations] Running ${name}...`);
-  await migration();
-  await query('INSERT INTO migrations (name) VALUES ($1)', [name]);
-  console.log(`[Migrations] Completed ${name}`);
+
+  // Wrap migration execution in transaction for atomicity
+  await transaction(async (client) => {
+    try {
+      // Execute the migration with transaction client
+      await migration(client);
+
+      // Record migration in database
+      await client.query('INSERT INTO migrations (name) VALUES ($1)', [name]);
+
+      console.log(`[Migrations] Completed ${name}`);
+    } catch (error) {
+      console.error(`[Migrations] Failed ${name}:`, error);
+      throw error;
+    }
+  });
 }

@@ -125,12 +125,20 @@ app.get('/health', async (_req, res): Promise<void> => {
   const checks: Record<string, string> = {};
 
   try {
-    const mainAppResponse = await fetch(`${MAIN_APP_URL}/health`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    checks.mainApp = mainAppResponse.ok ? 'healthy' : 'unhealthy';
-  } catch {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      const mainAppResponse = await fetch(`${MAIN_APP_URL}/health`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+      });
+      checks.mainApp = mainAppResponse.ok ? 'healthy' : 'unhealthy';
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  } catch (error) {
     checks.mainApp = 'unhealthy';
   }
 
@@ -155,12 +163,21 @@ app.get('/health/live', (_req, res) => {
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 app.get('/health/ready', async (_req, res) => {
   try {
-    const mainAppResponse = await fetch(`${MAIN_APP_URL}/health`);
-    if (!mainAppResponse.ok) {
-      res.status(503).json({ status: 'not ready', dependencies: { mainApp: 'unhealthy' } });
-      return;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      const mainAppResponse = await fetch(`${MAIN_APP_URL}/health`, {
+        signal: controller.signal,
+      });
+      if (!mainAppResponse.ok) {
+        res.status(503).json({ status: 'not ready', dependencies: { mainApp: 'unhealthy' } });
+        return;
+      }
+      res.json({ status: 'ready', dependencies: { mainApp: 'healthy' } });
+    } finally {
+      clearTimeout(timeoutId);
     }
-    res.json({ status: 'ready', dependencies: { mainApp: 'healthy' } });
   } catch {
     res.status(503).json({ status: 'not ready', dependencies: { mainApp: 'unhealthy' } });
   }

@@ -20,7 +20,7 @@ class ResponseCache {
     for (const key of keys) {
       sortedQuery[key] = req.query[key];
     }
-    return `${req.method}:${req.originalUrl}:${JSON.stringify(sortedQuery)}`;
+    return `${req.method}:${req.path}:${JSON.stringify(sortedQuery)}`;
   }
 
   get(req: Request): CacheEntry | null {
@@ -66,7 +66,8 @@ const responseCache = new ResponseCache();
 // Response caching middleware for GET requests
 export const cacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   if (req.method !== 'GET') {
-    return next();
+    next();
+    return;
   }
 
   const cached = responseCache.get(req);
@@ -84,20 +85,32 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   const originalJson = res.json.bind(res);
   res.json = function(data: unknown) {
     if (res.statusCode === 200) {
-      const headers: Record<string, string> = {};
-      Object.entries(res.getHeaders()).forEach(([key, value]) => {
-        if (typeof value === 'string') {
-          headers[key] = value;
-        } else if (typeof value === 'number') {
-          headers[key] = String(value);
-        } else if (Array.isArray(value)) {
-          headers[key] = value.join(', ');
-        } else if (value != null) {
-          headers[key] = String(value);
-        }
-      });
-      responseCache.set(req, data, headers);
-      res.set('X-Cache', 'MISS');
+      // Check Cache-Control header before storing
+      const cacheControl = res.getHeader('Cache-Control');
+      const cacheControlStr = typeof cacheControl === 'string'
+        ? cacheControl.toLowerCase()
+        : Array.isArray(cacheControl)
+          ? cacheControl.join(', ').toLowerCase()
+          : '';
+
+      const shouldSkipCache = cacheControlStr.includes('no-store') || cacheControlStr.includes('private');
+
+      if (!shouldSkipCache) {
+        const headers: Record<string, string> = {};
+        Object.entries(res.getHeaders()).forEach(([key, value]) => {
+          if (typeof value === 'string') {
+            headers[key] = value;
+          } else if (typeof value === 'number') {
+            headers[key] = String(value);
+          } else if (Array.isArray(value)) {
+            headers[key] = value.join(', ');
+          } else if (value !== null && value !== undefined) {
+            headers[key] = String(value);
+          }
+        });
+        responseCache.set(req, data, headers);
+        res.set('X-Cache', 'MISS');
+      }
     }
     return originalJson(data);
   };

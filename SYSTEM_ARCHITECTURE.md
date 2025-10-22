@@ -65,7 +65,7 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
 - Docker for containerization
 
 **Data Layer:**
-- PostgreSQL 15 as primary database
+- PostgreSQL 16 as primary database
 - Redis for caching and sessions
 - Plugin-specific schemas for isolation
 
@@ -476,7 +476,7 @@ services:
     environment: ["NODE_ENV=production"]
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     environment: ["POSTGRES_DB=kevinalthaus_prod"]
     volumes: ["postgres_data:/var/lib/postgresql/data"]
 

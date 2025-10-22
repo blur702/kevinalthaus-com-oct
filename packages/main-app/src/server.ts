@@ -3,6 +3,7 @@ import { Server } from 'http';
 import { runMigrations } from './db/migrations';
 import { closePool } from './db';
 import { createLogger, LogLevel } from '@monorepo/shared';
+import { ensureUploadDirectory } from './middleware/upload';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -18,6 +19,10 @@ let server: Server;
 // Initialize database and start server
 async function start(): Promise<void> {
   try {
+    // Initialize upload directory before starting server
+    await ensureUploadDirectory();
+    logger.info('Upload directory initialized');
+
     // Run database migrations
     await runMigrations();
     logger.info('Database migrations completed');

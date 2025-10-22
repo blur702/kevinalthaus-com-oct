@@ -27,8 +27,16 @@ server.listen(PORT, () => {
 // Graceful shutdown handler
 function gracefulShutdown(signal: string): void {
   console.log(`Received ${signal}. Shutting down test server...`);
+
+  // Set timeout to force exit if server doesn't close gracefully
+  const forceExitTimeout = setTimeout(() => {
+    console.warn('Server did not close gracefully within 10 seconds, forcing exit');
+    process.exit(1);
+  }, 10000);
+
   server.close(() => {
-    console.log('Test server closed');
+    clearTimeout(forceExitTimeout);
+    console.log('Test server closed cleanly');
     process.exit(0);
   });
 }

@@ -6,6 +6,7 @@ set -e
 
 APP_DIR="${APP_DIR:-/opt/kevinalthaus}"
 LOG_DIR="$APP_DIR/logs/cron"
+CONTAINER_NAME="${CONTAINER_NAME:-kevinalthaus-postgres-1}"
 
 # Create log directory
 mkdir -p "$LOG_DIR"
@@ -40,7 +41,7 @@ cat > "$CRON_FILE" <<EOF
 */5 * * * * cd $FULL_APP_DIR && $FULL_APP_DIR/scripts/monitor-postgres.sh >> $FULL_LOG_DIR/monitor.log 2>&1
 
 # Weekly database optimization (VACUUM ANALYZE) on Sundays at 3 AM
-0 3 * * 0 /usr/bin/docker exec kevinalthaus-postgres-1 /usr/bin/psql -U postgres -d kevinalthaus -c "VACUUM ANALYZE;" >> $FULL_LOG_DIR/vacuum.log 2>&1
+0 3 * * 0 /usr/bin/docker exec $CONTAINER_NAME /usr/bin/psql -U postgres -d kevinalthaus -c "VACUUM ANALYZE;" >> $FULL_LOG_DIR/vacuum.log 2>&1
 
 # Clean up old logs weekly (keep last 30 days)
 0 4 * * 0 /usr/bin/find $FULL_LOG_DIR -name "*.log" -type f -mtime +30 -delete

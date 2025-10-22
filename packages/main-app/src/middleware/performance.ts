@@ -13,8 +13,36 @@ class ResponseCache {
   private maxSize = 500; // Smaller cache for main app
   private defaultTTL = 180000; // 3 minutes
 
+  private canonicalizeQuery(query: Record<string, unknown>): string {
+    if (Object.keys(query).length === 0) {
+      return '';
+    }
+
+    // Sort keys lexicographically
+    const sortedKeys = Object.keys(query).sort();
+
+    // Build deterministic representation
+    const pairs: string[] = [];
+    for (const key of sortedKeys) {
+      const value = query[key];
+
+      // Handle arrays consistently
+      if (Array.isArray(value)) {
+        // Sort array values for determinism
+        const sortedArray = [...value].sort();
+        pairs.push(`${key}=${JSON.stringify(sortedArray)}`);
+      } else if (value !== null && value !== undefined) {
+        // Handle primitives and objects
+        pairs.push(`${key}=${JSON.stringify(value)}`);
+      }
+    }
+
+    return pairs.join('&');
+  }
+
   private generateKey(req: Request): string {
-    return `${req.method}:${req.originalUrl}:${JSON.stringify(req.query)}`;
+    const canonicalQuery = this.canonicalizeQuery(req.query as Record<string, unknown>);
+    return `${req.method}:${req.originalUrl.split('?')[0]}:${canonicalQuery}`;
   }
 
   get(req: Request): CacheEntry | null {
@@ -146,14 +174,14 @@ export const timingMiddleware = (_req: Request, res: Response, next: NextFunctio
   const originalEnd = res.end.bind(res);
 
   // Override res.end to set timing header before headers are sent
-  res.end = function(...args: any[]) {
+  res.end = function(chunk?: any, encodingOrCallback?: any, callback?: any): Response {
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1000000; // Convert to milliseconds
     res.setHeader('X-Response-Time', `${duration.toFixed(2)}ms`);
 
     // Call original res.end with original arguments
-    return originalEnd.apply(res, args);
-  } as typeof res.end;
+    return originalEnd.call(res, chunk, encodingOrCallback, callback);
+  };
 
   next();
 };

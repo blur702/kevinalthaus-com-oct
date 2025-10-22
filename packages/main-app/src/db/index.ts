@@ -42,7 +42,7 @@ if (process.env.NODE_ENV === 'development') {
   console.info('[DB] Using', useConnString ? 'DATABASE_URL' : 'individual env vars', 'for database configuration');
 }
 
-export async function query<T extends QueryResultRow = any>(
+export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params?: unknown[]
 ): Promise<QueryResult<T>> {

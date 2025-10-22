@@ -16,7 +16,6 @@ import { Role } from '@monorepo/shared';
 import { usersRouter } from './users';
 import { uploadsRouter } from './uploads';
 import { healthCheck } from './db';
-import { ensureUploadDirectory } from './middleware/upload';
 import { discoverPlugins } from './plugins';
 import { pluginManager } from './plugins/manager';
 import { adminPluginsRouter } from './routes/adminPlugins';
@@ -34,16 +33,6 @@ const app = express();
 
 // Enable trust proxy to get real client IP from X-Forwarded-For
 app.set('trust proxy', true);
-
-// Initialize upload directory
-void (async () => {
-  try {
-    await ensureUploadDirectory();
-    logger.info('Upload directory initialized');
-  } catch (error) {
-    logger.error('Failed to initialize upload directory:', error as Error);
-  }
-})();
 
 // Parse CORS_ORIGIN from environment
 const corsOrigins = process.env.CORS_ORIGIN

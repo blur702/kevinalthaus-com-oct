@@ -46,6 +46,18 @@ function timingSafeEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a, 'hex');
   const bufB = Buffer.from(b, 'hex');
 
+  // Validate hex conversion produced expected byte lengths
+  // Odd-length hex strings or invalid hex characters will produce incorrect buffer sizes
+  const expectedLength = a.length / 2;
+  if (bufA.length !== expectedLength || bufB.length !== expectedLength) {
+    return false;
+  }
+
+  // Additional safety check: ensure buffers have equal lengths
+  if (bufA.length !== bufB.length) {
+    return false;
+  }
+
   return cryptoTimingSafeEqual(bufA, bufB);
 }
 

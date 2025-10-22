@@ -2,6 +2,7 @@ import express from 'express';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { pluginManager } from '../plugins/manager';
 import { AuthenticatedRequest } from '../auth';
+import { logger } from '../logger';
 
 export const adminPluginsRouter = express.Router();
 
@@ -12,7 +13,12 @@ export const adminPluginsRouter = express.Router();
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const CSRF_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
-const CSRF_SECRET = process.env.CSRF_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'development_only_insecure_csrf_secret');
+
+// Require CSRF_SECRET in production, allow fallback for development
+if (process.env.NODE_ENV === 'production' && !process.env.CSRF_SECRET) {
+  throw new Error('CSRF_SECRET environment variable is required in production');
+}
+const CSRF_SECRET = process.env.CSRF_SECRET || 'development_only_insecure_csrf_secret';
 
 function signCsrf(userId: string, nonce: string, ts: number): string {
   const payload = `${userId}:${nonce}:${ts}`;
@@ -244,7 +250,7 @@ adminPluginsRouter.post('/:id/install', csrfProtection, (req, res): void => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      console.error('Plugin install failed:', e);
+      logger.error({ err: e, pluginId: req.params.id }, 'Plugin install failed');
       res.status(400).send(layout('Install Error', `<p>Plugin installation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
@@ -255,7 +261,7 @@ adminPluginsRouter.post('/:id/activate', csrfProtection, (req, res): void => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      console.error('Plugin activate failed:', e);
+      logger.error({ err: e, pluginId: req.params.id }, 'Plugin activate failed');
       res.status(400).send(layout('Activate Error', `<p>Plugin activation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
@@ -266,7 +272,7 @@ adminPluginsRouter.post('/:id/deactivate', csrfProtection, (req, res): void => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      console.error('Plugin deactivate failed:', e);
+      logger.error({ err: e, pluginId: req.params.id }, 'Plugin deactivate failed');
       res.status(400).send(layout('Deactivate Error', `<p>Plugin deactivation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });
@@ -277,7 +283,7 @@ adminPluginsRouter.post('/:id/uninstall', csrfProtection, (req, res): void => {
       res.redirect('/admin/plugins');
     })
     .catch((e) => {
-      console.error('Plugin uninstall failed:', e);
+      logger.error({ err: e, pluginId: req.params.id }, 'Plugin uninstall failed');
       res.status(400).send(layout('Uninstall Error', `<p>Plugin uninstall failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
     });
 });

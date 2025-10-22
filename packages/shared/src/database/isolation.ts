@@ -50,6 +50,9 @@ export interface ResourceQuotas {
   maxIndexesPerTable: number;
   maxQueryComplexity: number;
   maxQueryRows: number;
+  // Note: maxExecutionTime must be enforced at query execution time using
+  // database timeout mechanisms (e.g., PostgreSQL's statement_timeout).
+  // It cannot be enforced during static query analysis in enforceQuotas().
   maxExecutionTime: number;
 }
 
@@ -68,12 +71,15 @@ export class DatabaseIsolationEnforcer {
     private readonly quotas: ResourceQuotas,
   ) {}
 
+  // Note: This method does NOT enforce maxExecutionTime from ResourceQuotas.
+  // Execution time limits must be applied at query execution time using database
+  // timeout mechanisms (e.g., PostgreSQL's statement_timeout or query cancellation).
   enforceQuotas(
     query: string,
     estimatedRows: number = 1000,
   ): void {
     const complexity = this.estimateQueryComplexity(query);
-    
+
     if (complexity > this.quotas.maxQueryComplexity) {
       throw new Error(
         `Query complexity ${complexity} exceeds limit ${this.quotas.maxQueryComplexity}`,
@@ -91,29 +97,29 @@ export class DatabaseIsolationEnforcer {
     let complexity = 1;
 
     // Multiple pattern matches to assess query complexity
-    // This is not a single-pass algorithm but provides accurate complexity estimation
-    const lowerQuery = query.toLowerCase();
+    // Note: Regex patterns already have case-insensitive flags (/i or /gi)
 
     // Count joins - each join increases complexity as it multiplies row processing
-    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.join) || []).length * 10;
+    complexity += (query.match(DatabaseIsolationEnforcer.complexityPatterns.join) || []).length * 10;
 
     // Count subqueries - nested queries have higher cost due to repeated scans
-    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.subquery) || []).length * 20;
+    complexity += (query.match(DatabaseIsolationEnforcer.complexityPatterns.subquery) || []).length * 20;
 
     // Count aggregates - require full table scans and grouping operations
-    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.aggregate) || []).length * 5;
+    complexity += (query.match(DatabaseIsolationEnforcer.complexityPatterns.aggregate) || []).length * 5;
 
     // Count wildcards - selecting all columns increases I/O and memory usage
-    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.wildcard) || []).length * 3;
+    complexity += (query.match(DatabaseIsolationEnforcer.complexityPatterns.wildcard) || []).length * 3;
 
     // Count window functions - require sorting and partitioning operations
-    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.window) || []).length * 15;
+    complexity += (query.match(DatabaseIsolationEnforcer.complexityPatterns.window) || []).length * 15;
 
     // Count CTEs - Common Table Expressions add temporary result set overhead
-    complexity += (lowerQuery.match(DatabaseIsolationEnforcer.complexityPatterns.cte) || []).length * 8;
+    complexity += (query.match(DatabaseIsolationEnforcer.complexityPatterns.cte) || []).length * 8;
 
-    // Cap at configured maximum to prevent integer overflow
-    return Math.min(complexity, this.quotas.maxQueryComplexity);
+    // Cap at Number.MAX_SAFE_INTEGER to prevent overflow
+    // Return actual complexity so enforceQuotas can properly detect quota violations
+    return Math.min(complexity, Number.MAX_SAFE_INTEGER);
   }
 }
 

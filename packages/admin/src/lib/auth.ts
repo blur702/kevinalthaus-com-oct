@@ -1,7 +1,5 @@
-// Token storage utility for managing authentication tokens in localStorage
-
-const AUTH_ACCESS_TOKEN = 'auth_access_token';
-const AUTH_REFRESH_TOKEN = 'auth_refresh_token';
+// Authentication utility using httpOnly cookies for secure token storage
+// Tokens are stored server-side in httpOnly cookies to prevent XSS attacks
 
 // TypeScript interfaces matching backend response structure
 export interface User {
@@ -11,50 +9,85 @@ export interface User {
   role: string;
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
-export interface AuthResponse extends AuthTokens {
+export interface AuthResponse {
   user: User;
+  message?: string;
 }
 
 /**
- * Store authentication tokens in localStorage
+ * Decode a JWT token payload without verification
+ * Used only for client-side expiry checking
  */
-export function setTokens(accessToken: string, refreshToken: string): void {
-  localStorage.setItem(AUTH_ACCESS_TOKEN, accessToken);
-  localStorage.setItem(AUTH_REFRESH_TOKEN, refreshToken);
+function decodeJWT(token: string): { exp?: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    const payload = parts[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded;
+  } catch (error) {
+    return null;
+  }
 }
 
 /**
- * Retrieve the access token from localStorage
+ * NOT USED - Tokens are managed via httpOnly cookies
+ * This is a no-op for backwards compatibility
+ * @deprecated Use cookie-based authentication instead
+ */
+export function setTokens(_accessToken: string, _refreshToken: string): void {
+  // Tokens are now stored in httpOnly cookies set by the server
+  // This function is kept for backwards compatibility but does nothing
+  console.warn('setTokens is deprecated. Tokens are now managed via httpOnly cookies.');
+}
+
+/**
+ * NOT USED - Access tokens are in httpOnly cookies
+ * @deprecated Tokens are stored in httpOnly cookies
  */
 export function getAccessToken(): string | null {
-  return localStorage.getItem(AUTH_ACCESS_TOKEN);
+  console.warn('getAccessToken is deprecated. Tokens are managed via httpOnly cookies.');
+  return null;
 }
 
 /**
- * Retrieve the refresh token from localStorage
+ * NOT USED - Refresh tokens are in httpOnly cookies
+ * @deprecated Tokens are stored in httpOnly cookies
  */
 export function getRefreshToken(): string | null {
-  return localStorage.getItem(AUTH_REFRESH_TOKEN);
+  console.warn('getRefreshToken is deprecated. Tokens are managed via httpOnly cookies.');
+  return null;
 }
 
 /**
- * Remove all authentication tokens from localStorage (on logout)
+ * Clear authentication by calling the server logout endpoint
+ * Server will clear the httpOnly cookies
  */
-export function clearTokens(): void {
-  localStorage.removeItem(AUTH_ACCESS_TOKEN);
-  localStorage.removeItem(AUTH_REFRESH_TOKEN);
+export async function clearTokens(): Promise<void> {
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include', // Send cookies
+    });
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
 }
 
 /**
- * Check if user is authenticated by verifying valid tokens exist
+ * Check if user is authenticated by validating the access token from cookies
+ * Since cookies are httpOnly, we make a request to a validation endpoint
  */
-export function isAuthenticated(): boolean {
-  const accessToken = getAccessToken();
-  const refreshToken = getRefreshToken();
-  return !!(accessToken && refreshToken);
+export async function isAuthenticated(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/validate', {
+      method: 'GET',
+      credentials: 'include', // Send cookies
+    });
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
 }
