@@ -1,5 +1,5 @@
 import express from 'express';
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { pluginManager } from '../plugins/manager';
 import { AuthenticatedRequest } from '../auth';
 
@@ -22,23 +22,44 @@ function signCsrf(userId: string, nonce: string, ts: number): string {
 
 function verifyCsrf(token: string, userId: string): boolean {
   const parts = token.split(':');
-  if (parts.length !== 4) return false;
+  if (parts.length !== 4) {
+    return false;
+  }
   const [uid, nonce, tsStr, mac] = parts;
-  if (uid !== userId) return false;
+  if (uid !== userId) {
+    return false;
+  }
   const ts = Number(tsStr);
-  if (!Number.isFinite(ts) || ts <= 0) return false;
-  if (Date.now() - ts > CSRF_MAX_AGE_MS) return false;
+  if (!Number.isFinite(ts) || ts <= 0) {
+    return false;
+  }
+  if (Date.now() - ts > CSRF_MAX_AGE_MS) {
+    return false;
+  }
   const expected = createHmac('sha256', CSRF_SECRET).update(`${uid}:${nonce}:${ts}`).digest('hex');
-  return mac === expected;
+  
+  // Use timing-safe comparison to prevent timing attacks on MAC verification
+  try {
+    const macBuffer = Buffer.from(mac, 'hex');
+    const expectedBuffer = Buffer.from(expected, 'hex');
+    return macBuffer.length === expectedBuffer.length && timingSafeEqual(macBuffer, expectedBuffer);
+  } catch (error) {
+    // Invalid hex encoding
+    return false;
+  }
 }
 
 function getCookie(req: express.Request, name: string): string | undefined {
   const cookieHeader = req.headers.cookie;
-  if (!cookieHeader) return undefined;
+  if (!cookieHeader) {
+    return undefined;
+  }
   const cookies = cookieHeader.split(';').map((c) => c.trim());
   for (const c of cookies) {
     const [k, v] = c.split('=');
-    if (k === name) return decodeURIComponent(v || '');
+    if (k === name) {
+      return decodeURIComponent(v || '');
+    }
   }
   return undefined;
 }
@@ -82,7 +103,7 @@ function csrfProtection(req: express.Request, res: express.Response, next: expre
   }
 
   if (req.method === 'POST') {
-    const headerToken = typeof req.headers[CSRF_HEADER_NAME] === 'string' ? (req.headers[CSRF_HEADER_NAME] as string) : undefined;
+    const headerToken = typeof req.headers[CSRF_HEADER_NAME] === 'string' ? req.headers[CSRF_HEADER_NAME] : undefined;
     const bodyToken = typeof (req.body as Record<string, unknown>)?._csrf === 'string' ? ((req.body as Record<string, unknown>)?._csrf as string) : undefined;
     const cookieToken = getCookie(req, CSRF_COOKIE_NAME);
     const submitted = headerToken || bodyToken;

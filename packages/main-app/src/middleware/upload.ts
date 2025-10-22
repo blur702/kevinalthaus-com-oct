@@ -167,10 +167,15 @@ export async function sniffAndValidateFile(filePath: string, originalName: strin
     try {
       const { buffer } = await fd.read(Buffer.alloc(4100), 0, 4100, 0);
       // Lazy import to avoid ESM/CommonJS interop issues at load time
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { fileTypeFromBuffer } = await import('file-type');
+      // Type assertion needed for dynamic import - file-type is ESM-only
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
+      const fileTypeModule = await import('file-type');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const fileTypeFromBuffer = fileTypeModule.fileTypeFromBuffer;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
       const type = await fileTypeFromBuffer(buffer);
-      const detectedMime = type?.mime;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const detectedMime: string | undefined = type?.mime;
 
       const ext = path.extname(originalName).toLowerCase();
 

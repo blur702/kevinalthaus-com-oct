@@ -1,5 +1,7 @@
 import { PluginManifest } from './manifest';
 import { PluginStatus } from '../constants';
+import type { Pool } from 'pg';
+import type { Application } from 'express';
 
 export interface PluginLifecycleContext {
   pluginId: string;
@@ -20,8 +22,8 @@ export interface PluginExecutionContext extends PluginLifecycleContext {
   logger: PluginLogger;
   api: PluginAPI;
   storage: PluginStorage;
-  db?: any; // Database connection pool (eslint-disable-line @typescript-eslint/no-explicit-any)
-  app?: any; // Express app instance (eslint-disable-line @typescript-eslint/no-explicit-any)
+  db?: Pool; // Database connection pool
+  app?: Application; // Express app instance
 }
 
 export interface PluginLifecycleHooks {

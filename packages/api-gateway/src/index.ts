@@ -152,6 +152,7 @@ app.get('/health/live', (_req, res) => {
 });
 
 // Readiness should probe downstream dependencies
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 app.get('/health/ready', async (_req, res) => {
   try {
     const mainAppResponse = await fetch(`${MAIN_APP_URL}/health`);
