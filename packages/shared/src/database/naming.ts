@@ -116,14 +116,18 @@ function generateShortHash(input: string): string {
     hash ^= input.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
-  
-  const result = Math.abs(hash).toString(36).substring(0, 8);
-  
+
+  // Convert to base36 and ensure exactly 8 characters
+  const hashStr = Math.abs(hash).toString(36);
+  const result = hashStr.length >= 8
+    ? hashStr.substring(0, 8)
+    : hashStr.padStart(8, '0');
+
   // Cache the result
   if (hashCache.size < 1000) { // Prevent memory leaks
     hashCache.set(input, result);
   }
-  
+
   return result;
 }
 

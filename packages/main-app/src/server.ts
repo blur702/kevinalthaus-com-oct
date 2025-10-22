@@ -15,6 +15,7 @@ const PORT = process.env.MAIN_APP_PORT || process.env.PORT || 3001;
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
 let server: Server;
+let isShuttingDown = false; // Idempotency guard for graceful shutdown
 
 // Initialize database and start server
 async function start(): Promise<void> {
@@ -47,6 +48,13 @@ void start();
 
 // Graceful shutdown handler
 async function gracefulShutdown(signal: string): Promise<void> {
+  // Idempotency guard: prevent concurrent shutdowns
+  if (isShuttingDown) {
+    logger.warn(`Shutdown already in progress, ignoring ${signal}`);
+    return;
+  }
+  isShuttingDown = true;
+
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
 
   // Capture timeout timer so we can clear it if shutdown completes successfully

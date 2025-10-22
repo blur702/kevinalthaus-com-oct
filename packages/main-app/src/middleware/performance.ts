@@ -98,10 +98,54 @@ class ResponseCache {
 
 const responseCache = new ResponseCache();
 
+// Helper to check if Cache-Control header prohibits caching
+function isCacheControlNoCacheable(cacheControl: string | string[] | undefined): boolean {
+  if (!cacheControl) {
+    return false;
+  }
+  const ccStr = Array.isArray(cacheControl) ? cacheControl.join(', ') : cacheControl;
+  const ccLower = ccStr.toLowerCase();
+  return ccLower.includes('no-store') || ccLower.includes('no-cache') || ccLower.includes('private');
+}
+
+// Helper to check if response Cache-Control allows caching
+function isCacheControlCacheable(cacheControl: string | string[] | undefined): boolean {
+  if (!cacheControl) {
+    return false;
+  }
+  const ccStr = Array.isArray(cacheControl) ? cacheControl.join(', ') : cacheControl;
+  const ccLower = ccStr.toLowerCase();
+
+  // Must not contain no-store, no-cache, or private
+  if (ccLower.includes('no-store') || ccLower.includes('no-cache') || ccLower.includes('private')) {
+    return false;
+  }
+
+  // Should contain public or max-age > 0
+  if (ccLower.includes('public')) {
+    return true;
+  }
+
+  // Check for max-age > 0
+  const maxAgeMatch = ccLower.match(/max-age=(\d+)/);
+  if (maxAgeMatch && parseInt(maxAgeMatch[1], 10) > 0) {
+    return true;
+  }
+
+  return false;
+}
+
 // Response caching middleware for GET requests
 export const cacheMiddleware = (req: Request, res: Response, next: NextFunction) => {
   if (req.method !== 'GET') {
     return next();
+  }
+
+  // Check request Cache-Control header - bypass cache if client requests fresh data
+  if (isCacheControlNoCacheable(req.headers['cache-control'])) {
+    // Skip reading from cache
+    next();
+    return;
   }
 
   const cached = responseCache.get(req);
@@ -119,14 +163,23 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   const originalJson = res.json.bind(res);
   res.json = function(data: unknown) {
     if (res.statusCode === 200) {
-      const headers: Record<string, string> = {};
-      Object.entries(res.getHeaders()).forEach(([key, value]) => {
-        if (typeof value === 'string') {
-          headers[key] = value;
-        }
-      });
-      responseCache.set(req, data, headers);
-      res.set('X-Cache', 'MISS');
+      // Check response Cache-Control before caching
+      const responseCacheControl = res.getHeader('Cache-Control');
+      const shouldCache = isCacheControlCacheable(responseCacheControl);
+
+      if (shouldCache) {
+        const headers: Record<string, string> = {};
+        Object.entries(res.getHeaders()).forEach(([key, value]) => {
+          if (typeof value === 'string') {
+            headers[key] = value;
+          }
+        });
+        responseCache.set(req, data, headers);
+        res.set('X-Cache', 'MISS');
+      } else {
+        // Not cacheable, set header to indicate why
+        res.set('X-Cache', 'SKIP');
+      }
     }
     return originalJson(data);
   };

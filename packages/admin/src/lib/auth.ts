@@ -15,24 +15,6 @@ export interface AuthResponse {
 }
 
 /**
- * Decode a JWT token payload without verification
- * Used only for client-side expiry checking
- */
-function decodeJWT(token: string): { exp?: number } | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return null;
-    }
-    const payload = parts[1];
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-    return decoded;
-  } catch (error) {
-    return null;
-  }
-}
-
-/**
  * NOT USED - Tokens are managed via httpOnly cookies
  * This is a no-op for backwards compatibility
  * @deprecated Use cookie-based authentication instead

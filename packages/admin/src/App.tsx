@@ -57,6 +57,96 @@ const navItems: NavItem[] = [
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
 ]
 
+interface ProtectedLayoutProps {
+  children: React.ReactNode
+  drawer: React.ReactNode
+  drawerWidth: number
+  mobileOpen: boolean
+  handleDrawerToggle: () => void
+  handleLogout: () => void
+}
+
+const ProtectedLayout: React.FC<ProtectedLayoutProps> = ({
+  children,
+  drawer,
+  drawerWidth,
+  mobileOpen,
+  handleDrawerToggle,
+  handleLogout,
+}) => (
+  <Box sx={{ display: 'flex' }}>
+    <AppBar
+      position="fixed"
+      sx={{
+        width: { sm: `calc(100% - ${drawerWidth}px)` },
+        ml: { sm: `${drawerWidth}px` },
+      }}
+    >
+      <Toolbar>
+        <IconButton
+          color="inherit"
+          aria-label="open drawer"
+          edge="start"
+          onClick={handleDrawerToggle}
+          sx={{ mr: 2, display: { sm: 'none' } }}
+        >
+          <MenuIcon />
+        </IconButton>
+        <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          Kevin Althaus - Admin Dashboard
+        </Typography>
+        <Button
+          color="inherit"
+          onClick={handleLogout}
+          startIcon={<LogoutIcon />}
+        >
+          Logout
+        </Button>
+      </Toolbar>
+    </AppBar>
+    <Box
+      component="nav"
+      sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+    >
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile.
+        }}
+        sx={{
+          display: { xs: 'block', sm: 'none' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+        }}
+      >
+        {drawer}
+      </Drawer>
+      <Drawer
+        variant="permanent"
+        sx={{
+          display: { xs: 'none', sm: 'block' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+        }}
+        open
+      >
+        {drawer}
+      </Drawer>
+    </Box>
+    <Box
+      component="main"
+      sx={{
+        flexGrow: 1,
+        p: 3,
+        width: { sm: `calc(100% - ${drawerWidth}px)` },
+      }}
+    >
+      <Toolbar />
+      {children}
+    </Box>
+  </Box>
+)
+
 const App: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
@@ -96,81 +186,6 @@ const App: React.FC = () => {
     </div>
   )
 
-  // Protected layout component with drawer navigation
-  const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Kevin Althaus - Admin Dashboard
-          </Typography>
-          <Button
-            color="inherit"
-            onClick={handleLogout}
-            startIcon={<LogoutIcon />}
-          >
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
-          }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-        }}
-      >
-        <Toolbar />
-        {children}
-      </Box>
-    </Box>
-  )
-
   return (
     <>
       <CssBaseline />
@@ -185,7 +200,13 @@ const App: React.FC = () => {
           path="/"
           element={
             <ProtectedRoute>
-              <ProtectedLayout>
+              <ProtectedLayout
+                drawer={drawer}
+                drawerWidth={drawerWidth}
+                mobileOpen={mobileOpen}
+                handleDrawerToggle={handleDrawerToggle}
+                handleLogout={handleLogout}
+              >
                 <Dashboard />
               </ProtectedLayout>
             </ProtectedRoute>
@@ -195,7 +216,13 @@ const App: React.FC = () => {
           path="/users"
           element={
             <ProtectedRoute>
-              <ProtectedLayout>
+              <ProtectedLayout
+                drawer={drawer}
+                drawerWidth={drawerWidth}
+                mobileOpen={mobileOpen}
+                handleDrawerToggle={handleDrawerToggle}
+                handleLogout={handleLogout}
+              >
                 <Users />
               </ProtectedLayout>
             </ProtectedRoute>
@@ -205,7 +232,13 @@ const App: React.FC = () => {
           path="/content"
           element={
             <ProtectedRoute>
-              <ProtectedLayout>
+              <ProtectedLayout
+                drawer={drawer}
+                drawerWidth={drawerWidth}
+                mobileOpen={mobileOpen}
+                handleDrawerToggle={handleDrawerToggle}
+                handleLogout={handleLogout}
+              >
                 <Content />
               </ProtectedLayout>
             </ProtectedRoute>
@@ -215,7 +248,13 @@ const App: React.FC = () => {
           path="/analytics"
           element={
             <ProtectedRoute>
-              <ProtectedLayout>
+              <ProtectedLayout
+                drawer={drawer}
+                drawerWidth={drawerWidth}
+                mobileOpen={mobileOpen}
+                handleDrawerToggle={handleDrawerToggle}
+                handleLogout={handleLogout}
+              >
                 <Analytics />
               </ProtectedLayout>
             </ProtectedRoute>
@@ -225,7 +264,13 @@ const App: React.FC = () => {
           path="/settings"
           element={
             <ProtectedRoute>
-              <ProtectedLayout>
+              <ProtectedLayout
+                drawer={drawer}
+                drawerWidth={drawerWidth}
+                mobileOpen={mobileOpen}
+                handleDrawerToggle={handleDrawerToggle}
+                handleLogout={handleLogout}
+              >
                 <Settings />
               </ProtectedLayout>
             </ProtectedRoute>

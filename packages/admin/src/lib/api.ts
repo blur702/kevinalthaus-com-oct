@@ -92,9 +92,12 @@ api.interceptors.response.use(
       const refreshToken = getRefreshToken();
 
       if (!refreshToken) {
-        // No refresh token available, clear tokens and redirect to login
+        // No refresh token available, clear tokens and emit logout event
         clearTokens();
-        window.location.href = '/login';
+        // Emit custom event for the application to handle (e.g., show modal, save state, navigate)
+        window.dispatchEvent(new CustomEvent('auth:logout', {
+          detail: { reason: 'no_refresh_token' }
+        }));
         return Promise.reject(error);
       }
 
@@ -123,10 +126,13 @@ api.interceptors.response.use(
         // Retry the original request
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
+        // Refresh failed, clear tokens and emit logout event
         processQueue(refreshError as Error, null);
         clearTokens();
-        window.location.href = '/login';
+        // Emit custom event for the application to handle (e.g., show modal, save state, navigate)
+        window.dispatchEvent(new CustomEvent('auth:logout', {
+          detail: { reason: 'refresh_failed', error: refreshError }
+        }));
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

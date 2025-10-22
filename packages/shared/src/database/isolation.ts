@@ -42,12 +42,10 @@ export const ADMIN_ISOLATION_POLICY: IsolationPolicy = {
   allowedOperations: Object.values(DatabaseOperation),
 };
 
-export interface QueryResourceLimits {
-  maxConnections: number;
-  maxStorageBytes: number;
-  maxTablesPerPlugin: number;
-  maxRowsPerTable: number;
-  maxIndexesPerTable: number;
+/**
+ * Query execution constraints enforced during static query analysis
+ */
+export interface QueryExecutionLimits {
   maxQueryComplexity: number;
   maxQueryRows: number;
   // Note: maxExecutionTime must be enforced at query execution time using
@@ -56,7 +54,24 @@ export interface QueryResourceLimits {
   maxExecutionTime: number;
 }
 
-/** @deprecated Use QueryResourceLimits instead */
+/**
+ * Infrastructure-level resource limits for plugins
+ * These are enforced at the infrastructure level, not during query analysis
+ */
+export interface InfraResourceLimits {
+  maxConnections: number;
+  maxStorageBytes: number;
+  maxTablesPerPlugin: number;
+  maxRowsPerTable: number;
+  maxIndexesPerTable: number;
+}
+
+/**
+ * @deprecated Use QueryExecutionLimits for query constraints or InfraResourceLimits for infrastructure constraints
+ */
+export interface QueryResourceLimits extends QueryExecutionLimits, InfraResourceLimits {}
+
+/** @deprecated Use QueryExecutionLimits instead */
 export type ResourceQuotas = QueryResourceLimits;
 
 export class DatabaseIsolationEnforcer {
@@ -70,11 +85,15 @@ export class DatabaseIsolationEnforcer {
     cte: /\bwith\b/gi,
   };
 
-  constructor(
-    private readonly quotas: QueryResourceLimits,
-  ) {}
+  private readonly maxQueryComplexity: number;
+  private readonly maxQueryRows: number;
 
-  // Note: This method does NOT enforce maxExecutionTime from QueryResourceLimits.
+  constructor(limits: QueryExecutionLimits) {
+    this.maxQueryComplexity = limits.maxQueryComplexity;
+    this.maxQueryRows = limits.maxQueryRows;
+  }
+
+  // Note: This method does NOT enforce maxExecutionTime from QueryExecutionLimits.
   // Execution time limits must be applied at query execution time using database
   // timeout mechanisms (e.g., PostgreSQL's statement_timeout or query cancellation).
   enforceQuotas(
@@ -87,21 +106,21 @@ export class DatabaseIsolationEnforcer {
       throw new Error('Query parameter cannot be empty or whitespace');
     }
 
-    if (!Number.isFinite(estimatedRows) || !Number.isInteger(estimatedRows) || estimatedRows <= 0) {
-      throw new Error('Estimated rows must be a finite positive integer greater than zero');
+    if (!Number.isFinite(estimatedRows) || estimatedRows <= 0) {
+      throw new Error('Estimated rows must be a finite positive number greater than zero');
     }
 
     const complexity = this.estimateQueryComplexity(trimmedQuery);
 
-    if (complexity > this.quotas.maxQueryComplexity) {
+    if (complexity > this.maxQueryComplexity) {
       throw new Error(
-        `Query complexity ${complexity} exceeds limit ${this.quotas.maxQueryComplexity}`,
+        `Query complexity ${complexity} exceeds limit ${this.maxQueryComplexity}`,
       );
     }
 
-    if (estimatedRows > this.quotas.maxQueryRows) {
+    if (estimatedRows > this.maxQueryRows) {
       throw new Error(
-        `Estimated rows ${estimatedRows} exceeds limit ${this.quotas.maxQueryRows}`,
+        `Estimated rows ${estimatedRows} exceeds limit ${this.maxQueryRows}`,
       );
     }
   }
@@ -150,14 +169,6 @@ export interface QueryValidationResult {
   errors: string[];
   warnings: string[];
   complexity: number;
-}
-
-export interface InfraResourceLimits {
-  maxConnections: number;
-  maxStorageBytes: number;
-  maxTablesPerPlugin: number;
-  maxRowsPerTable: number;
-  maxIndexesPerTable: number;
 }
 
 /** @deprecated Use InfraResourceLimits instead */

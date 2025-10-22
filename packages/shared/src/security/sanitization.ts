@@ -93,7 +93,7 @@ export class ConfigKeyCollisionError extends Error {
   constructor(
     message: string,
     public readonly originalKey: string,
-    public readonly sanitizedKey: string
+    public readonly conflictingKey: string
   ) {
     super(message);
     this.name = 'ConfigKeyCollisionError';
@@ -110,11 +110,11 @@ export function sanitizePluginConfig(config: Record<string, unknown>): Record<st
     // Check for key collision using Map to properly detect all collisions
     // (checking sanitized[key] !== undefined fails when first value is undefined)
     if (keyMapping.has(sanitizedKey)) {
-      const originalKey = keyMapping.get(sanitizedKey);
+      const originalKey = keyMapping.get(sanitizedKey)!;
       throw new ConfigKeyCollisionError(
         `Configuration key collision: "${key}" and "${originalKey}" both normalize to "${sanitizedKey}"`,
-        key,
-        sanitizedKey
+        originalKey,
+        key
       );
     }
 

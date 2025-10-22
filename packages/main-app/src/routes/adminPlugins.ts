@@ -6,6 +6,31 @@ import { logger } from '../logger';
 
 export const adminPluginsRouter = express.Router();
 
+// Plugin ID validation pattern
+const VALID_PLUGIN_ID_PATTERN = /^[a-z0-9-_]+$/i;
+
+/**
+ * Validate plugin ID format and send error response if invalid
+ * @returns true if valid, false if invalid (response already sent)
+ */
+function validatePluginId(
+  pluginId: string,
+  routeName: string,
+  res: express.Response
+): boolean {
+  if (!VALID_PLUGIN_ID_PATTERN.test(pluginId)) {
+    logger.warn({ pluginId, route: routeName }, 'Invalid plugin ID format');
+    res.status(400).send(
+      layout(
+        'Invalid Plugin ID',
+        `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`
+      )
+    );
+    return false;
+  }
+  return true;
+}
+
 // CSRF protection using HMAC-signed, expiring double-submit cookie tokens.
 // Note: For multi-instance deployments, prefer a shared store (e.g., Redis) for nonce tracking
 // to prevent replay across instances. This implementation rotates the token after successful POST.
@@ -246,11 +271,8 @@ adminPluginsRouter.get('/', csrfProtection, (req, res): void => {
 
 adminPluginsRouter.post('/:id/install', csrfProtection, (req, res): void => {
   const pluginId = req.params.id;
-  const validIdPattern = /^[a-z0-9-_]+$/i;
 
-  if (!validIdPattern.test(pluginId)) {
-    logger.warn({ pluginId, route: 'install' }, 'Invalid plugin ID format');
-    res.status(400).send(layout('Invalid Plugin ID', `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`));
+  if (!validatePluginId(pluginId, 'install', res)) {
     return;
   }
 
@@ -266,11 +288,8 @@ adminPluginsRouter.post('/:id/install', csrfProtection, (req, res): void => {
 
 adminPluginsRouter.post('/:id/activate', csrfProtection, (req, res): void => {
   const pluginId = req.params.id;
-  const validIdPattern = /^[a-z0-9-_]+$/i;
 
-  if (!validIdPattern.test(pluginId)) {
-    logger.warn({ pluginId, route: 'activate' }, 'Invalid plugin ID format');
-    res.status(400).send(layout('Invalid Plugin ID', `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`));
+  if (!validatePluginId(pluginId, 'activate', res)) {
     return;
   }
 
@@ -286,11 +305,8 @@ adminPluginsRouter.post('/:id/activate', csrfProtection, (req, res): void => {
 
 adminPluginsRouter.post('/:id/deactivate', csrfProtection, (req, res): void => {
   const pluginId = req.params.id;
-  const validIdPattern = /^[a-z0-9-_]+$/i;
 
-  if (!validIdPattern.test(pluginId)) {
-    logger.warn({ pluginId, route: 'deactivate' }, 'Invalid plugin ID format');
-    res.status(400).send(layout('Invalid Plugin ID', `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`));
+  if (!validatePluginId(pluginId, 'deactivate', res)) {
     return;
   }
 
@@ -306,11 +322,8 @@ adminPluginsRouter.post('/:id/deactivate', csrfProtection, (req, res): void => {
 
 adminPluginsRouter.post('/:id/uninstall', csrfProtection, (req, res): void => {
   const pluginId = req.params.id;
-  const validIdPattern = /^[a-z0-9-_]+$/i;
 
-  if (!validIdPattern.test(pluginId)) {
-    logger.warn({ pluginId, route: 'uninstall' }, 'Invalid plugin ID format');
-    res.status(400).send(layout('Invalid Plugin ID', `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`));
+  if (!validatePluginId(pluginId, 'uninstall', res)) {
     return;
   }
 
