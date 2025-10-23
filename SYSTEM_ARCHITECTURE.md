@@ -1,4 +1,4 @@
-# System Architecture Documentation
+﻿# System Architecture Documentation
 
 ## Overview
 
@@ -49,39 +49,7 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
       +----------------------------------------+    +----------------------+
 ```
 
-```text
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Admin Panel   │    │   Mobile App    │
-│   (React)       │    │   (React)       │    │   (Future)      │
-│   Port 3002     │    │   Port 3003     │    │                 │
-└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
-          │                      │                      │
-          └──────────────────────┼──────────────────────┘
-                                 │
-                    ┌─────────────┴───────────┐
-                    │    API Gateway          │
-                    │    (Express.js)         │
-                    │    Port 3000            │
-                    └─────────────┬───────────┘
-                                 │
-          ┌─────────────────────┬─┴───────────────────┐
-          │                     │                     │
-   ┌──────┴───────┐    ┌────────┴────────┐   ┌───────┴────────┐
-   │  Main App    │    │ Python Service  │   │  Plugin Engine │
-   │ (Node.js)    │    │ (FastAPI)       │   │  (Node.js)     │
-   │ Port 3001    │    │ Port 8000       │   │  Port 3004     │
-   └──────┬───────┘    └────────┬────────┘   └───────┬────────┘
-          │                     │                    │
-          └─────────────────────┼────────────────────┘
-                                │
-                 ┌──────────────┴──────────────┐
-                 │                             │
-        ┌────────┴────────┐          ┌─────────┴─────────┐
-        │   PostgreSQL     │          │      Redis        │
-        │   Port 5432      │          │   Port 6379       │
-        │ (Primary DB)     │          │ (Caching/Sessions)│
-        └──────────────────┘          └───────────────────┘
-```
+
 
 ### Port Mapping
 
@@ -736,3 +704,4 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 ---
 
 This architecture is designed to be scalable, maintainable, and secure while providing a robust foundation for plugin development and system extension. For specific implementation details, refer to the individual service documentation and the [Plugin Development Guide](./PLUGIN_DEVELOPMENT_GUIDE.md).
+
