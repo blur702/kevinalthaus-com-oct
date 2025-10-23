@@ -46,7 +46,7 @@ const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const CSRF_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 
-// Require CSRF_SECRET in production. In development, generate a strong random secret if missing.
+// Require CSRF_SECRET in production. In development, persist secret to file for stability.
 if (process.env.NODE_ENV === 'production' && !process.env.CSRF_SECRET) {
   throw new Error('CSRF_SECRET environment variable is required in production');
 }
@@ -54,14 +54,45 @@ const CSRF_SECRET: string = (() => {
   if (process.env.CSRF_SECRET) {
     return process.env.CSRF_SECRET;
   }
-  // Development fallback: generate at startup and warn prominently
-  const generated = randomBytes(32).toString('hex');
+
+  // Development: persist secret to file to survive restarts
   if (process.env.NODE_ENV !== 'production') {
-    logger.warn(
-      'CSRF_SECRET not set. Generated ephemeral development secret. DO NOT use in persistent environments. Set CSRF_SECRET to a stable value.'
-    );
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = require('fs') as typeof import('fs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path = require('path') as typeof import('path');
+    const secretFilePath: string = process.env.CSRF_SECRET_FILE || path.join(process.cwd(), '.csrf-secret');
+
+    try {
+      // Try to read existing secret from file
+      if (fs.existsSync(secretFilePath)) {
+        const existingSecret: string = fs.readFileSync(secretFilePath, 'utf8').trim();
+        if (existingSecret && existingSecret.length >= 32) {
+          logger.info('Loaded CSRF_SECRET from file', { file: secretFilePath });
+          return existingSecret;
+        }
+      }
+
+      // Generate new secret and persist to file
+      const generated = randomBytes(32).toString('hex');
+      fs.writeFileSync(secretFilePath, generated, { mode: 0o600 });
+      logger.warn(
+        'CSRF_SECRET not set. Generated and persisted to file for development stability.',
+        { file: secretFilePath }
+      );
+      logger.warn('Add to .gitignore: ' + path.basename(secretFilePath));
+      return generated;
+    } catch (error) {
+      // Fallback to ephemeral if file operations fail
+      logger.warn('Failed to persist CSRF_SECRET to file, using ephemeral secret', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return randomBytes(32).toString('hex');
+    }
   }
-  return generated;
+
+  // Production fallback (shouldn't reach here due to check above)
+  throw new Error('CSRF_SECRET is required');
 })();
 
 function signCsrf(userId: string, nonce: string, ts: number): string {
@@ -172,6 +203,77 @@ function csrfProtection(
   }
 
   if (req.method === 'POST') {
+    // Validate Origin and Referer headers to prevent cross-origin CSRF attacks
+    const origin = req.get('Origin');
+    const referer = req.get('Referer');
+    const host = req.get('Host');
+
+    // Construct allowed origins from current host
+    const allowedOrigins = [
+      `http://${host}`,
+      `https://${host}`,
+    ];
+
+    // Check Origin header (preferred)
+    if (origin) {
+      if (!allowedOrigins.includes(origin)) {
+        logger.warn('CSRF: Invalid Origin header', { origin, host });
+        res
+          .status(403)
+          .type('html')
+          .send(
+            layout('Forbidden', "<p>Invalid Origin header</p><p><a href='/admin/plugins'>Back</a></p>")
+          );
+        return;
+      }
+    }
+    // Fallback to Referer if Origin not present
+    else if (referer) {
+      const refererUrl = new URL(referer);
+      const refererOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
+      if (!allowedOrigins.includes(refererOrigin)) {
+        logger.warn('CSRF: Invalid Referer header', { referer, host });
+        res
+          .status(403)
+          .type('html')
+          .send(
+            layout('Forbidden', "<p>Invalid Referer header</p><p><a href='/admin/plugins'>Back</a></p>")
+          );
+        return;
+      }
+    } else {
+      // Neither Origin nor Referer present - reject
+      logger.warn('CSRF: Missing Origin and Referer headers');
+      res
+        .status(403)
+        .type('html')
+        .send(
+          layout('Forbidden', "<p>Missing Origin/Referer header</p><p><a href='/admin/plugins'>Back</a></p>")
+        );
+      return;
+    }
+
+    // Restrict content-type to form submissions and JSON
+    const contentType = req.get('Content-Type') || '';
+    const allowedContentTypes = [
+      'application/x-www-form-urlencoded',
+      'application/json',
+      'multipart/form-data',
+    ];
+    const isAllowedContentType = allowedContentTypes.some(allowed => contentType.includes(allowed));
+
+    if (!isAllowedContentType) {
+      logger.warn('CSRF: Invalid Content-Type', { contentType });
+      res
+        .status(403)
+        .type('html')
+        .send(
+          layout('Forbidden', "<p>Invalid Content-Type</p><p><a href='/admin/plugins'>Back</a></p>")
+        );
+      return;
+    }
+
+    // Proceed with token validation
     const headerToken =
       typeof req.headers[CSRF_HEADER_NAME] === 'string' ? req.headers[CSRF_HEADER_NAME] : undefined;
     const bodyToken =
@@ -353,18 +455,22 @@ async function handlePluginAction(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 adminPluginsRouter.post('/:id/install', csrfProtection, async (req, res): Promise<void> => {
   await handlePluginAction(req, res, 'install');
 });
 
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 adminPluginsRouter.post('/:id/activate', csrfProtection, async (req, res): Promise<void> => {
   await handlePluginAction(req, res, 'activate');
 });
 
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 adminPluginsRouter.post('/:id/deactivate', csrfProtection, async (req, res): Promise<void> => {
   await handlePluginAction(req, res, 'deactivate');
 });
 
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 adminPluginsRouter.post('/:id/uninstall', csrfProtection, async (req, res): Promise<void> => {
   await handlePluginAction(req, res, 'uninstall');
 });

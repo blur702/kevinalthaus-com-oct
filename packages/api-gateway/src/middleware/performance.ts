@@ -86,9 +86,9 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
     });
     res.set('X-Cache', 'HIT');
     // Prefer json for objects; send for strings/buffers
-    const body = cached.data as unknown;
+    const body = cached.data;
     if (typeof body === 'string' || Buffer.isBuffer(body)) {
-      res.send(body as string);
+      res.send(body);
     } else {
       res.json(body);
     }
@@ -101,7 +101,9 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   const originalEnd = res.end.bind(res);
 
   const maybeCache = (data: unknown): void => {
-    if (res.statusCode !== 200) return;
+    if (res.statusCode !== 200) {
+      return;
+    }
     const cacheControl = res.getHeader('Cache-Control');
     const cacheControlStr =
       typeof cacheControl === 'string'
@@ -113,7 +115,9 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
       cacheControlStr.includes('no-store') ||
       cacheControlStr.includes('no-cache') ||
       cacheControlStr.includes('private');
-    if (shouldSkipCache) return;
+    if (shouldSkipCache) {
+      return;
+    }
 
     const headers: Record<string, string> = {};
     Object.entries(res.getHeaders()).forEach(([key, value]) => {
@@ -138,16 +142,19 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
 
   res.send = function (body?: unknown) {
     // Preserve semantics: res.send can take Buffer|string|object
-    maybeCache(body as unknown);
-    return originalSend(body as any);
+    maybeCache(body);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return originalSend(body as Parameters<typeof originalSend>[0]);
   } as typeof res.send;
 
-  res.end = function (chunk?: any, encoding?: any, cb?: any) {
+  res.end = function (
+    ...args: Parameters<typeof originalEnd>
+  ): ReturnType<typeof originalEnd> {
     // Only cache if a final chunk is provided
-    if (typeof chunk !== 'undefined') {
-      maybeCache(chunk);
+    if (args.length > 0 && typeof args[0] !== 'undefined') {
+      maybeCache(args[0]);
     }
-    return originalEnd(chunk, encoding, cb);
+    return originalEnd(...args);
   } as typeof res.end;
 
   next();

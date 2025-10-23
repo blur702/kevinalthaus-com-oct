@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import type { ParsedQs } from 'qs';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 
@@ -13,23 +14,23 @@ class ResponseCache {
   private maxSize = 500; // Smaller cache for main app
   private defaultTTL = 180000; // 3 minutes
 
-  private canonicalizeQuery(query: Record<string, unknown>): string {
+  private canonicalizeQuery(query: ParsedQs): string {
     if (Object.keys(query).length === 0) {
       return '';
     }
 
     // Sort keys lexicographically
-    const sortedKeys = Object.keys(query).sort();
+    const sortedKeys = Object.keys(query as Record<string, unknown>).sort();
 
     // Build deterministic representation
     const pairs: string[] = [];
     for (const key of sortedKeys) {
-      const value = query[key];
+      const value = (query as Record<string, unknown>)[key];
 
       // Handle arrays consistently
       if (Array.isArray(value)) {
         // Sort array values for determinism
-        const sortedArray = [...value].sort();
+        const sortedArray = (value as unknown[]).slice().sort();
         pairs.push(`${key}=${JSON.stringify(sortedArray)}`);
       } else if (value !== null && value !== undefined) {
         // Handle primitives and objects
@@ -41,7 +42,7 @@ class ResponseCache {
   }
 
   private generateKey(req: Request): string {
-    const canonicalQuery = this.canonicalizeQuery(req.query as Record<string, unknown>);
+    const canonicalQuery = this.canonicalizeQuery(req.query);
     return `${req.method}:${req.originalUrl.split('?')[0]}:${canonicalQuery}`;
   }
 
@@ -138,9 +139,10 @@ function isCacheControlCacheable(cacheControl: string | string[] | undefined): b
 }
 
 // Response caching middleware for GET requests
-export const cacheMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const cacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   if (req.method !== 'GET') {
-    return next();
+    next();
+    return;
   }
 
   // Check request Cache-Control header - bypass cache if client requests fresh data
@@ -194,7 +196,7 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
       }
     }
     return originalJson(data);
-  };
+  } as typeof res.json;
 
   next();
 };

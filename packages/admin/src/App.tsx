@@ -150,7 +150,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = (): void => {
-    clearTokens();
+    void clearTokens();
     navigate('/login');
   };
 

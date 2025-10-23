@@ -8,17 +8,28 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-// Secure JWT_SECRET handling - require real secret in production
+// Secure JWT_SECRET handling - require real secret in production, generate random in development
 let JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-    JWT_SECRET = 'development_only_insecure_key_change_for_production';
-    console.warn(
-      'WARNING: Using insecure development JWT secret. Set JWT_SECRET environment variable for production!'
-    );
+    // Generate a random secret for development to avoid using a static default
+    JWT_SECRET = randomBytes(32).toString('hex');
+    console.warn('');
+    console.warn('═══════════════════════════════════════════════════════════════');
+    console.warn('⚠️  WARNING: JWT_SECRET not set - using random ephemeral secret');
+    console.warn('═══════════════════════════════════════════════════════════════');
+    console.warn('This is acceptable for development but has implications:');
+    console.warn('  - All JWT tokens become invalid on server restart');
+    console.warn('  - Users must re-login after each restart');
+    console.warn('  - Not suitable for any production or staging environment');
+    console.warn('');
+    console.warn('For persistent development sessions, set JWT_SECRET in .env:');
+    console.warn('  JWT_SECRET=' + JWT_SECRET);
+    console.warn('═══════════════════════════════════════════════════════════════');
+    console.warn('');
   } else {
     throw new Error(
-      'JWT_SECRET environment variable is required in production. Please set a secure random string.'
+      'JWT_SECRET environment variable is required in production. Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
     );
   }
 }
@@ -29,12 +40,28 @@ const REFRESH_TOKEN_EXPIRES_DAYS = 30;
 const ACCESS_TOKEN_COOKIE_NAME = 'accessToken';
 const REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
 
+// Parse COOKIE_SAMESITE from environment (lax|strict|none, default: lax for better compatibility)
+type SameSiteValue = 'lax' | 'strict' | 'none';
+const COOKIE_SAMESITE: SameSiteValue = (process.env.COOKIE_SAMESITE as SameSiteValue) || 'lax';
+
+// Validate sameSite value
+if (!['lax', 'strict', 'none'].includes(COOKIE_SAMESITE)) {
+  throw new Error(
+    `Invalid COOKIE_SAMESITE value: ${process.env.COOKIE_SAMESITE}. Must be one of: lax, strict, none`
+  );
+}
+
 // Helper function to configure cookie options
-function getCookieOptions(maxAge: number) {
+// secure: true is required when sameSite=none per spec, or when running in production behind HTTPS
+function getCookieOptions(
+  maxAge: number
+): { httpOnly: boolean; secure: boolean; sameSite: 'lax' | 'strict' | 'none'; maxAge: number } {
+  const isSecureRequired = COOKIE_SAMESITE === 'none' || process.env.NODE_ENV === 'production';
+
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
+    secure: isSecureRequired,
+    sameSite: COOKIE_SAMESITE,
     maxAge,
   };
 }
@@ -151,14 +178,15 @@ router.post(
       const accessToken = generateAccessToken(tokenPayload);
       const refreshToken = generateRefreshToken();
 
-      // Store refresh token
+      // Store refresh token with context binding (user agent, IP) for security
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS);
+      const userAgent = req.get('User-Agent') || 'Unknown';
 
       await query(
-        `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip)
-       VALUES ($1, $2, $3, $4)`,
-        [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req)]
+        `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip, user_agent)
+       VALUES ($1, $2, $3, $4, $5)`,
+        [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req), userAgent]
       );
 
       const accessMaxAgeMs = 15 * 60 * 1000; // match JWT_EXPIRES_IN default '15m'
@@ -288,14 +316,15 @@ router.post(
       const accessToken = generateAccessToken(tokenPayload);
       const refreshToken = generateRefreshToken();
 
-      // Store refresh token
+      // Store refresh token with context binding (user agent, IP) for security
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS);
+      const userAgent = req.get('User-Agent') || 'Unknown';
 
       await query(
-        `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip)
-       VALUES ($1, $2, $3, $4)`,
-        [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req)]
+        `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip, user_agent)
+       VALUES ($1, $2, $3, $4, $5)`,
+        [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req), userAgent]
       );
 
       const accessMaxAgeMs = 15 * 60 * 1000; // match JWT_EXPIRES_IN default '15m'
@@ -354,6 +383,7 @@ router.post(
         user_id: string;
         expires_at: Date;
         revoked_at: Date | null;
+        user_agent: string | null;
       }>('SELECT * FROM refresh_tokens WHERE token_hash = $1 AND revoked_at IS NULL', [tokenHash]);
 
       if (tokenResult.rows.length === 0) {
@@ -370,6 +400,26 @@ router.post(
         res.status(401).json({
           error: 'Unauthorized',
           message: 'Refresh token expired',
+        });
+        return;
+      }
+
+      // Validate user agent to detect token theft
+      const currentUserAgent = req.get('User-Agent') || 'Unknown';
+      if (token.user_agent && token.user_agent !== currentUserAgent) {
+        // User agent mismatch - potential token theft
+        defaultLogger.warn('Refresh token user agent mismatch - potential theft detected', {
+          userId: token.user_id,
+          storedAgent: token.user_agent,
+          currentAgent: currentUserAgent,
+        });
+        // Revoke the suspicious token immediately
+        await query('UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE id = $1', [
+          token.id,
+        ]);
+        res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Token validation failed',
         });
         return;
       }
@@ -404,10 +454,11 @@ router.post(
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS);
 
+        // Store new refresh token with same user agent (already validated above)
         await client.query(
-          `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip)
-         VALUES ($1, $2, $3, $4)`,
-          [user.id, hashSHA256(newRefreshToken), expiresAt, getClientIp(req)]
+          `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip, user_agent)
+         VALUES ($1, $2, $3, $4, $5)`,
+          [user.id, hashSHA256(newRefreshToken), expiresAt, getClientIp(req), currentUserAgent]
         );
 
         // Generate new access token
@@ -425,7 +476,6 @@ router.post(
         };
       });
 
-      const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
       const accessMaxAgeMs = 15 * 60 * 1000; // match JWT_EXPIRES_IN default '15m'
       res.cookie(ACCESS_TOKEN_COOKIE_NAME, result.accessToken, getCookieOptions(accessMaxAgeMs));
@@ -500,7 +550,7 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
 
   // 1. Check for token in httpOnly cookie
   if (req.cookies && req.cookies.accessToken) {
-    token = req.cookies.accessToken;
+    token = req.cookies.accessToken as string;
   }
   // 2. Fallback to Authorization header for backward compatibility
   else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {

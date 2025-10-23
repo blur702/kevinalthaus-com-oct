@@ -54,5 +54,6 @@ export function validatePluginName(name: string): boolean {
 }
 
 export function validatePluginVersion(version: string): boolean {
+  // eslint-disable-next-line security/detect-unsafe-regex
   return /^\d+\.\d+\.\d+(-[a-z0-9.-]+)?(\+[a-z0-9.-]+)?$/i.test(version);
 }

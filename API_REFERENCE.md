@@ -17,15 +17,42 @@ This document provides a comprehensive reference for all APIs available in the K
 
 ## Authentication
 
-### JWT Authentication
+### Authentication Methods
 
-All API requests require a valid JWT token in the Authorization header:
+The platform supports two authentication methods depending on the client type:
+
+#### 1. Cookie-Based Authentication (Recommended for Web Clients)
+
+The primary authentication method for browser-based clients. After successful login, `accessToken` and `refreshToken` are set as secure HTTP-only cookies.
+
+**Authentication Flow:**
+1. Login via `/api/auth/login` (tokens set automatically as cookies)
+2. Subsequent requests automatically include cookies
+3. No Authorization header needed when using cookies
+4. Refresh tokens automatically rotate on `/api/auth/refresh`
+
+**Cookie Configuration:**
+- `accessToken`: HTTP-only, SameSite (configurable via `COOKIE_SAMESITE` env), secure in production
+- `refreshToken`: HTTP-only, SameSite (configurable), secure in production, 30-day expiry
+- See `COOKIE_SAMESITE` in `.env.example` for configuration options (lax/strict/none)
+
+#### 2. Header-Based Authentication (API Clients & Mobile)
+
+For non-browser clients (mobile apps, server-to-server), tokens can be sent via Authorization header:
 
 ```
 Authorization: Bearer <jwt_token>
 ```
 
-### Getting a Token
+**API Gateway Behavior:**
+- The API Gateway (`/api/*`) enforces JWT verification via the `Authorization` header
+- The gateway does NOT parse or forward cookies to downstream services
+- For cookie-based clients, the main-app backend handles cookie extraction directly
+- Gateway sets `X-User-Id`, `X-User-Role`, `X-User-Email` headers after JWT verification for downstream services
+
+**Security Note:** Downstream services (main-app, python-service) MUST run on a private network and trust `X-User-*` headers only from the gateway.
+
+### Getting Tokens
 
 ```http
 POST /api/auth/login
@@ -37,25 +64,37 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
+**Response (Cookie-Based Clients):**
 
 ```json
 {
   "success": true,
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "rt_abc123...",
-    "user": {
-      "id": "user-uuid",
-      "email": "user@example.com",
-      "role": "admin"
-    },
-    "expiresIn": 3600
+  "message": "Login successful",
+  "user": {
+    "id": "user-uuid",
+    "email": "user@example.com",
+    "role": "admin"
   }
 }
 ```
 
+*Cookies `accessToken` and `refreshToken` are set automatically in response headers.*
+
+**Response (Header-Based Clients):**
+
+Same JSON response, but you must extract tokens from the response body if needed for manual storage.
+
 ### Refreshing Tokens
+
+**Cookie-Based:**
+
+```http
+POST /api/auth/refresh
+```
+
+*Reads `refreshToken` from cookie, returns new tokens as cookies.*
+
+**Header-Based:**
 
 ```http
 POST /api/auth/refresh
@@ -65,6 +104,8 @@ Content-Type: application/json
   "refreshToken": "rt_abc123..."
 }
 ```
+
+*Returns new `accessToken` and `refreshToken` in response body.*
 
 ## Core System APIs
 
@@ -116,7 +157,7 @@ Authorization: Bearer <token>
 #### List Users
 
 ```http
-GET /api/users?page=1&limit=20&role=admin
+GET /api/users?page=1&limit=20&role=admin&email=john&username=doe
 Authorization: Bearer <token>
 ```
 
@@ -124,8 +165,11 @@ Authorization: Bearer <token>
 
 - `page` (number): Page number (default: 1)
 - `limit` (number): Items per page (default: 20, max: 100)
-- `role` (string): Filter by role
-- `search` (string): Search by username or email
+- `role` (string): Filter by role (e.g., `admin`, `editor`, `viewer`)
+- `active` (boolean): Filter by active status (e.g., `true`, `false`)
+- `email` (string): Search by email (partial match, case-insensitive)
+- `username` (string): Search by username (partial match, case-insensitive)
+- `search` (string): Legacy parameter - searches both email and username (ignored if `email` or `username` specified)
 
 **Response:**
 
@@ -357,6 +401,78 @@ Authorization: Bearer <token>
   "maintenanceMode": false,
   "pluginSystemEnabled": true
 }
+```
+
+### File Uploads
+
+#### Upload File
+
+Upload files with automatic magic-byte validation to prevent malicious file uploads.
+
+```http
+POST /api/uploads
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+file=@/path/to/file.jpg
+```
+
+**Request:**
+
+- `file` (file): The file to upload (form-data field name must be "file")
+
+**Validation:**
+
+The system performs multi-layer file validation:
+
+1. **Extension Check**: Verifies file extension is in allowed list
+2. **MIME Type Check**: Validates MIME type from client
+3. **Magic Byte Validation**: Reads first 4100 bytes to detect actual file type
+4. **Content Match**: Ensures file extension matches detected content type
+
+**Allowed File Types** (configurable via `ALLOWED_FILE_TYPES` env):
+
+- Images: `image/jpeg`, `image/png`, `image/gif`, `image/webp`
+- Documents: `application/pdf`
+
+**Response (Success):**
+
+```json
+{
+  "message": "File uploaded successfully",
+  "file": {
+    "filename": "1234567890_myfile.jpg",
+    "mimetype": "image/jpeg",
+    "size": 524288,
+    "path": "1234567890_myfile.jpg"
+  }
+}
+```
+
+**Response (Validation Failed):**
+
+```json
+{
+  "error": "Invalid file content",
+  "details": "Detected MIME type \"application/x-executable\" is not in allowed types list",
+  "detectedMime": "application/x-executable"
+}
+```
+
+**Security Features:**
+
+- **Magic Byte Sniffing**: Detects actual file type regardless of extension
+- **Automatic Cleanup**: Invalid files are deleted immediately
+- **Size Limits**: Configurable max size (default: 10MB via `UPLOAD_MAX_SIZE`)
+- **Filename Sanitization**: Removes path traversal and special characters
+- **Timestamp Prefix**: Prevents filename collisions
+
+**Developer Notes:**
+
+The `validateUploadedFile` middleware can be applied to any route with multer:
+
+```typescript
+router.post('/upload', uploadMiddleware.single('file'), validateUploadedFile, handler);
 ```
 
 ## Plugin Development APIs
@@ -883,6 +999,100 @@ export async function makeAPICallWithRetry(
   "timestamp": "2024-01-15T10:30:00.000Z"
 }
 ```
+
+## Security & Performance
+
+### CSRF Protection
+
+The platform implements multi-layered CSRF protection for state-changing operations:
+
+1. **Double-Submit Cookie Pattern**: CSRF tokens validated on POST/PUT/DELETE/PATCH requests
+2. **Origin/Referer Validation**: Requests must originate from allowed origins
+3. **Content-Type Restrictions**: Only allows `application/x-www-form-urlencoded`, `application/json`, and `multipart/form-data`
+4. **Timing-Safe Comparison**: Prevents timing attacks on token comparison
+
+**Configuration:**
+
+- `CSRF_SECRET`: Secret for signing CSRF tokens (required in production)
+- `CSRF_SECRET_FILE`: File path to persist secret in development (default: `.csrf-secret`)
+
+### Refresh Token Security
+
+Refresh tokens are bound to request context to detect token theft:
+
+1. **User Agent Binding**: Tokens tied to the User-Agent header
+2. **IP Address Tracking**: Original IP address stored for audit purposes
+3. **Automatic Revocation**: Tokens automatically revoked on user agent mismatch
+4. **Token Rotation**: New refresh token issued on each use
+
+**Security Warnings:**
+
+Refresh token validation failures with user agent mismatches are logged as potential token theft. All such tokens are automatically revoked.
+
+### Database Query Logging
+
+Database queries are logged with configurable sampling to reduce production log noise while maintaining observability.
+
+**Configuration:**
+
+- `LOG_LEVEL`: Controls logging verbosity
+  - `debug`: Log all queries
+  - `info` (default): Use sampling for successful queries
+  - `warn`/`error`: Use sampling, only log warnings/errors
+- `QUERY_LOG_SAMPLE_RATE`: Log every Nth successful query (default: 10)
+
+**Security Features:**
+
+- **SQL Sanitization**: Query text never logged, only hash fingerprint
+- **Error Sanitization**: SQL fragments stripped from error messages
+- **Parameter Masking**: Query parameters never logged to prevent credential leakage
+
+**Example Logs:**
+
+```json
+{
+  "message": "[DB] Query executed",
+  "queryHash": "a1b2c3d4e5f6",
+  "duration": "12ms",
+  "rowCount": 5
+}
+```
+
+### Cookie Security
+
+Authentication cookies use configurable SameSite attributes for CSRF protection:
+
+**Cookie Attributes:**
+
+- `httpOnly: true` - Prevents JavaScript access
+- `secure: true` - Enforced in production or when `sameSite=none`
+- `sameSite` - Configurable via `COOKIE_SAMESITE` env variable
+
+**SameSite Options:**
+
+- `lax` (default): Best for most cases, allows cookies on top-level navigation
+- `strict`: Maximum CSRF protection, blocks all cross-site cookie sending
+- `none`: Required for cross-domain scenarios (requires HTTPS)
+
+### PostgreSQL Configuration
+
+**SSL/TLS:**
+
+Configure PostgreSQL SSL mode via `PGSSLMODE` environment variable:
+
+- `disable`: No SSL (development only)
+- `prefer` (default for dev): Attempts SSL but falls back
+- `require`: Requires SSL (recommended for production)
+- `verify-ca`: Requires SSL and verifies CA
+- `verify-full`: Requires SSL and verifies hostname
+
+**Migration Locking:**
+
+Database migrations use PostgreSQL advisory locks to prevent concurrent execution:
+
+- Lock ID derived from `MIGRATION_LOCK_NAMESPACE` (default: `kevinalthaus-com-oct`)
+- SHA256 hash ensures unique lock IDs per application
+- Supports multiple applications sharing the same database
 
 ---
 

@@ -14,8 +14,18 @@ interface ProtectedRouteProps {
  */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
+  const [authenticated, setAuthenticated] = React.useState<boolean | null>(null);
 
-  if (!isAuthenticated()) {
+  React.useEffect(() => {
+    void isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    // Still checking authentication
+    return null;
+  }
+
+  if (!authenticated) {
     // Redirect to login page with the current location stored in state
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

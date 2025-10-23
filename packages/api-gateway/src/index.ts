@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { createProxyMiddleware, Options } from 'http-proxy-middleware';
+import { randomBytes } from 'crypto';
 import {
   compressionMiddleware,
   rateLimitMiddleware,
@@ -18,22 +19,50 @@ import { requestIdMiddleware } from './middleware/requestId';
 const app = express();
 
 // Enforce JWT secret handling
+
 let JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  if (process.env.NODE_ENV !== 'development') {
-    throw new Error('JWT_SECRET is required for API Gateway in non-development environments');
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+    // Generate a random secret for development to avoid using a static default
+    JWT_SECRET = randomBytes(32).toString('hex');
+    // eslint-disable-next-line no-console
+    console.warn('');
+    // eslint-disable-next-line no-console
+    console.warn('═══════════════════════════════════════════════════════════════');
+    // eslint-disable-next-line no-console
+    console.warn('⚠️  [Gateway] JWT_SECRET not set - using random ephemeral secret');
+    // eslint-disable-next-line no-console
+    console.warn('═══════════════════════════════════════════════════════════════');
+    // eslint-disable-next-line no-console
+    console.warn('This is acceptable for development but has implications:');
+    // eslint-disable-next-line no-console
+    console.warn('  - All JWT tokens become invalid on gateway restart');
+    // eslint-disable-next-line no-console
+    console.warn('  - Must match main-app JWT_SECRET for token verification');
+    // eslint-disable-next-line no-console
+    console.warn('  - Not suitable for any production or staging environment');
+    // eslint-disable-next-line no-console
+    console.warn('');
+    // eslint-disable-next-line no-console
+    console.warn('Set JWT_SECRET in .env to match across services:');
+    // eslint-disable-next-line no-console
+    console.warn('  JWT_SECRET=' + JWT_SECRET);
+    // eslint-disable-next-line no-console
+    console.warn('═══════════════════════════════════════════════════════════════');
+    // eslint-disable-next-line no-console
+    console.warn('');
+  } else {
+    throw new Error(
+      'JWT_SECRET is required for API Gateway in production. Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
   }
-  JWT_SECRET = 'development_only_insecure_key_do_not_use_in_prod';
-  // eslint-disable-next-line no-console
-  console.warn(
-    '[Gateway] WARNING: Using development-only JWT secret. Set JWT_SECRET for production.'
-  );
 }
 const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3001';
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
+const PLUGIN_ENGINE_URL = process.env.PLUGIN_ENGINE_URL || 'http://localhost:3004';
 
 // Validate proxy targets from env
-const ALLOWED_PROXY_TARGETS = [MAIN_APP_URL, PYTHON_SERVICE_URL];
+const ALLOWED_PROXY_TARGETS = [MAIN_APP_URL, PYTHON_SERVICE_URL, PLUGIN_ENGINE_URL];
 
 // Parse CORS_ORIGIN from environment
 const corsOrigins = process.env.CORS_ORIGIN
@@ -126,29 +155,41 @@ const authRateLimit = rateLimit({
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 app.use('/api/', rateLimitMiddleware);
 
+// Helper function to check downstream service health with independent AbortController
+async function checkServiceHealth(url: string, timeoutMs: number = 5000): Promise<boolean> {
+  // Create fresh AbortController for this check to ensure independent timeout per service
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${url}/health`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+    });
+    return response.ok;
+  } catch (error) {
+    // Service unreachable or timed out
+    return false;
+  } finally {
+    // Always clear timeout in finally to prevent memory leaks
+    clearTimeout(timeoutId);
+  }
+}
+
 // Health check endpoints
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 app.get('/health', async (_req, res): Promise<void> => {
-  // Check downstream services
-  const checks: Record<string, string> = {};
+  // Check downstream services in parallel with independent timeouts
+  const [mainAppHealthy, pythonServiceHealthy] = await Promise.all([
+    checkServiceHealth(MAIN_APP_URL),
+    checkServiceHealth(PYTHON_SERVICE_URL),
+  ]);
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    try {
-      const mainAppResponse = await fetch(`${MAIN_APP_URL}/health`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-      });
-      checks.mainApp = mainAppResponse.ok ? 'healthy' : 'unhealthy';
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  } catch (error) {
-    checks.mainApp = 'unhealthy';
-  }
+  const checks = {
+    mainApp: mainAppHealthy ? 'healthy' : 'unhealthy',
+    pythonService: pythonServiceHealthy ? 'healthy' : 'unhealthy',
+  };
 
   const allHealthy = Object.values(checks).every((status) => status === 'healthy');
   const status = allHealthy ? 'healthy' : 'degraded';
@@ -170,25 +211,15 @@ app.get('/health/live', (_req, res) => {
 // Readiness should probe downstream dependencies
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 app.get('/health/ready', async (_req, res) => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+  // Check critical dependencies (main-app is required for readiness)
+  const mainAppHealthy = await checkServiceHealth(MAIN_APP_URL);
 
-    try {
-      const mainAppResponse = await fetch(`${MAIN_APP_URL}/health`, {
-        signal: controller.signal,
-      });
-      if (!mainAppResponse.ok) {
-        res.status(503).json({ status: 'not ready', dependencies: { mainApp: 'unhealthy' } });
-        return;
-      }
-      res.json({ status: 'ready', dependencies: { mainApp: 'healthy' } });
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  } catch {
+  if (!mainAppHealthy) {
     res.status(503).json({ status: 'not ready', dependencies: { mainApp: 'unhealthy' } });
+    return;
   }
+
+  res.json({ status: 'ready', dependencies: { mainApp: 'healthy' } });
 });
 
 // Root endpoint
@@ -199,6 +230,28 @@ app.get('/', (_req, res) => {
     environment: process.env.NODE_ENV || 'development',
   });
 });
+
+// Proxy helper
+function buildProxy(target: string, pathRewrite?: Record<string, string>): express.RequestHandler {
+  const options: Options = {
+    target,
+    changeOrigin: true,
+    logLevel: 'warn',
+    pathRewrite,
+    onProxyReq: (proxyReq, req) => {
+      // propagate request id if present
+      const rid = req.headers['x-request-id'];
+      if (rid) proxyReq.setHeader('x-request-id', String(rid));
+    },
+  };
+  return createProxyMiddleware(options) as unknown as express.RequestHandler;
+}
+
+// Plugins proxy (optional service)
+app.use(
+  '/api/plugins',
+  buildProxy(PLUGIN_ENGINE_URL, { '^/api/plugins': '/plugins' })
+);
 
 // JWT verification middleware for protected routes
 function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {

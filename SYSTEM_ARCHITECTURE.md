@@ -342,6 +342,64 @@ const dbConfig = {
 - `viewer` - Read-only access
 - `guest` - Public content only
 
+### API Gateway and Downstream Service Trust Model
+
+**Critical Security Requirement**: All downstream services (main-app, python-service, plugin-engine) MUST run on a private, trusted network isolated from public access.
+
+**Header Forwarding Architecture:**
+
+The API Gateway acts as the single public-facing entry point and performs JWT authentication. After successful verification, it forwards user context to downstream services via custom headers:
+
+- `X-User-Id`: Authenticated user's unique identifier
+- `X-User-Role`: User's role (admin, editor, viewer, etc.)
+- `X-User-Email`: User's email address
+
+**Trust Model Requirements:**
+
+1. **Network Isolation**: Downstream services MUST be on a private network unreachable from public internet
+2. **No Public Exposure**: Main-app, Python-service, etc. ports (3001, 8000) must NOT be exposed publicly
+3. **Gateway-Only Access**: Services trust X-User-* headers ONLY from requests originating from the gateway
+4. **No Public Endpoints**: Services should not implement their own authentication for routes behind the gateway
+
+**Security Implications:**
+
+- **If downstream services are publicly accessible**, attackers can forge X-User-* headers to impersonate any user
+- **Proper network configuration is mandatory** for this architecture to be secure
+- Use Docker networks, VPCs, or firewall rules to enforce isolation
+- Consider mutual TLS or shared secrets between gateway and downstream services for additional verification
+
+**Verification Strategy** (Optional Enhancement):
+
+For additional defense-in-depth, downstream services can:
+- Verify requests include a shared secret header (e.g., `X-Internal-Token`)
+- Check source IP against gateway allowlist
+- Implement mutual TLS between gateway and services
+
+**Production Deployment:**
+
+```yaml
+# docker-compose.prod.yml example
+services:
+  api-gateway:
+    ports:
+      - "3000:3000"  # PUBLIC
+    networks:
+      - public
+      - private
+
+  main-app:
+    # NO public ports exposed
+    networks:
+      - private  # ONLY private network
+
+  python-service:
+    # NO public ports exposed
+    networks:
+      - private  # ONLY private network
+```
+
+**Important**: If you need to expose backend services directly (not recommended), they MUST implement their own complete authentication and MUST NOT trust X-User-* headers.
+
 ### Plugin Security
 
 **Isolation Mechanisms:**

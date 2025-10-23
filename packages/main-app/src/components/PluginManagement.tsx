@@ -42,7 +42,9 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({ plugins, csr
     g.console?.warn?.('[PluginManagement] confirm() not available in this context; blocking destructive action.');
     return false;
   };
-  const getStatusColor = (status: Plugin['status']) => {
+  const getStatusColor = (
+    status: Plugin['status']
+  ): 'success' | 'info' | 'warning' | 'error' | 'default' => {
     switch (status) {
       case 'active':
         return 'success';
@@ -57,7 +59,7 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({ plugins, csr
     }
   };
 
-  const getStatusLabel = (status: Plugin['status']) => {
+  const getStatusLabel = (status: Plugin['status']): string => {
     switch (status) {
       case 'active':
         return 'Active';

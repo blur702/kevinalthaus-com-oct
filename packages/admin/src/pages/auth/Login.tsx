@@ -122,7 +122,7 @@ const Login: React.FC = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} noValidate>
+          <Box component="form" onSubmit={(e): void => { void handleSubmit(e); }} noValidate>
             <TextField
               margin="normal"
               required

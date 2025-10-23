@@ -84,7 +84,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Graceful shutdown handler
-async function gracefulShutdown(signal: string): Promise<void> {
+function gracefulShutdown(signal: string): void {
   // Idempotency guard: prevent concurrent shutdowns
   if (isShuttingDown) {
     logger.warn(`Shutdown already in progress, ignoring ${signal}`);

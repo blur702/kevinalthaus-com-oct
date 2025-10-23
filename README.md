@@ -1,104 +1,75 @@
 # Kevin Althaus Platform
 
-A modern, extensible web platform built with React, TypeScript, and Node.js featuring a powerful plugin architecture.
+Modern, extensible web platform with microservices architecture and plugin system.
 
-## 🚀 Features
+## Key Features
 
-- **Microservices Architecture** - Scalable, containerized services
-- **Plugin System** - Extensible architecture with isolated plugin execution
-- **Modern Frontend** - React 18 with Material UI and TypeScript
-- **Admin Dashboard** - Comprehensive management interface
-- **Security First** - RBAC, input validation, and isolated plugin execution
-- **Database Isolation** - Plugin-specific PostgreSQL schemas
-- **Theme System** - Customizable frontend and backend themes
-- **Docker Support** - Full containerization with Docker Compose
+- 🔌 **Plugin System** - Extensible architecture with security sandboxing
+- 🎨 **Theme System** - Frontend/backend customization via plugins
+- 🔐 **Security** - RBAC, input validation, timing-safe operations
+- 📊 **Admin Dashboard** - User management, plugin management, analytics
+- 🐳 **Docker Ready** - Full containerization with production configs
+- � **Scalable** - Microservices with independent scaling
 
-## 📋 Table of Contents
+## Documentation
 
-- [Quick Start](#quick-start)
-- [Architecture Overview](#architecture-overview)
-- [Development Setup](#development-setup)
-- [Plugin Development](#plugin-development)
-- [API Documentation](#api-documentation)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
+For detailed information, see:
 
-## 🏃 Quick Start
+- **[Setup & Development](./assets/docs/development.md)** - Development environment setup
+- **[Architecture Guide](./assets/docs/architecture.md)** - System design and patterns
+- **[Plugin Development](./assets/docs/plugins.md)** - Creating and managing plugins
+- **[API Reference](./assets/docs/api.md)** - Complete API documentation
+- **[Deployment Guide](./assets/docs/deployment.md)** - Production deployment
+- **[Security Guide](./assets/docs/security.md)** - Security implementation details
 
-### Prerequisites
+## Quick Start
 
-- Node.js 18+ and npm 9+
-- Docker and Docker Compose
-- PostgreSQL 15+ (or use Docker)
+**Prerequisites:** Node.js 18+, Docker, Docker Compose
 
-### Installation
+```bash
+# Clone and setup
+git clone <repository-url>
+cd kevinalthaus-com-oct
+npm install
 
-1. **Clone the repository:**
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
 
-   ```bash
-   git clone <repository-url>
-   cd kevinalthaus-com-oct
-   ```
-
-2. **Install dependencies:**
-
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment:**
-
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
-
-4. **Start services:**
-
-   ```bash
-   # Start database and Redis
-   docker-compose up -d postgres redis
-
-   # Start all development servers
-   npm run dev:all
-   ```
-
-5. **Access the applications:**
-   - **Frontend**: http://localhost:3002
-   - **Admin Panel**: http://localhost:3003
-   - **API Gateway**: http://localhost:3000
-   - **Main App**: http://localhost:3001
-   - **Python Service**: http://localhost:8000
-
-## 🏗 Architecture Overview
-
+# Start services
+docker-compose up -d postgres redis
+npm run dev:all
 ```
-┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Admin Panel   │
-│   (React)       │    │   (React)       │
-│   Port 3002     │    │   Port 3003     │
-└─────────┬───────┘    └─────────┬───────┘
-          │                      │
-          └──────────────────────┼──────────────────────┐
-                                 │                      │
-                    ┌─────────────┴───────────┐         │
-                    │    API Gateway          │         │
-                    │    (Express.js)         │         │
-                    │    Port 3000            │         │
-                    └─────────────┬───────────┘         │
-                                 │                      │
-          ┌─────────────────────┬─┴───────────────────┐  │
-          │                     │                     │  │
-   ┌──────┴───────┐    ┌────────┴────────┐   ┌───────┴──┴──────┐
-   │  Main App    │    │ Python Service  │   │  Plugin Engine │
-   │ (Node.js)    │    │ (FastAPI)       │   │  (Node.js)     │
-   │ Port 3001    │    │ Port 8000       │   │  Port 3004     │
-   └──────┬───────┘    └────────┬────────┘   └───────┬────────┘
-          │                     │                    │
-          └─────────────────────┼────────────────────┘
-                                │
-                    ┌───────────┴───────────┐
-                    │    PostgreSQL         │
+
+**Access Points:**
+- Frontend: http://localhost:3002
+- Admin Panel: http://localhost:3003  
+- API Gateway: http://localhost:3000
+- Main App: http://localhost:3001
+
+## Architecture
+
+**Microservices Stack:**
+- **API Gateway** (Express.js) - Central routing, auth, rate limiting
+- **Main App** (Node.js) - Core business logic, user management
+- **Python Service** (FastAPI) - Specialized Python ecosystem services
+- **Frontend** (React + Material-UI) - Public interface
+- **Admin Panel** (React + Material-UI) - Management interface
+- **Plugin Engine** (Node.js) - Isolated plugin execution
+- **Database** (PostgreSQL) - Primary data store
+- **Cache** (Redis) - Sessions and caching
+
+## Contributing
+
+1. Fork repository
+2. Create feature branch: `git checkout -b feature/name`
+3. Make changes and add tests
+4. Run checks: `npm test && npm run lint`
+5. Submit pull request
+
+## License
+
+MIT License - see LICENSE file for details.
                     │    Port 5432          │
                     └───────────────────────┘
 ```

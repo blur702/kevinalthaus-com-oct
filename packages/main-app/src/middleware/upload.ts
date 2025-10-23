@@ -1,4 +1,5 @@
 import multer from 'multer';
+import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { promises as fs, existsSync, mkdirSync } from 'fs';
 import { sanitizeFilename } from '@monorepo/shared';
@@ -135,6 +136,118 @@ export async function ensureUploadDirectory(): Promise<void> {
     await fs.mkdir(UPLOAD_DIRECTORY, { recursive: true });
   } catch (error) {
     throw new Error(`Failed to create upload directory: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Express middleware to validate uploaded files using magic-byte sniffing
+ * Use this after multer middleware to enforce file type validation
+ *
+ * Usage:
+ *   router.post('/upload', uploadMiddleware.single('file'), validateUploadedFile, handler)
+ *
+ * On validation failure:
+ * - Deletes the uploaded file
+ * - Returns 400 with error details
+ * - Does not call next(), preventing handler from running
+ */
+export async function validateUploadedFile(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // Check for single file upload (req.file)
+    if (req.file) {
+      const filePath = (req.file as Express.Multer.File & { path?: string }).path || '';
+      const originalName = req.file.originalname;
+
+      const validation = await sniffAndValidateFile(filePath, originalName);
+      if (!validation.valid) {
+        // Remove the stored file if invalid
+        if (filePath) {
+          try {
+            await fs.unlink(filePath);
+          } catch {
+            /* ignore unlink errors */
+          }
+        }
+        res.status(400).json({
+          error: 'Invalid file content',
+          details: validation.reason,
+          detectedMime: validation.detectedMime,
+        });
+        return;
+      }
+    }
+
+    // Check for multiple file uploads (req.files)
+    if (req.files) {
+      const files = Array.isArray(req.files)
+        ? req.files
+        : Object.values(req.files).flat();
+
+      for (const file of files) {
+        const filePath = (file as Express.Multer.File & { path?: string }).path || '';
+        const originalName = file.originalname;
+
+        const validation = await sniffAndValidateFile(filePath, originalName);
+        if (!validation.valid) {
+          // Remove ALL uploaded files if any one fails validation
+          for (const f of files) {
+            const fp = (f as Express.Multer.File & { path?: string }).path;
+            if (fp) {
+              try {
+                await fs.unlink(fp);
+              } catch {
+                /* ignore */
+              }
+            }
+          }
+          res.status(400).json({
+            error: 'Invalid file content',
+            details: validation.reason,
+            detectedMime: validation.detectedMime,
+            filename: originalName,
+          });
+          return;
+        }
+      }
+    }
+
+    // All files valid or no files uploaded, continue to next handler
+    next();
+  } catch (error) {
+    // On unexpected error, try to clean up any uploaded files
+    if (req.file) {
+      const filePath = (req.file as Express.Multer.File & { path?: string }).path;
+      if (filePath) {
+        try {
+          await fs.unlink(filePath);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    if (req.files) {
+      const files = Array.isArray(req.files)
+        ? req.files
+        : Object.values(req.files).flat();
+      for (const f of files) {
+        const fp = (f as Express.Multer.File & { path?: string }).path;
+        if (fp) {
+          try {
+            await fs.unlink(fp);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    }
+    res.status(500).json({
+      error: 'File validation failed',
+      message: (error as Error).message,
+    });
   }
 }
 

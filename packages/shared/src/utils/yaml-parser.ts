@@ -83,6 +83,8 @@ export function validatePluginManifest(data: unknown): PluginManifest {
     throw new ManifestValidationError('Plugin manifest validation failed', clonedErrors);
   }
 
+  // Type guard has validated that data conforms to PluginManifest
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   return data as PluginManifest;
 }
 

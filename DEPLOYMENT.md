@@ -103,6 +103,19 @@ Required changes:
 - `ENCRYPTION_KEY` - Random 32-byte hex string
 - `PLUGIN_SIGNATURE_SECRET` - Random 32-byte hex string
 - `ADMIN_PASSWORD` - Change default admin password
+- `COOKIE_SAMESITE` - Cookie SameSite policy (see Cookie Security below)
+
+### Cookie Security
+
+The `COOKIE_SAMESITE` setting controls the SameSite attribute for authentication cookies:
+
+- **`lax` (default)**: Recommended for most deployments. Provides CSRF protection while allowing cookies on top-level navigation (e.g., clicking links from external sites). Best balance of security and usability.
+
+- **`strict`**: Maximum CSRF protection. Cookies are never sent on cross-site requests. Use when your application never needs to be accessed via cross-site links.
+
+- **`none`**: Required for cross-domain authentication (e.g., subdomain scenarios). **Important**: When set to `none`, the `secure` flag is automatically enabled, **requiring HTTPS**. Will not work over HTTP. Only use when you need cross-site cookie sending and have HTTPS properly configured.
+
+**Production Recommendation**: Use `lax` for single-domain deployments behind HTTPS. Use `none` only for legitimate cross-domain scenarios with HTTPS enforced.
 
 ### Connection String
 

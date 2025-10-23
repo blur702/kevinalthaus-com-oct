@@ -1,10 +1,29 @@
 import { query, transaction, pool } from './index';
 import { PoolClient } from 'pg';
+import { createHash } from 'crypto';
 
-// Advisory lock ID for migrations (arbitrary number, must be consistent)
-const MIGRATION_LOCK_ID = 1234567890;
+// Advisory lock ID derived from application namespace to prevent collisions
+// If multiple apps share the same database, they should use different lock IDs
+// Lock ID is 32-bit signed integer (-2^31 to 2^31-1), derived from hash of namespace
+const MIGRATION_LOCK_NAMESPACE = process.env.MIGRATION_LOCK_NAMESPACE || 'kevinalthaus-com-oct';
+
+function deriveLockId(namespace: string): number {
+  // Create SHA256 hash of namespace and take first 4 bytes
+  const hash = createHash('sha256').update(namespace).digest();
+  // Convert first 4 bytes to signed 32-bit integer
+  // Use bitwise operations to ensure result fits in int32 range
+  const lockId = hash.readInt32BE(0);
+  return lockId;
+}
+
+const MIGRATION_LOCK_ID = deriveLockId(MIGRATION_LOCK_NAMESPACE);
+
+// Log the lock ID for reference (helpful for debugging lock conflicts)
+// eslint-disable-next-line no-console
+console.log(`[Migrations] Using advisory lock ID ${MIGRATION_LOCK_ID} (derived from namespace: ${MIGRATION_LOCK_NAMESPACE})`);
 
 export async function runMigrations(): Promise<void> {
+  // eslint-disable-next-line no-console
   console.log('[Migrations] Running database migrations...');
 
   // Get a dedicated client to hold the advisory lock for the entire migration duration
@@ -13,8 +32,10 @@ export async function runMigrations(): Promise<void> {
   try {
     // Acquire advisory lock to prevent concurrent migrations
     // This lock is session-scoped and will be held until we release it or disconnect
+    // eslint-disable-next-line no-console
     console.log('[Migrations] Acquiring migration lock...');
     await lockClient.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
+    // eslint-disable-next-line no-console
     console.log('[Migrations] Migration lock acquired');
 
     // Create migrations tracking table
@@ -148,21 +169,40 @@ export async function runMigrations(): Promise<void> {
       `);
     });
 
+    await runMigration('07-add-refresh-token-context', async (client: PoolClient) => {
+      // Add user_agent and device_label columns to refresh_tokens for context binding
+      await client.query(`
+        ALTER TABLE refresh_tokens
+        ADD COLUMN IF NOT EXISTS user_agent TEXT,
+        ADD COLUMN IF NOT EXISTS device_label VARCHAR(255);
+      `);
+
+      // Create index on user_agent for efficient lookups during refresh token validation
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_agent ON refresh_tokens(user_agent);
+      `);
+    });
+
+    // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('[Migrations] Migration failed:', error);
     throw error;
   } finally {
     // Release advisory lock and return client to pool
     try {
       await lockClient.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
+      // eslint-disable-next-line no-console
       console.log('[Migrations] Migration lock released');
     } catch (unlockError) {
+      // eslint-disable-next-line no-console
       console.error('[Migrations] Failed to release migration lock:', unlockError);
       // Don't throw here, as the lock will be auto-released when connection closes
     } finally {
       // Always release the client back to the pool
       lockClient.release();
+      // eslint-disable-next-line no-console
       console.log('[Migrations] Lock client released');
     }
   }
@@ -177,10 +217,12 @@ async function runMigration(
   ]);
 
   if (result.rows.length > 0) {
+    // eslint-disable-next-line no-console
     console.log(`[Migrations] Skipping ${name} (already executed)`);
     return;
   }
 
+  // eslint-disable-next-line no-console
   console.log(`[Migrations] Running ${name}...`);
 
   // Wrap migration execution in transaction for atomicity
@@ -192,8 +234,10 @@ async function runMigration(
       // Record migration in database
       await client.query('INSERT INTO migrations (name) VALUES ($1)', [name]);
 
+      // eslint-disable-next-line no-console
       console.log(`[Migrations] Completed ${name}`);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`[Migrations] Failed ${name}:`, error);
       throw error;
     }

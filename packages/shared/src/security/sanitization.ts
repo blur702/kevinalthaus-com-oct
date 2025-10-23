@@ -122,10 +122,11 @@ export function sanitizePluginConfig(config: Record<string, unknown>): Record<st
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       sanitized[sanitizedKey] = sanitizePluginConfig(value as Record<string, unknown>);
     } else if (Array.isArray(value)) {
-      sanitized[sanitizedKey] = value.map((item) =>
+      sanitized[sanitizedKey] = value.map((item: unknown) =>
         typeof item === 'string' ? stripAllHTML(item) : item
       );
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       sanitized[sanitizedKey] = value;
     }
   }

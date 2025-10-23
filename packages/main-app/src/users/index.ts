@@ -14,9 +14,18 @@ router.use(authMiddleware);
 router.get(
   '/',
   requireCapability(Capability.USER_VIEW),
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { page = '1', limit = '10', search = '', role = '', active = '' } = req.query;
+      const {
+        page = '1',
+        limit = '10',
+        search = '',
+        email = '',
+        username = '',
+        role = '',
+        active = '',
+      } = req.query;
 
       // Validate and sanitize pagination parameters
       const pageNum = Math.max(1, parseInt(page as string) || 1);
@@ -27,10 +36,25 @@ router.get(
       const params: unknown[] = [];
       let paramCount = 0;
 
-      if (search) {
+      // Support both legacy 'search' parameter and specific 'email'/'username' parameters
+      // If email or username specified, they take precedence over search
+      if (email) {
+        paramCount++;
+        whereClause += ` AND email ILIKE $${paramCount}`;
+        params.push(`%${String(email)}%`);
+      }
+
+      if (username) {
+        paramCount++;
+        whereClause += ` AND username ILIKE $${paramCount}`;
+        params.push(`%${String(username)}%`);
+      }
+
+      // Legacy search parameter - searches both email and username if no specific params given
+      if (search && !email && !username) {
         paramCount++;
         whereClause += ` AND (email ILIKE $${paramCount} OR username ILIKE $${paramCount})`;
-        params.push(`%${search}%`);
+        params.push(`%${String(search)}%`);
       }
 
       if (role) {
@@ -95,6 +119,7 @@ router.get(
 router.get(
   '/:id',
   requireCapability(Capability.USER_VIEW),
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
@@ -137,8 +162,10 @@ router.get(
 router.post(
   '/',
   requireRole(Role.ADMIN),
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { email, username, password, role = 'viewer' } = req.body;
 
       // Validate input
@@ -151,6 +178,7 @@ router.post(
       }
 
       // Validate email format
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       if (!validateEmail(email)) {
         res.status(400).json({
           error: 'Bad Request',
@@ -168,6 +196,7 @@ router.post(
       }
 
       // Hash password
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const password_hash = await hashPassword(password);
 
       // Create user
@@ -212,9 +241,11 @@ router.post(
 router.patch(
   '/:id',
   requireRole(Role.ADMIN),
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { email, username, role, is_active } = req.body;
 
       const updates: string[] = [];
@@ -223,6 +254,7 @@ router.patch(
 
       if (email !== undefined) {
         // Validate email format if provided
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!validateEmail(email)) {
           res.status(400).json({
             error: 'Bad Request',
@@ -322,6 +354,7 @@ router.patch(
 router.delete(
   '/:id',
   requireRole(Role.ADMIN),
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;

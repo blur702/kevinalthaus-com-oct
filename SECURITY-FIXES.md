@@ -45,6 +45,47 @@
 - **Impact**: Less visible token placement while maintaining functionality
 - **Client**: Updated JavaScript to read from `document.body.dataset.csrfToken`
 
+### 6. Origin and Referer Header Validation ✅
+
+**File**: `packages/main-app/src/routes/adminPlugins.ts:174-223`
+
+- **Issue**: CSRF protection relied only on double-submit cookie, vulnerable to subdomain attacks
+- **Fix**: Added layered defense with Origin/Referer header validation
+- **Implementation**:
+  - Validates `Origin` header against allowed origins (http/https + current host)
+  - Falls back to `Referer` header if Origin not present
+  - Rejects requests missing both headers
+  - Logs all validation failures for monitoring
+- **Impact**: Prevents cross-origin CSRF even if attacker can set cookies
+- **Security**: Defense-in-depth approach combining multiple CSRF protections
+
+### 7. Content-Type Restriction ✅
+
+**File**: `packages/main-app/src/routes/adminPlugins.ts:225-243`
+
+- **Issue**: No Content-Type validation allowed arbitrary content types
+- **Fix**: Restricted to safe content types only
+- **Allowed Types**:
+  - `application/x-www-form-urlencoded` (HTML forms)
+  - `application/json` (AJAX requests)
+  - `multipart/form-data` (File uploads)
+- **Impact**: Prevents CSRF attacks using unusual content types
+- **Security**: Blocks Flash/PDF-based CSRF vectors
+
+## CSRF Protection Requirements
+
+All POST requests to admin routes now require:
+
+1. **Valid CSRF token**: Double-submit cookie matching header/body token
+2. **Valid Origin or Referer**: Must match current host (http/https schemes allowed)
+3. **Allowed Content-Type**: Must be form-urlencoded, JSON, or multipart
+4. **Authenticated session**: User must be logged in
+
+**Important**: If implementing API clients for admin endpoints, ensure they:
+- Set appropriate `Origin` or `Referer` headers
+- Use allowed Content-Type headers
+- Include CSRF token from cookie in request header/body
+
 ## Security Architecture Improvements
 
 ### Before:

@@ -187,13 +187,16 @@ export class DatabaseIsolationEnforcer {
   // AST-based complexity analysis using node-sql-parser to avoid string/comment false-positives
   private estimateQueryComplexity(query: string): number {
     // Lazy import to avoid burdening consumers who don't need this
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Parser } = require('node-sql-parser');
-    const parser = new Parser();
+    // Provide minimal typing for the parser to avoid implicit any
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
+    const { Parser }: { Parser: new () => { astify: (sql: string, opts?: { database?: string }) => Record<string, unknown> | Record<string, unknown>[] } } = require('node-sql-parser');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const parser: { astify: (sql: string, opts?: { database?: string }) => Record<string, unknown> | Record<string, unknown>[] } = new Parser();
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const ast = parser.astify(query, { database: 'PostgreSQL' });
-      const statements = Array.isArray(ast) ? ast : [ast];
+      const statements: Array<Record<string, unknown>> = Array.isArray(ast) ? ast : [ast];
 
       let joins = 0;
       let cartesianJoins = 0;
