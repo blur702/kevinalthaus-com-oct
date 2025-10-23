@@ -83,7 +83,7 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
         └──────────────────┘          └───────────────────┘
 ```
 
-**Port Mapping**
+### Port Mapping
 
 - Frontend: host 3001 -> container 3000
 - Admin Panel: host 3000 -> container 3000

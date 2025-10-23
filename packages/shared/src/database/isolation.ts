@@ -126,11 +126,29 @@ export class DatabaseIsolationEnforcer {
     const options: IsolationEnforcerOptions =
       'limits' in limitsOrOptions ? limitsOrOptions : { limits: limitsOrOptions, weights };
 
-    this.maxQueryComplexity = options.limits.maxQueryComplexity;
-    this.maxQueryRows = options.limits.maxQueryRows;
+    // Validate limits and normalize
+    const mc = options.limits.maxQueryComplexity;
+    const mr = options.limits.maxQueryRows;
+    if (!Number.isFinite(mc) || mc <= 0) {
+      throw new Error(`[Isolation] Invalid maxQueryComplexity: ${mc}`);
+    }
+    if (!Number.isFinite(mr) || mr <= 0) {
+      throw new Error(`[Isolation] Invalid maxQueryRows: ${mr}`);
+    }
+
+    this.maxQueryComplexity = Math.floor(mc);
+    this.maxQueryRows = Math.floor(mr);
     this.weights = { ...DEFAULT_COMPLEXITY_WEIGHTS, ...(options.weights || {}) };
-    // Fallback defaults to maxQueryComplexity, which is more reasonable than MAX_SAFE_INTEGER
-    this.fallbackComplexity = options.fallbackComplexity ?? options.limits.maxQueryComplexity;
+    // Fallback complexity: validated explicit value or safe low default (1)
+    const fc = options.fallbackComplexity;
+    if (fc !== undefined) {
+      if (!Number.isFinite(fc) || fc <= 0) {
+        throw new Error(`[Isolation] Invalid fallbackComplexity: ${fc}`);
+      }
+      this.fallbackComplexity = Math.floor(fc);
+    } else {
+      this.fallbackComplexity = 1;
+    }
     this.logger =
       options.logger ||
       ((message, context) => {

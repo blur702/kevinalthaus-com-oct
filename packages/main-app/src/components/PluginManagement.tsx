@@ -34,12 +34,13 @@ export interface PluginManagementProps {
 
 export const PluginManagement: React.FC<PluginManagementProps> = ({ plugins, csrfToken }) => {
   const askConfirm = (message: string): boolean => {
-    const g: any = typeof globalThis !== 'undefined' ? (globalThis as any) : undefined;
+    type GlobalConfirm = typeof globalThis & { confirm?: (msg: string) => boolean; console?: Console };
+    const g = (globalThis as unknown) as GlobalConfirm;
     if (g && typeof g.confirm === 'function') {
       return g.confirm(message);
     }
-    // In non-browser contexts (SSR/tests), default to true to avoid blocking
-    return true;
+    g.console?.warn?.('[PluginManagement] confirm() not available in this context; blocking destructive action.');
+    return false;
   };
   const getStatusColor = (status: Plugin['status']) => {
     switch (status) {

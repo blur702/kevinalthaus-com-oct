@@ -46,8 +46,7 @@ cat > "$CRON_FILE" <<EOF
 0 3 * * 0 /usr/bin/docker exec "$CONTAINER_NAME" /usr/bin/psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "VACUUM ANALYZE;" >> "$FULL_LOG_DIR"/vacuum.log 2>&1
 
 # Clean up old logs weekly (keep last 30 days)
-# Guard against unsafe or empty FULL_LOG_DIR before running destructive find
-0 4 * * 0 [ -n "$FULL_LOG_DIR" ] && [ "$FULL_LOG_DIR" != "/" ] && [ "$FULL_LOG_DIR" != "." ] && /usr/bin/find "$FULL_LOG_DIR" -name "*.log" -type f -mtime +30 -delete || { mkdir -p /var/log/cron_cleanup; echo "[ERROR] Unsafe FULL_LOG_DIR=\"$FULL_LOG_DIR\" - skipping log cleanup" >> /var/log/cron_cleanup/cleanup.error.log 2>&1; }
+0 4 * * 0 mkdir -p /var/log/cron_cleanup && $FULL_APP_DIR/scripts/cleanup-logs.sh "$FULL_LOG_DIR" 2>> /var/log/cron_cleanup/cleanup.error.log
 EOF
 
 # Install crontab
@@ -64,4 +63,3 @@ echo "  - Weekly log cleanup on Sundays at 4:00 AM"
 echo ""
 echo "View cron jobs: crontab -l"
 echo "View logs: ls -la $LOG_DIR"
-

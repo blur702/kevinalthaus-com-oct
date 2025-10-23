@@ -28,9 +28,18 @@ export function generatePluginTableName(pluginId: string, tableName: string): st
 
   if (fullName.length > MAX_IDENTIFIER_LENGTH) {
     const hash = generateShortHash(fullName);
-    const maxTableLength = MAX_IDENTIFIER_LENGTH - sanitizedPluginId.length - hash.length - 2;
-    const truncatedTable = sanitizedTable.substring(0, maxTableLength);
-    return `${sanitizedPluginId}_${truncatedTable}_${hash}`;
+    // Bound plugin ID to reserve space for underscore, hash, and at least one table char
+    const maxPluginLen = MAX_IDENTIFIER_LENGTH - hash.length - 2 - 1;
+    const boundedPluginId = sanitizedPluginId.substring(0, Math.max(0, maxPluginLen));
+
+    // Compute remaining table length and clamp to >= 0
+    const maxTableLength = MAX_IDENTIFIER_LENGTH - boundedPluginId.length - hash.length - 2;
+    const truncatedTable = sanitizedTable.substring(0, Math.max(0, maxTableLength));
+
+    if (truncatedTable.length === 0) {
+      return `${boundedPluginId}_${hash}`;
+    }
+    return `${boundedPluginId}_${truncatedTable}_${hash}`;
   }
 
   return fullName;

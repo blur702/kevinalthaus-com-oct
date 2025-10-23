@@ -5,7 +5,7 @@ services:
     image: postgres:16-alpine
     restart: always
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
     volumes:
@@ -14,6 +14,8 @@ services:
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
       - ./docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - ./docker/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./secrets/server.crt:/etc/ssl/certs/server.crt:ro
+      - ./secrets/server.key:/etc/ssl/private/server.key:ro
     command: postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
     healthcheck:
       test:

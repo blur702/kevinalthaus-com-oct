@@ -22,7 +22,8 @@ if (!JWT_SECRET) {
     );
   }
 }
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+// Short-lived access token (default 15 minutes) to reduce risk window
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 const REFRESH_TOKEN_EXPIRES_DAYS = 30;
 
 const ACCESS_TOKEN_COOKIE_NAME = 'accessToken';
@@ -160,9 +161,9 @@ router.post(
         [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req)]
       );
 
-      const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+      const accessMaxAgeMs = 15 * 60 * 1000; // match JWT_EXPIRES_IN default '15m'
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-      res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getCookieOptions(sevenDaysInMs));
+      res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getCookieOptions(accessMaxAgeMs));
       res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getCookieOptions(thirtyDaysInMs));
 
       res.status(201).json({
@@ -297,9 +298,9 @@ router.post(
         [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req)]
       );
 
-      const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+      const accessMaxAgeMs = 15 * 60 * 1000; // match JWT_EXPIRES_IN default '15m'
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-      res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getCookieOptions(sevenDaysInMs));
+      res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getCookieOptions(accessMaxAgeMs));
       res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getCookieOptions(thirtyDaysInMs));
 
       res.json({
@@ -426,7 +427,8 @@ router.post(
 
       const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-      res.cookie(ACCESS_TOKEN_COOKIE_NAME, result.accessToken, getCookieOptions(sevenDaysInMs));
+      const accessMaxAgeMs = 15 * 60 * 1000; // match JWT_EXPIRES_IN default '15m'
+      res.cookie(ACCESS_TOKEN_COOKIE_NAME, result.accessToken, getCookieOptions(accessMaxAgeMs));
       res.cookie(REFRESH_TOKEN_COOKIE_NAME, result.refreshToken, getCookieOptions(thirtyDaysInMs));
 
       res.json({

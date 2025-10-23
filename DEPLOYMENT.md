@@ -307,3 +307,38 @@ For issues or questions:
 2. Review health checks: `./scripts/monitor-postgres.sh`
 3. Consult troubleshooting section above
 4. Check GitHub issues
+### SSL Certificates for PostgreSQL
+
+PostgreSQL is configured with `ssl = on` and expects the certificate and key at:
+
+- `/etc/ssl/certs/server.crt`
+- `/etc/ssl/private/server.key`
+
+In production, `docker-compose.prod.yml` mounts these from `./secrets/server.crt` and `./secrets/server.key` (read-only).
+Provide your certificate and key with the following requirements:
+
+- `server.key` permissions must be `600` and owned by the `postgres` user.
+- Use a certificate/key signed by a trusted CA, or a self-signed cert for staging.
+
+Example (self-signed for staging):
+
+```
+mkdir -p secrets
+openssl req -new -x509 -days 365 -nodes -text \
+  -out secrets/server.crt -keyout secrets/server.key \
+  -subj "/CN=postgres.local"
+chmod 600 secrets/server.key
+```
+
+If certificates are not present, the Postgres service will fail to start while `ssl = on`.
+
+### Statement Timeout Guidance
+
+The default `statement_timeout` is set to 120 seconds to avoid prematurely terminating legitimate long‑running operations.
+For clients with short‑lived queries, set a lower timeout per session or role:
+
+```
+SET statement_timeout = '15s';
+-- or
+ALTER ROLE app_user SET statement_timeout = '15s';
+```

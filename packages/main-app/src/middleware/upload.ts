@@ -105,8 +105,9 @@ const fileFilter = (
 ): void => {
   const ext = path.extname(file.originalname).toLowerCase();
   if (!ALLOWED_EXTENSIONS.has(ext)) {
-    // Reject files with disallowed extensions before writing
-    cb(null, false);
+    // Reject files with disallowed extensions before writing with a clear error
+    const allowed = Array.from(ALLOWED_EXTENSIONS).join(', ');
+    cb(new Error(`Disallowed file extension "${ext}" for file "${file.originalname}". Allowed extensions: ${allowed}`));
     return;
   }
 

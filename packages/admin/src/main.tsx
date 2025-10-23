@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
-import { adminTheme } from './theme.ts';
+import { adminTheme } from './theme';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
