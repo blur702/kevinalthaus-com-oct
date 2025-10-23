@@ -61,6 +61,44 @@ const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3001';
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 const PLUGIN_ENGINE_URL = process.env.PLUGIN_ENGINE_URL || 'http://localhost:3004';
 
+// Internal gateway token for service-to-service authentication
+let INTERNAL_GATEWAY_TOKEN = process.env.INTERNAL_GATEWAY_TOKEN;
+if (!INTERNAL_GATEWAY_TOKEN) {
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+    INTERNAL_GATEWAY_TOKEN = randomBytes(32).toString('hex');
+    // eslint-disable-next-line no-console
+    console.warn('');
+    // eslint-disable-next-line no-console
+    console.warn('═══════════════════════════════════════════════════════════════');
+    // eslint-disable-next-line no-console
+    console.warn('⚠️  [Gateway] INTERNAL_GATEWAY_TOKEN not set - using random ephemeral token');
+    // eslint-disable-next-line no-console
+    console.warn('═══════════════════════════════════════════════════════════════');
+    // eslint-disable-next-line no-console
+    console.warn('This is acceptable for development but has implications:');
+    // eslint-disable-next-line no-console
+    console.warn('  - Token becomes invalid on gateway restart');
+    // eslint-disable-next-line no-console
+    console.warn('  - Must match across all services for verification');
+    // eslint-disable-next-line no-console
+    console.warn('  - Not suitable for any production or staging environment');
+    // eslint-disable-next-line no-console
+    console.warn('');
+    // eslint-disable-next-line no-console
+    console.warn('Set INTERNAL_GATEWAY_TOKEN in .env to match across services:');
+    // eslint-disable-next-line no-console
+    console.warn('  INTERNAL_GATEWAY_TOKEN=' + INTERNAL_GATEWAY_TOKEN);
+    // eslint-disable-next-line no-console
+    console.warn('═══════════════════════════════════════════════════════════════');
+    // eslint-disable-next-line no-console
+    console.warn('');
+  } else {
+    throw new Error(
+      'INTERNAL_GATEWAY_TOKEN is required for API Gateway in production. Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
+}
+
 // Validate proxy targets from env
 const ALLOWED_PROXY_TARGETS = [MAIN_APP_URL, PYTHON_SERVICE_URL, PLUGIN_ENGINE_URL];
 
@@ -239,6 +277,9 @@ function buildProxy(target: string, pathRewrite?: Record<string, string>): expre
     logLevel: 'warn',
     pathRewrite,
     onProxyReq: (proxyReq, req) => {
+      // Set internal gateway token to verify request origin
+      proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN!);
+
       // propagate request id if present
       const rid = req.headers['x-request-id'];
       if (rid) {
@@ -246,6 +287,22 @@ function buildProxy(target: string, pathRewrite?: Record<string, string>): expre
           'x-request-id',
           Array.isArray(rid) ? rid[0] : String(rid)
         );
+      }
+
+      // Drop any incoming spoofed X-User-* headers from clients
+      proxyReq.removeHeader('X-User-Id');
+      proxyReq.removeHeader('X-User-Role');
+      proxyReq.removeHeader('X-User-Email');
+
+      // Forward user context headers only from verified JWT middleware
+      if (req.headers['x-user-id']) {
+        proxyReq.setHeader('X-User-Id', req.headers['x-user-id'] as string);
+      }
+      if (req.headers['x-user-role']) {
+        proxyReq.setHeader('X-User-Role', req.headers['x-user-role'] as string);
+      }
+      if (req.headers['x-user-email']) {
+        proxyReq.setHeader('X-User-Email', req.headers['x-user-email'] as string);
       }
     },
   };
@@ -260,19 +317,43 @@ app.use(
   buildProxy(PLUGIN_ENGINE_URL, { '^/api/plugins': '/plugins' })
 );
 
+// Helper function to extract cookie value
+function getCookie(cookieHeader: string | undefined, name: string): string | undefined {
+  if (!cookieHeader) return undefined;
+  const cookies = cookieHeader.split(';').map((c) => c.trim());
+  for (const cookie of cookies) {
+    const eqIndex = cookie.indexOf('=');
+    if (eqIndex === -1) continue;
+    const key = cookie.substring(0, eqIndex);
+    const value = cookie.substring(eqIndex + 1);
+    if (key === name) {
+      return decodeURIComponent(value);
+    }
+  }
+  return undefined;
+}
+
 // JWT verification middleware for protected routes
 function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
+  let token: string | undefined;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  // 1. Check for token in cookie (preferred for browser clients)
+  const cookieToken = getCookie(req.headers.cookie, 'accessToken');
+  if (cookieToken) {
+    token = cookieToken;
+  }
+  // 2. Fallback to Authorization header (for API clients)
+  else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.substring(7);
+  }
+
+  if (!token) {
     res.status(401).json({
       error: 'Unauthorized',
       message: 'No token provided',
     });
     return;
   }
-
-  const token = authHeader.substring(7);
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET!) as {
@@ -312,6 +393,9 @@ function createSecureProxy(target: string, pathRewrite?: Record<string, string>)
       proxyReq.setHeader('X-Forwarded-Proto', req.protocol);
       proxyReq.setHeader('X-Forwarded-Host', req.get('Host') || '');
       proxyReq.setHeader('X-Real-IP', req.ip || '');
+
+      // Set internal gateway token to verify request origin
+      proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN!);
 
       // Drop any incoming spoofed X-User-* headers from clients
       proxyReq.removeHeader('X-User-Id');

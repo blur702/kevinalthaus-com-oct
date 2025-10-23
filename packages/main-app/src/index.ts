@@ -31,6 +31,40 @@ const logger = createLogger({
   format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
 });
 
+// Internal gateway token for service-to-service authentication
+const INTERNAL_GATEWAY_TOKEN = process.env.INTERNAL_GATEWAY_TOKEN;
+if (!INTERNAL_GATEWAY_TOKEN && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+  throw new Error(
+    'INTERNAL_GATEWAY_TOKEN is required for main-app in production. Must match the token configured in API Gateway.'
+  );
+}
+
+// Middleware to verify requests come from the API gateway
+function verifyInternalToken(req: express.Request, res: express.Response, next: express.NextFunction): void {
+  // Skip verification in development/test if token not configured
+  if (!INTERNAL_GATEWAY_TOKEN && (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test')) {
+    next();
+    return;
+  }
+
+  const providedToken = req.headers['x-internal-token'];
+
+  if (!providedToken || providedToken !== INTERNAL_GATEWAY_TOKEN) {
+    logger.warn('Unauthorized direct access attempt - missing or invalid internal token', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+    });
+    res.status(403).json({
+      error: 'Forbidden',
+      message: 'Direct access to this service is not allowed',
+    });
+    return;
+  }
+
+  next();
+}
+
 const app = express();
 
 // Trust proxy configuration - can be number of hops, specific IPs, or CIDR ranges
@@ -117,6 +151,16 @@ app.use(cookieParser());
 
 // Cache middleware for GET requests
 app.use(cacheMiddleware);
+
+// Verify internal token on all requests except health checks
+// Health checks need to be accessible for container orchestration
+app.use((req, res, next) => {
+  if (req.path.startsWith('/health')) {
+    next();
+  } else {
+    verifyInternalToken(req, res, next);
+  }
+});
 
 // Health check endpoints
 app.get(

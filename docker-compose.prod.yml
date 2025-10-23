@@ -82,8 +82,8 @@ services:
     build:
       context: .
       dockerfile: docker/main-app/Dockerfile
-    ports:
-      - '4001:3001'
+    # Port mapping removed for security - main-app is only accessible via api-gateway
+    # This prevents direct access and header spoofing attacks
     depends_on:
       postgres:
         condition: service_healthy

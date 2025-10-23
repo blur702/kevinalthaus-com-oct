@@ -13,6 +13,17 @@ import type { PluginManifest } from '@monorepo/shared';
 
 export const pluginsRouter = express.Router();
 
+// Plugin ID validation pattern (same as adminPlugins)
+const VALID_PLUGIN_ID_PATTERN = /^[a-z0-9-_]+$/i;
+
+/**
+ * Validate plugin ID format
+ * @returns true if valid, false if invalid
+ */
+function validatePluginId(pluginId: string): boolean {
+  return VALID_PLUGIN_ID_PATTERN.test(pluginId);
+}
+
 // Require admin for all plugin management endpoints
 pluginsRouter.use(authMiddleware, requireRole(Role.ADMIN));
 
@@ -53,6 +64,13 @@ const PLUGIN_UPLOAD_DIR = path.resolve(
   process.env.PLUGIN_UPLOAD_DIR || path.join(process.cwd(), 'data', 'plugin-uploads')
 );
 
+// Parse and validate plugin upload max size from environment
+const parsedPluginMaxSize = parseInt(process.env.PLUGIN_UPLOAD_MAX_SIZE || '52428800', 10);
+const PLUGIN_UPLOAD_MAX_SIZE =
+  Number.isFinite(parsedPluginMaxSize) && parsedPluginMaxSize > 0
+    ? parsedPluginMaxSize
+    : 52428800; // Default 50MB
+
 function ensureDirSync(dir: string): void {
   // eslint-disable-next-line security/detect-non-literal-fs-filename
   if (!existsSync(dir)) {
@@ -91,7 +109,7 @@ const storage = multer.diskStorage({
 
 const uploadPackage = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  limits: { fileSize: PLUGIN_UPLOAD_MAX_SIZE },
   fileFilter: (_req, file, cb) => {
     // Preliminary check — final decision via magic-byte sniffing
     if (ALLOWED_ARCHIVE_MIME.has(file.mimetype)) {
@@ -216,6 +234,10 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 pluginsRouter.post('/:id/install', async (req, res) => {
   const { id } = req.params;
+  if (!validatePluginId(id)) {
+    res.status(400).json({ error: 'Bad Request', message: 'Invalid plugin ID format' });
+    return;
+  }
   try {
     await pluginManager.install(id);
     res.status(200).json({ message: 'Installed', id });
@@ -227,6 +249,10 @@ pluginsRouter.post('/:id/install', async (req, res) => {
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 pluginsRouter.post('/:id/activate', async (req, res) => {
   const { id } = req.params;
+  if (!validatePluginId(id)) {
+    res.status(400).json({ error: 'Bad Request', message: 'Invalid plugin ID format' });
+    return;
+  }
   try {
     await pluginManager.activate(id);
     res.status(200).json({ message: 'Activated', id });
@@ -238,6 +264,10 @@ pluginsRouter.post('/:id/activate', async (req, res) => {
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 pluginsRouter.post('/:id/deactivate', async (req, res) => {
   const { id } = req.params;
+  if (!validatePluginId(id)) {
+    res.status(400).json({ error: 'Bad Request', message: 'Invalid plugin ID format' });
+    return;
+  }
   try {
     await pluginManager.deactivate(id);
     res.status(200).json({ message: 'Deactivated', id });
@@ -249,6 +279,10 @@ pluginsRouter.post('/:id/deactivate', async (req, res) => {
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 pluginsRouter.post('/:id/uninstall', async (req, res) => {
   const { id } = req.params;
+  if (!validatePluginId(id)) {
+    res.status(400).json({ error: 'Bad Request', message: 'Invalid plugin ID format' });
+    return;
+  }
   try {
     await pluginManager.uninstall(id);
     res.status(200).json({ message: 'Uninstalled', id });

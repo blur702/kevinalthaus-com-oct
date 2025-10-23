@@ -11,10 +11,56 @@ if (!useConnString && !process.env.POSTGRES_PASSWORD && process.env.NODE_ENV !==
   );
 }
 
+// Parse PostgreSQL SSL mode from environment
+function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } {
+  const sslMode = process.env.PGSSLMODE || 'prefer';
+
+  switch (sslMode) {
+    case 'disable':
+      return false;
+    case 'prefer':
+      // Try SSL but fall back to non-SSL if it fails
+      return { rejectUnauthorized: false };
+    case 'require':
+      // Require SSL but don't verify the certificate
+      return { rejectUnauthorized: false };
+    case 'verify-ca':
+    case 'verify-full': {
+      // Require SSL and verify the certificate
+      const ca = process.env.PGSSLROOTCERT;
+      if (!ca) {
+        throw new Error(
+          `PGSSLROOTCERT is required when PGSSLMODE is '${sslMode}'. ` +
+          'Provide the path to the root certificate file.'
+        );
+      }
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const fs = require('fs');
+      try {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
+        const caContent = fs.readFileSync(ca, 'utf8');
+        return { rejectUnauthorized: true, ca: caContent };
+      } catch (error) {
+        throw new Error(
+          `Failed to read SSL certificate from PGSSLROOTCERT=${ca}: ${(error as Error).message}`
+        );
+      }
+    }
+    default:
+      throw new Error(
+        `Invalid PGSSLMODE '${sslMode}'. ` +
+        'Valid values: disable, prefer, require, verify-ca, verify-full'
+      );
+  }
+}
+
+const sslConfig = getSSLConfig();
+
 const pool = new Pool(
   useConnString
     ? {
         connectionString: process.env.DATABASE_URL,
+        ssl: sslConfig,
         min: 2,
         max: 10,
         idleTimeoutMillis: 30000,
@@ -26,6 +72,7 @@ const pool = new Pool(
         database: process.env.POSTGRES_DB || 'kevinalthaus',
         user: process.env.POSTGRES_USER || 'postgres',
         password: process.env.POSTGRES_PASSWORD,
+        ssl: sslConfig,
         min: 2,
         max: 10,
         idleTimeoutMillis: 30000,

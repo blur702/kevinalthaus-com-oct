@@ -509,14 +509,9 @@ router.post(
         );
       }
 
-      // Clear cookies
-      const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict' as const,
-      };
-      res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, cookieOptions);
-      res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, cookieOptions);
+      // Clear cookies using consistent options
+      res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, getCookieOptions(0));
+      res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getCookieOptions(0));
 
       res.json({ message: 'Logout successful' });
     } catch (error) {

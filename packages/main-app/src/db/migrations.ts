@@ -16,11 +16,27 @@ function deriveLockId(namespace: string): number {
   return lockId;
 }
 
-const MIGRATION_LOCK_ID = deriveLockId(MIGRATION_LOCK_NAMESPACE);
+// Allow explicit override of lock ID via environment variable
+let MIGRATION_LOCK_ID: number;
+let lockIdMethod: string;
+
+if (process.env.MIGRATION_LOCK_ID) {
+  const explicitLockId = parseInt(process.env.MIGRATION_LOCK_ID, 10);
+  if (!Number.isFinite(explicitLockId) || explicitLockId < -2147483648 || explicitLockId > 2147483647) {
+    throw new Error(
+      `MIGRATION_LOCK_ID must be a valid 32-bit signed integer (${-2147483648} to ${2147483647}), got: ${process.env.MIGRATION_LOCK_ID}`
+    );
+  }
+  MIGRATION_LOCK_ID = explicitLockId;
+  lockIdMethod = 'explicit (MIGRATION_LOCK_ID)';
+} else {
+  MIGRATION_LOCK_ID = deriveLockId(MIGRATION_LOCK_NAMESPACE);
+  lockIdMethod = `derived from namespace: ${MIGRATION_LOCK_NAMESPACE}`;
+}
 
 // Log the lock ID for reference (helpful for debugging lock conflicts)
 // eslint-disable-next-line no-console
-console.log(`[Migrations] Using advisory lock ID ${MIGRATION_LOCK_ID} (derived from namespace: ${MIGRATION_LOCK_NAMESPACE})`);
+console.log(`[Migrations] Using advisory lock ID ${MIGRATION_LOCK_ID} (${lockIdMethod})`);
 
 export async function runMigrations(): Promise<void> {
   // eslint-disable-next-line no-console
