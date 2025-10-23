@@ -23,7 +23,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         if (mounted) setAuthenticated(ok);
       })
       .catch((err) => {
-        console.error('Auth check failed:', err);
+        if (import.meta.env && import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.error('Auth check failed', err);
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn('Auth check failed');
+        }
         if (mounted) setAuthenticated(false);
       });
     return () => {

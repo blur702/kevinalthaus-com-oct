@@ -3,6 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { backendTheme } from '../theme/backend-theme';
+import { escapeHtml } from '@monorepo/shared/utils/html';
 
 export interface SSRRenderOptions {
   title: string;
@@ -86,12 +87,11 @@ export function renderReactSSR(component: React.ReactElement, options: SSRRender
 </html>`;
 }
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/`/g, '&#96;');
-}
+// escapeHtml provided by @monorepo/shared/utils/html
+
+
+
+
+
+
+

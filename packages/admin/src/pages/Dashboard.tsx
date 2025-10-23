@@ -49,7 +49,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, color =
             />
           )}
         </Box>
-        <Box color={`${color}.main`} sx={{ fontSize: '2.5rem' }}>
+        <Box sx={{ fontSize: '2.5rem', color: (theme) => theme.palette[color].main }}>
           {icon}
         </Box>
       </Box>

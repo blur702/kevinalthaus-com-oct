@@ -6,6 +6,7 @@ import type { AuthenticatedRequest } from '../auth';
 import { renderReactSSR } from '../utils/ssr-renderer';
 import PluginManagement, { Plugin } from '../components/PluginManagement';
 import { createLogger, LogLevel } from '@monorepo/shared';
+import { escapeHtml } from '@monorepo/shared/utils/html';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -325,11 +326,6 @@ function csrfProtection(
   next();
 }
 
-// HTML escape function to prevent XSS
-function escapeHtml(str: string | undefined): string {
-  if (str === undefined) {
-    return '';
-  }
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -494,3 +490,4 @@ adminPluginsRouter.post('/:id/deactivate', csrfProtection, async (req, res): Pro
 adminPluginsRouter.post('/:id/uninstall', csrfProtection, async (req, res): Promise<void> => {
   await handlePluginAction(req, res, 'uninstall');
 });
+

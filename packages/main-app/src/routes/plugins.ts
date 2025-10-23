@@ -205,7 +205,7 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
     if (typeof req.body?.manifest === 'string') {
       try {
         const parse = JSON.parse(req.body.manifest) as PluginManifest;
-        const validate = createValidator<PluginManifest>(PLUGIN_MANIFEST_SCHEMA as unknown as any);
+        const validate = createValidator<PluginManifest>(PLUGIN_MANIFEST_SCHEMA);
         if (!validate(parse)) {
           try { if (filePath) await fs.unlink(filePath); } catch { /* ignore */ }
           res.status(400).json({ error: 'Manifest validation failed', details: validate.errors });
@@ -303,3 +303,7 @@ pluginsRouter.post('/:id/uninstall', async (req, res) => {
 });
 
 export default pluginsRouter;
+
+
+
+

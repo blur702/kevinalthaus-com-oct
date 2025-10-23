@@ -18,7 +18,7 @@ if [ -z "$RESOLVED" ]; then
   exit 1
 fi
 
-if [ "$RESOLVED" = "/" ] || [ "$RESOLVED" = "." ]; then
+if [ "$RESOLVED" = "/" ] || [ "$RESOLVED" = "$(pwd -P)" ]; then
   echo "[ERROR] Refusing to operate on unsafe path: '$LOG_DIR'" >&2
   exit 1
 fi
@@ -31,3 +31,4 @@ fi
 echo "[INFO] Cleaning *.log files older than $MAX_AGE_DAYS days in '$RESOLVED'"
 find "$RESOLVED" -name "*.log" -type f -mtime +"$MAX_AGE_DAYS" -print -delete
 echo "[INFO] Cleanup complete"
+

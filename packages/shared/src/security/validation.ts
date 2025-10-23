@@ -54,6 +54,12 @@ export function validatePluginName(name: string): boolean {
 }
 
 export function validatePluginVersion(version: string): boolean {
-  // eslint-disable-next-line security/detect-unsafe-regex
-  return /^\d+\.\d+\.\d+(-[a-z0-9.-]+)?(\+[a-z0-9.-]+)?$/i.test(version);
+  // Guard against extremely long inputs to prevent ReDoS-style behavior
+  if (typeof version !== 'string' || version.length === 0 || version.length > 256) {
+    return false;
+  }
+  // Simple, safe semver-like pattern without nested quantifiers
+  // e.g., 1.2.3, 1.2.3-alpha.1, 1.2.3+build.5, 1.2.3-alpha+build
+  const pattern = /^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?(?:\+[A-Za-z0-9.-]+)?$/;
+  return pattern.test(version);
 }

@@ -212,13 +212,14 @@ Each plugin has default resource limits:
 The system uses a capability-based permission system:
 
 ```typescript
-import { PermissionContext, Capability } from '@monorepo/shared';
+import { PermissionContext, Capability, hasCapability } from '@monorepo/shared';
 
 // Check permissions in your plugin
 export function requiresPermission(capability: Capability) {
   return (target: any, propertyName: string, descriptor: PropertyDescriptor) => {
     const method = descriptor.value;
     descriptor.value = function (context: PluginExecutionContext, ...args: any[]) {
+      // hasCapability(permissions: PermissionContext, capability: Capability): boolean
       if (!hasCapability(context.permissions, capability)) {
         throw new Error(`Permission denied: ${capability} required`);
       }
@@ -257,28 +258,25 @@ export function validateConfig(config: Record<string, unknown>): boolean {
 ### Query Isolation
 
 ```typescript
-import { IsolationEnforcer, DatabaseOperation } from '@monorepo/shared';
+import { DatabaseIsolationEnforcer } from '@monorepo/shared';
 
-const enforcer = new IsolationEnforcer({
-  allowCrossPluginQueries: false,
-  allowSystemSchemaAccess: false,
-  maxQueryComplexity: 1000,
-  maxExecutionTime: 30000,
-  allowedOperations: [
-    DatabaseOperation.SELECT,
-    DatabaseOperation.INSERT,
-    DatabaseOperation.UPDATE,
-    DatabaseOperation.DELETE,
-  ],
+// Configure query execution limits; execution time is enforced via DB settings
+const enforcer = new DatabaseIsolationEnforcer({
+  limits: {
+    maxQueryComplexity: 1000,
+    maxQueryRows: 100000,
+    maxExecutionTime: 30000,
+  },
 });
 
-// Validate queries before execution
-export function validateQuery(query: string, pluginId: string) {
-  const result = enforcer.validateQuery(query, pluginId);
-  if (!result.valid) {
-    throw new Error(`Invalid query: ${result.errors.join(', ')}`);
+// Enforce quotas before execution; throws on violations
+export function enforceQuerySafety(query: string, estimatedRows: number): void {
+  try {
+    enforcer.enforceQuotas(query, estimatedRows);
+  } catch (err) {
+    // Optionally log and rethrow
+    throw err;
   }
-  return result;
 }
 ```
 
@@ -564,7 +562,7 @@ export function validateSettings(config: Record<string, unknown>): boolean {
   const sanitized = validatePluginConfig(config);
 
   // Add custom validation
-  if (config.apiKey && typeof config.apiKey !== 'string') {
+  if ((sanitized as any).apiKey && typeof (sanitized as any).apiKey !== 'string') {
     throw new Error('API key must be a string');
   }
 
@@ -576,17 +574,18 @@ export function validateSettings(config: Record<string, unknown>): boolean {
 
 ```typescript
 export class PluginResourceManager {
-  private connections: Set<PluginDatabaseConnection> = new Set();
+  private connections: Set<PoolClient> = new Set();
 
   async getConnection(context: PluginExecutionContext) {
-    const connection = await context.database.getConnection();
-    this.connections.add(connection);
-    return connection;
+    if (!context.db) throw new Error('Database pool not available');
+    const client = await context.db.connect();
+    this.connections.add(client);
+    return client;
   }
 
   async cleanup() {
-    for (const connection of this.connections) {
-      await connection.close();
+    for (const client of this.connections) {
+      try { client.release(); } catch { /* ignore */ }
     }
     this.connections.clear();
   }
@@ -599,6 +598,29 @@ export class PluginResourceManager {
 // tests/plugin.test.ts
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import MyAwesomePlugin from '../src/index';
+import type { PluginExecutionContext } from '@monorepo/shared';
+
+// Minimal test helper: returns a stubbed PluginExecutionContext for unit tests
+function createMockContext(): PluginExecutionContext {
+  return {
+    pluginId: 'test-plugin',
+    manifest: {
+      name: 'test-plugin',
+      version: '1.0.0',
+      displayName: 'Test Plugin',
+      description: 'A test plugin',
+      author: { name: 'Tester' },
+      capabilities: ['api:call'],
+      entrypoint: 'dist/index.js',
+    } as any,
+    pluginPath: '/tmp/plugin',
+    dataPath: '/tmp/plugin-data',
+    logger: { info: () => {}, warn: () => {}, debug: () => {}, error: () => {}, child: () => ({ info: () => {}, warn: () => {}, debug: () => {}, error: () => {}, child: () => ({} as any) } as any) } as any,
+    api: { get: async () => ({ status: 200, data: {} }) } as any,
+    storage: { get: async () => undefined, set: async () => {} } as any,
+    db: undefined,
+  } as unknown as PluginExecutionContext;
+}
 
 describe('MyAwesomePlugin', () => {
   let plugin: MyAwesomePlugin;

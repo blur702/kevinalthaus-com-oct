@@ -500,7 +500,7 @@ router.post(
       });
 
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-      const accessMaxAgeMs = 15 * 60 * 1000; // match JWT_EXPIRES_IN default '15m'
+      const accessMaxAgeMs = parseDurationToMs(JWT_EXPIRES_IN, 15 * 60 * 1000)
       res.cookie(ACCESS_TOKEN_COOKIE_NAME, result.accessToken, getCookieOptions(accessMaxAgeMs));
       res.cookie(REFRESH_TOKEN_COOKIE_NAME, result.refreshToken, getCookieOptions(thirtyDaysInMs));
 
@@ -596,3 +596,4 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
 }
 
 export { router as authRouter, AuthenticatedRequest };
+

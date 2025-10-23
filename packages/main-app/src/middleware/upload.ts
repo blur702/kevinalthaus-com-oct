@@ -132,7 +132,7 @@ export async function ensureUploadDirectory(): Promise<void> {
   try {
     // UPLOAD_DIRECTORY is validated and resolved to absolute path at module initialization
     // eslint-disable-next-line security/detect-non-literal-fs-filename
-    await fs.mkdir(UPLOAD_DIRECTORY, { recursive: true });
+    await fs.mkdir(UPLOAD_DIRECTORY, { recursive: true, mode: 0o700 });
     // Ensure quarantine directory exists with restrictive permissions where supported
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     await fs.mkdir(QUARANTINE_DIRECTORY, { recursive: true, mode: 0o700 });
