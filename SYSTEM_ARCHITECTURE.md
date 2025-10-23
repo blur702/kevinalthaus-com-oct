@@ -57,6 +57,8 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
 - Admin Panel: host 3000 -> container 3000
 - API Gateway: 4000
 - Main App: service 3001 (exposed as 4001:3001)
+- Python Service: 8000
+- Plugin Engine: 3004
 - PostgreSQL: 5432
 - Redis: 6379
 
@@ -350,7 +352,7 @@ For additional defense-in-depth, downstream services can:
 services:
   api-gateway:
     ports:
-      - "3000:3000"  # PUBLIC
+      - "4000:4000"  # PUBLIC
     networks:
       - public
       - private
