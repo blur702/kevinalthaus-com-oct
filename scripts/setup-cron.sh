@@ -26,6 +26,11 @@ if [ ! -f "$APP_DIR/scripts/monitor-postgres.sh" ] || [ ! -x "$APP_DIR/scripts/m
     exit 1
 fi
 
+if [ ! -f "$APP_DIR/scripts/cleanup-logs.sh" ] || [ ! -x "$APP_DIR/scripts/cleanup-logs.sh" ]; then
+    echo "ERROR: $APP_DIR/scripts/cleanup-logs.sh not found or not executable"
+    exit 1
+fi
+
 # Get absolute paths for cron
 FULL_APP_DIR=$(readlink -f "$APP_DIR")
 FULL_LOG_DIR=$(readlink -f "$LOG_DIR")

@@ -163,40 +163,68 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
     return;
   }
 
+  // Track whether we've already cached to prevent double-caching
+  let cached = false;
+
+  const maybeCache = (data: unknown): void => {
+    if (cached || res.statusCode !== 200) {
+      return;
+    }
+
+    // Check response Cache-Control before caching
+    const responseCacheControlHeader = res.getHeader('Cache-Control');
+    const responseCacheControl =
+      typeof responseCacheControlHeader === 'number'
+        ? String(responseCacheControlHeader)
+        : responseCacheControlHeader;
+    const shouldCache = isCacheControlCacheable(responseCacheControl);
+
+    if (shouldCache) {
+      const headers: Record<string, string> = {};
+      Object.entries(res.getHeaders()).forEach(([key, value]) => {
+        if (typeof value === 'string') {
+          headers[key] = value;
+        } else if (typeof value === 'number') {
+          headers[key] = String(value);
+        } else if (Array.isArray(value)) {
+          headers[key] = value.join(', ');
+        } else if (value !== null && value !== undefined) {
+          headers[key] = String(value);
+        }
+      });
+      responseCache.set(req, data, headers);
+      res.set('X-Cache', 'MISS');
+      cached = true;
+    } else {
+      res.set('X-Cache', 'SKIP');
+    }
+  };
+
   // Override res.json to cache response
   const originalJson = res.json.bind(res);
   res.json = function (data: unknown) {
-    if (res.statusCode === 200) {
-      // Check response Cache-Control before caching
-      const responseCacheControlHeader = res.getHeader('Cache-Control');
-      const responseCacheControl =
-        typeof responseCacheControlHeader === 'number'
-          ? String(responseCacheControlHeader)
-          : responseCacheControlHeader;
-      const shouldCache = isCacheControlCacheable(responseCacheControl);
-
-      if (shouldCache) {
-        const headers: Record<string, string> = {};
-        Object.entries(res.getHeaders()).forEach(([key, value]) => {
-          if (typeof value === 'string') {
-            headers[key] = value;
-          } else if (typeof value === 'number') {
-            headers[key] = String(value);
-          } else if (Array.isArray(value)) {
-            headers[key] = value.join(', ');
-          } else if (value !== null && value !== undefined) {
-            headers[key] = String(value);
-          }
-        });
-        responseCache.set(req, data, headers);
-        res.set('X-Cache', 'MISS');
-      } else {
-        // Not cacheable, set header to indicate why
-        res.set('X-Cache', 'SKIP');
-      }
-    }
+    maybeCache(data);
     return originalJson(data);
   } as typeof res.json;
+
+  // Override res.send to cache response
+  const originalSend = res.send.bind(res);
+  res.send = function (body?: unknown) {
+    maybeCache(body);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return originalSend(body as Parameters<typeof originalSend>[0]);
+  } as typeof res.send;
+
+  // Override res.end to cache response
+  const originalEnd = res.end.bind(res);
+  res.end = function (
+    ...args: Parameters<typeof originalEnd>
+  ): ReturnType<typeof originalEnd> {
+    if (args.length > 0 && typeof args[0] !== 'undefined') {
+      maybeCache(args[0]);
+    }
+    return originalEnd(...args);
+  } as typeof res.end;
 
   next();
 };

@@ -133,12 +133,12 @@ const Dashboard: React.FC = () => {
         const data = response.data;
 
         // Fetch plugin count from real API
-        let pluginCount: number | undefined;
+        let pluginCount: number;
         try {
           const plugins = await fetchPlugins(controller.signal);
           pluginCount = plugins.plugins.length;
         } catch {
-          pluginCount = undefined; // leave undefined to fall back to mock
+          pluginCount = 5; // fall back to mock count
         }
 
         // Map API response to stat cards with icons and colors
@@ -154,7 +154,7 @@ const Dashboard: React.FC = () => {
           {
             id: 'plugins',
             title: 'Plugins',
-            value: pluginCount !== undefined ? pluginCount : 0,
+            value: pluginCount,
             change: undefined,
             icon: <Article />,
             color: 'secondary' as const,

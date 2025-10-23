@@ -16,7 +16,7 @@ const logger = createLogger({
 export const adminPluginsRouter = express.Router();
 
 // Plugin ID validation pattern
-const VALID_PLUGIN_ID_PATTERN = /^[a-z0-9-_]+$/i;
+const VALID_PLUGIN_ID_PATTERN = /^[a-z0-9-_]+$/;
 
 /**
  * Validate plugin ID format and send error response if invalid
@@ -30,7 +30,7 @@ function validatePluginId(pluginId: string, routeName: string, res: express.Resp
       .send(
         layout(
           'Invalid Plugin ID',
-          `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`
+          `<p>Invalid plugin ID format. Only lowercase alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`
         )
       );
     return false;

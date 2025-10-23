@@ -41,13 +41,11 @@ echo "[$(date)] Starting PostgreSQL restore from $BACKUP_FILE..."
 echo "[$(date)] Stopping application services..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api-gateway main-app
 
-# Drop and recreate database (safely quote database name)
+# Drop and recreate database (using psql variable substitution for safe identifier quoting)
 echo "[$(date)] Recreating database..."
-# Escape double quotes in database name for SQL identifier
-ESCAPED_DB_NAME=$(echo "$POSTGRES_DB" | sed 's/"/""/g')
 docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = :'dbname' AND pid <> pg_backend_pid();"
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS \"$ESCAPED_DB_NAME\";"
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "CREATE DATABASE \"$ESCAPED_DB_NAME\";"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c "DROP DATABASE IF EXISTS :'dbname';"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c "CREATE DATABASE :'dbname';"
 
 # Restore from backup
 echo "[$(date)] Restoring from backup..."

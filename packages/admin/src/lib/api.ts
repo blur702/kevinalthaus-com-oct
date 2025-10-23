@@ -66,8 +66,12 @@ export interface UploadPluginOptions {
 export async function uploadPluginPackage(file: File, options: UploadPluginOptions = {}): Promise<unknown> {
   const form = new FormData();
   form.append('package', file);
-  if (options.manifestJson) form.append('manifest', options.manifestJson);
-  if (options.signatureBase64) form.append('signature', options.signatureBase64);
+  if (options.manifestJson) {
+    form.append('manifest', options.manifestJson);
+  }
+  if (options.signatureBase64) {
+    form.append('signature', options.signatureBase64);
+  }
   const { data } = await api.post('/api/plugins/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });

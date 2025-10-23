@@ -335,7 +335,7 @@ Provide your certificate and key with the following requirements:
 
 Example (self-signed for staging):
 
-```
+```bash
 mkdir -p secrets
 openssl req -new -x509 -days 365 -nodes -text \
   -out secrets/server.crt -keyout secrets/server.key \
@@ -350,7 +350,7 @@ If certificates are not present, the Postgres service will fail to start while `
 The default `statement_timeout` is set to 120 seconds to avoid prematurely terminating legitimate long‑running operations.
 For clients with short‑lived queries, set a lower timeout per session or role:
 
-```
+```sql
 SET statement_timeout = '15s';
 -- or
 ALTER ROLE app_user SET statement_timeout = '15s';

@@ -43,7 +43,8 @@ function verifyInternalToken(req: express.Request, res: express.Response, next: 
 
 app.use(morgan('combined'));
 app.use(helmet());
-app.use(cors({ origin: '*', credentials: false }));
+// CORS disabled - service is internal and protected by API gateway
+// app.use(cors({ origin: '*', credentials: false }));
 app.use(express.json({ limit: '256kb' }));
 
 // Verify internal token on all requests except health checks

@@ -187,7 +187,7 @@ router.post(
         return;
       }
 
-      if (!Object.values(Role).includes(role as Role)) {
+      if (typeof role !== 'string' || !Object.values(Role).includes(role as Role)) {
         res.status(400).json({
           error: 'Bad Request',
           message: 'Invalid role',
@@ -300,9 +300,9 @@ router.patch(
         return;
       }
 
-      paramCount++;
       updates.push(`updated_at = CURRENT_TIMESTAMP`);
       params.push(id);
+      paramCount++;
 
       const result = await query<{
         id: string;

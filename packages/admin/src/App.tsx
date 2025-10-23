@@ -149,8 +149,9 @@ const App: React.FC = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleLogout = (): void => {
-    void clearTokens();
+  const handleLogout = async (e?: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
+    e?.preventDefault();
+    await clearTokens();
     navigate('/login');
   };
 

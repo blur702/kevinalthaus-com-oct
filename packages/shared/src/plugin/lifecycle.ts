@@ -22,8 +22,44 @@ export interface PluginExecutionContext extends PluginLifecycleContext {
   logger: PluginLogger;
   api: PluginAPI;
   storage: PluginStorage;
-  db?: Pool; // Database connection pool
-  app?: Application; // Express app instance
+  /**
+   * Database connection pool - Available only for backend/server-side plugins
+   *
+   * Provided only when the host runtime has initialized the database pool.
+   * Frontend-only plugins will receive `undefined`.
+   *
+   * Use for:
+   * - Running SQL queries
+   * - Managing transactions
+   * - Database migrations during onInstall/onUpdate
+   *
+   * Always check for undefined before use:
+   * ```typescript
+   * if (!context.db) {
+   *   throw new Error('Database not available for this plugin');
+   * }
+   * ```
+   */
+  db?: Pool;
+  /**
+   * Express application instance - Available only for backend/server-side plugins
+   *
+   * Provided only when the host runtime has initialized the Express application.
+   * Frontend-only plugins will receive `undefined`.
+   *
+   * Use for:
+   * - Registering HTTP routes and middleware
+   * - Adding WebSocket handlers
+   * - Customizing request/response handling
+   *
+   * Always check for undefined before use:
+   * ```typescript
+   * if (!context.app) {
+   *   throw new Error('Express app not available for this plugin');
+   * }
+   * ```
+   */
+  app?: Application;
 }
 
 export interface PluginLifecycleHooks {

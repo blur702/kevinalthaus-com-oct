@@ -319,11 +319,15 @@ app.use(
 
 // Helper function to extract cookie value
 function getCookie(cookieHeader: string | undefined, name: string): string | undefined {
-  if (!cookieHeader) return undefined;
+  if (!cookieHeader) {
+    return undefined;
+  }
   const cookies = cookieHeader.split(';').map((c) => c.trim());
   for (const cookie of cookies) {
     const eqIndex = cookie.indexOf('=');
-    if (eqIndex === -1) continue;
+    if (eqIndex === -1) {
+      continue;
+    }
     const key = cookie.substring(0, eqIndex);
     const value = cookie.substring(eqIndex + 1);
     if (key === name) {

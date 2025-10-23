@@ -223,7 +223,7 @@ curl http://localhost:3001/health/ready
 
 ```bash
 # Connect to PostgreSQL
-docker exec -it kevinalthaus-postgres psql -U postgres -d kevinalthaus
+docker exec -it kevinalthaus-postgres-1 psql -U postgres -d kevinalthaus
 
 # Check migrations
 kevinalthaus=# SELECT * FROM migrations ORDER BY executed_at;
@@ -245,13 +245,13 @@ kevinalthaus=# \q
 docker-compose ps postgres-backup
 
 # List backups
-docker exec kevinalthaus-postgres-backup ls -lh /backups
+docker exec kevinalthaus-postgres-backup-1 ls -lh /backups
 
 # Manual backup
-docker exec kevinalthaus-postgres-backup /backup.sh
+docker exec kevinalthaus-postgres-backup-1 /backup.sh
 
 # Restore from backup
-docker exec -i kevinalthaus-postgres psql -U postgres -d kevinalthaus < backup.sql
+docker exec -i kevinalthaus-postgres-1 psql -U postgres -d kevinalthaus < backup.sql
 ```
 
 ## Environment Variables Reference

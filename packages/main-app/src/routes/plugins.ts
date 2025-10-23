@@ -157,7 +157,9 @@ async function sha256File(filePath: string): Promise<string> {
 }
 
 function verifySignature(checksumHex: string, signatureBase64: string, publicKeyPem?: string): boolean {
-  if (!publicKeyPem) return false;
+  if (!publicKeyPem) {
+    return false;
+  }
   try {
     const verifier = createVerify('RSA-SHA256');
     verifier.update(checksumHex, 'utf8');
@@ -183,7 +185,9 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
 
     if (!detectedMime || !ALLOWED_ARCHIVE_MIME.has(detectedMime)) {
       try {
-        if (filePath) await fs.unlink(filePath);
+        if (filePath) {
+          await fs.unlink(filePath);
+        }
       } catch {
         /* ignore */
       }
