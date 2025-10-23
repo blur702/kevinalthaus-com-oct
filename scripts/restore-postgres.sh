@@ -44,8 +44,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api-gateway
 # Drop and recreate database (using psql variable substitution for safe identifier quoting)
 echo "[$(date)] Recreating database..."
 docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = :'dbname' AND pid <> pg_backend_pid();"
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c "DROP DATABASE IF EXISTS :dbname;"
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c "CREATE DATABASE :dbname;"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS \"$POSTGRES_DB\";"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "CREATE DATABASE \"$POSTGRES_DB\";"
 
 # Restore from backup
 echo "[$(date)] Restoring from backup..."

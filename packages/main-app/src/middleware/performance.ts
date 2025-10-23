@@ -19,25 +19,34 @@ class ResponseCache {
       return '';
     }
 
-    // Sort keys lexicographically
-    const sortedKeys = Object.keys(query as Record<string, unknown>).sort();
+    const canonicalizeValue = (val: unknown): string => {
+      if (val === null || typeof val === 'undefined') {
+        return '';
+      }
+      if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+        return JSON.stringify(val);
+      }
+      if (Array.isArray(val)) {
+        const mapped = (val as unknown[]).map((v) => canonicalizeValue(v));
+        // Sort canonical strings for deterministic ordering
+        mapped.sort();
+        return `[${mapped.join(',')}]`;
+      }
+      if (typeof val === 'object') {
+        const obj = val as Record<string, unknown>;
+        const keys = Object.keys(obj).sort();
+        const parts = keys.map((k) => `${k}:${canonicalizeValue(obj[k])}`);
+        return `{${parts.join(',')}}`;
+      }
+      return JSON.stringify(String(val));
+    };
 
-    // Build deterministic representation
+    const sortedKeys = Object.keys(query as Record<string, unknown>).sort();
     const pairs: string[] = [];
     for (const key of sortedKeys) {
       const value = (query as Record<string, unknown>)[key];
-
-      // Handle arrays consistently
-      if (Array.isArray(value)) {
-        // Sort array values for determinism
-        const sortedArray = (value as unknown[]).slice().sort();
-        pairs.push(`${key}=${JSON.stringify(sortedArray)}`);
-      } else if (value !== null && value !== undefined) {
-        // Handle primitives and objects
-        pairs.push(`${key}=${JSON.stringify(value)}`);
-      }
+      pairs.push(`${key}=${canonicalizeValue(value)}`);
     }
-
     return pairs.join('&');
   }
 

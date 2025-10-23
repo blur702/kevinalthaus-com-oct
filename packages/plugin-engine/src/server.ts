@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { timingSafeEqual } from 'crypto';
 
 const app = express();
 const PORT = Number(process.env.PLUGIN_ENGINE_PORT || process.env.PORT || 3004);
@@ -21,9 +22,15 @@ function verifyInternalToken(req: express.Request, res: express.Response, next: 
     return;
   }
 
-  const providedToken = req.headers['x-internal-token'];
+  const headerVal = req.headers['x-internal-token'];
+  const provided = Array.isArray(headerVal) ? headerVal[0] : headerVal;
+  const providedStr = typeof provided === 'string' ? provided : '';
+  const expectedStr = INTERNAL_GATEWAY_TOKEN || '';
+  const a = Buffer.from(providedStr);
+  const b = Buffer.from(expectedStr);
+  const valid = a.length === b.length && timingSafeEqual(a, b);
 
-  if (!providedToken || providedToken !== INTERNAL_GATEWAY_TOKEN) {
+  if (!valid) {
     // eslint-disable-next-line no-console
     console.warn('[plugin-engine] Unauthorized direct access attempt', {
       ip: req.ip,

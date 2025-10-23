@@ -1,5 +1,6 @@
 const PLUGIN_SCHEMA_PREFIX = 'plugin_';
 const MAX_IDENTIFIER_LENGTH = 63;
+const HASH_LENGTH = 8;
 const RESERVED_SCHEMAS = ['public', 'information_schema', 'pg_catalog', 'pg_toast'];
 
 // Cache for hash results to improve performance
@@ -129,9 +130,9 @@ function generateShortHash(input: string): string {
     hash = Math.imul(hash, 16777619);
   }
 
-  // Convert to base36 and ensure exactly 8 characters
+  // Convert to base36 and ensure fixed hash length
   const hashStr = Math.abs(hash).toString(36);
-  const result = hashStr.length >= 8 ? hashStr.substring(0, 8) : hashStr.padStart(8, '0');
+  const result = hashStr.length >= HASH_LENGTH ? hashStr.substring(0, HASH_LENGTH) : hashStr.padStart(HASH_LENGTH, '0');
 
   // Cache the result
   if (hashCache.size < 1000) {

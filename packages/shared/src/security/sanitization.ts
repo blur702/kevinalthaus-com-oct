@@ -27,13 +27,16 @@ const DEFAULT_SANITIZE_OPTIONS: IOptions = {
   allowProtocolRelative: false,
   transformTags: {
     a: (tagName, attribs) => {
-      // Enforce rel="noopener noreferrer" when target is present
+      // Enforce rel tokens when target is present, merging with existing rel
       if (attribs.target) {
+        const existing = (attribs.rel || '').split(/\s+/).filter(Boolean);
+        const required = ['noopener', 'noreferrer'];
+        const merged = Array.from(new Set([...existing, ...required])).join(' ');
         return {
           tagName,
           attribs: {
             ...attribs,
-            rel: 'noopener noreferrer',
+            rel: merged,
           },
         };
       }

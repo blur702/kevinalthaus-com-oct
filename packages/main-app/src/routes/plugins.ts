@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { promises as fs, mkdirSync } from 'fs';
-import { createHash, createVerify } from 'crypto';
+import { createHash, createVerify, randomBytes } from 'crypto';
 import { authMiddleware } from '../auth';
 import { requireRole } from '../auth/rbac-middleware';
 import { Role, sanitizeFilename, createLogger, LogLevel } from '@monorepo/shared';
@@ -106,7 +106,8 @@ const storage = multer.diskStorage({
     const base = path.basename(file.originalname, path.extname(file.originalname));
     const sanitized = sanitizeFilename(base);
     const ext = path.extname(file.originalname).toLowerCase();
-    const finalName = `${Date.now()}_${sanitized}${ext}`;
+    const rand = randomBytes(12).toString('hex');
+    const finalName = `${rand}_${sanitized}${ext}`;
     cb(null, finalName);
   },
 });
@@ -206,11 +207,13 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
         const parse = JSON.parse(req.body.manifest) as PluginManifest;
         const validate = createValidator<PluginManifest>(PLUGIN_MANIFEST_SCHEMA as unknown as any);
         if (!validate(parse)) {
+          try { if (filePath) await fs.unlink(filePath); } catch { /* ignore */ }
           res.status(400).json({ error: 'Manifest validation failed', details: validate.errors });
           return;
         }
         manifest = parse;
       } catch (err) {
+        try { if (filePath) await fs.unlink(filePath); } catch { /* ignore */ }
         res.status(400).json({ error: 'Invalid manifest JSON', message: err instanceof Error ? err.message : String(err) });
         return;
       }

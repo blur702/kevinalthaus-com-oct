@@ -2,6 +2,7 @@ import multer from 'multer';
 import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { promises as fs, mkdirSync } from 'fs';
+import { randomBytes } from 'crypto';
 import { sanitizeFilename } from '@monorepo/shared';
 
 // Validate upload max size from environment variables
@@ -88,9 +89,9 @@ const storage = multer.diskStorage({
     const baseName = path.basename(file.originalname, path.extname(file.originalname));
     const sanitizedBaseName = sanitizeFilename(baseName);
 
-    // Add timestamp prefix to prevent filename collisions
-    const timestamp = Date.now();
-    const finalFilename = `${timestamp}_${sanitizedBaseName}${originalExt}`;
+    // Use cryptographically secure random to avoid collisions
+    const rand = randomBytes(12).toString('hex');
+    const finalFilename = `${rand}_${sanitizedBaseName}${originalExt}`;
 
     cb(null, finalFilename);
   },
@@ -226,10 +227,16 @@ export async function validateUploadedFile(
         try {
           // eslint-disable-next-line security/detect-non-literal-fs-filename
           await fs.rename(quarantinePath, finalPath);
-        } catch {
-          // If rename fails, attempt to unlink quarantine file to avoid leftovers
-          try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
-          throw new Error('Failed to move uploaded file to final destination');
+        } catch (renameErr) {
+          // Fallback: copy then unlink to handle cross-device moves
+          try {
+            await fs.copyFile(quarantinePath, finalPath);
+            await fs.unlink(quarantinePath);
+          } catch (fallbackErr) {
+            // Attempt to cleanup quarantine file to avoid leftovers
+            try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
+            throw new Error(`Failed to move uploaded file. file=${filename}, quarantinePath=${quarantinePath}, finalPath=${finalPath}, renameError=${(renameErr as Error).message}, fallbackError=${(fallbackErr as Error).message}`);
+          }
         }
       }
     }
@@ -244,9 +251,14 @@ export async function validateUploadedFile(
           try {
             // eslint-disable-next-line security/detect-non-literal-fs-filename
             await fs.rename(quarantinePath, finalPath);
-          } catch {
-            try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
-            throw new Error('Failed to move one or more uploaded files to final destination');
+          } catch (renameErr) {
+            try {
+              await fs.copyFile(quarantinePath, finalPath);
+              await fs.unlink(quarantinePath);
+            } catch (fallbackErr) {
+              try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
+              throw new Error(`Failed to move uploaded file. file=${filename}, quarantinePath=${quarantinePath}, finalPath=${finalPath}, renameError=${(renameErr as Error).message}, fallbackError=${(fallbackErr as Error).message}`);
+            }
           }
         }
       }

@@ -20,16 +20,15 @@ RUN addgroup -g 1001 -S appuser \
 
 WORKDIR /app
 
-# Copy package manifest to install production deps
+# Copy root manifests and plugin-engine package manifest for workspace install
+COPY package.json package-lock.json ./
 COPY packages/plugin-engine/package.json ./packages/plugin-engine/package.json
 
-WORKDIR /app/packages/plugin-engine
-
-# Install only production dependencies for the plugin engine package
-RUN npm install --omit=dev && npm cache clean --force
+# Install only production dependencies for the plugin-engine workspace using lockfile
+RUN npm ci --omit=dev --workspace=packages/plugin-engine && npm cache clean --force
 
 # Copy built artifacts from builder image
-COPY --from=builder /app/packages/plugin-engine/dist ./dist
+COPY --from=builder /app/packages/plugin-engine/dist ./packages/plugin-engine/dist
 
 USER appuser
 
@@ -38,4 +37,4 @@ EXPOSE 3004
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
   CMD curl -f http://localhost:3004/health || exit 1
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "packages/plugin-engine/dist/server.js"]

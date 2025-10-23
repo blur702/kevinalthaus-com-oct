@@ -1,4 +1,4 @@
-﻿export interface IsolationPolicy {
+export interface IsolationPolicy {
   allowCrossPluginQueries: boolean;
   allowSystemSchemaAccess: boolean;
   maxQueryComplexity: number;
@@ -129,10 +129,10 @@ export class DatabaseIsolationEnforcer {
     // Validate limits and normalize
     const mc = options.limits.maxQueryComplexity;
     const mr = options.limits.maxQueryRows;
-    if (!Number.isFinite(mc) || mc <= 0) {
+    if (!Number.isFinite(mc) || Math.floor(mc) < 1) {
       throw new Error(`[Isolation] Invalid maxQueryComplexity: ${mc}`);
     }
-    if (!Number.isFinite(mr) || mr <= 0) {
+    if (!Number.isFinite(mr) || Math.floor(mr) < 1) {
       throw new Error(`[Isolation] Invalid maxQueryRows: ${mr}`);
     }
 
@@ -142,7 +142,7 @@ export class DatabaseIsolationEnforcer {
     // Fallback complexity: validated explicit value or safe low default (1)
     const fc = options.fallbackComplexity;
     if (fc !== undefined) {
-      if (!Number.isFinite(fc) || fc <= 0) {
+      if (!Number.isFinite(fc) || Math.floor(fc) < 1) {
         throw new Error(`[Isolation] Invalid fallbackComplexity: ${fc}`);
       }
       this.fallbackComplexity = Math.floor(fc);
@@ -277,7 +277,7 @@ export class DatabaseIsolationEnforcer {
                   visit(fromObj.table);
                 }
               } else {
-                // Plain table in FROM list â€” if more than one without join, potential cartesian
+                // Plain table in FROM list — if more than one without join, potential cartesian
                 plainTables += 1;
                 const tableOrItem = ('table' in fromObj ? fromObj.table : fromItem) as unknown;
                 visit(tableOrItem);

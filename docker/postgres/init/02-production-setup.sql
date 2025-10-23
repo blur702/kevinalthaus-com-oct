@@ -79,18 +79,26 @@ END $$ LANGUAGE plpgsql;
 -- PERFORMANCE INDEXES
 -- ----------------------------------------
 
--- Create indexes on commonly queried columns for users table
-CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email));
-CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users(LOWER(username));
-CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
-CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active) WHERE is_active = true;
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users') THEN
+        CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email));
+        CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users(LOWER(username));
+        CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+        CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+        CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active) WHERE is_active = true;
+    END IF;
+END $$;
 
--- Create indexes for refresh tokens
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_revoked_at ON refresh_tokens(revoked_at) WHERE revoked_at IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'refresh_tokens') THEN
+        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
+        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_revoked_at ON refresh_tokens(revoked_at) WHERE revoked_at IS NULL;
+    END IF;
+END $$;
 
 -- Create indexes for plugin registry (if table exists)
 DO $$
@@ -192,6 +200,7 @@ GRANT SELECT ON v_slow_queries TO monitoring;
 
 -- Grant default privileges for future tables to monitoring role
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO monitoring;
+ALTER DEFAULT PRIVILEGES FOR ROLE app_user IN SCHEMA public GRANT SELECT ON TABLES TO monitoring;
 
 -- ----------------------------------------
 -- MAINTENANCE CONFIGURATION

@@ -209,21 +209,30 @@ function csrfProtection(
 
     // Get allowed origins from environment (required for production)
     const adminAllowedOriginsEnv = process.env.ADMIN_ALLOWED_ORIGINS;
-    if (!adminAllowedOriginsEnv && process.env.NODE_ENV === 'production') {
-      logger.error('ADMIN_ALLOWED_ORIGINS not configured in production');
-      res
-        .status(500)
-        .type('html')
-        .send(
-          layout('Configuration Error', "<p>Server misconfiguration</p><p><a href='/admin/plugins'>Back</a></p>")
+    let allowedOrigins: string[];
+    if (!adminAllowedOriginsEnv) {
+      if (process.env.NODE_ENV === 'development') {
+        allowedOrigins = ['http://localhost:3003', 'https://localhost:3003'];
+      } else {
+        logger.error(
+          'ADMIN_ALLOWED_ORIGINS not configured for non-development environment',
+          undefined,
+          { nodeEnv: process.env.NODE_ENV }
         );
-      return;
+        res
+          .status(500)
+          .type('html')
+          .send(
+            layout(
+              'Configuration Error',
+              "<p>Server misconfiguration: ADMIN_ALLOWED_ORIGINS is required</p><p><a href='/admin/plugins'>Back</a></p>"
+            )
+          );
+        return;
+      }
+    } else {
+      allowedOrigins = adminAllowedOriginsEnv.split(',').map((o) => o.trim()).filter(Boolean);
     }
-
-    // Parse allowed origins, fallback to localhost for development
-    const allowedOrigins = adminAllowedOriginsEnv
-      ? adminAllowedOriginsEnv.split(',').map((o) => o.trim()).filter(Boolean)
-      : ['http://localhost:3003', 'https://localhost:3003'];
 
     // Check Origin header (preferred)
     if (origin) {

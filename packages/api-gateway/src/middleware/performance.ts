@@ -88,8 +88,32 @@ const responseCache = new ResponseCache();
 // Response caching middleware for GET requests
 export const cacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   // Skip caching for non-GET requests or authenticated requests
-  // Check for Authorization header, Cookie header (session auth), and any other auth indicators
-  if (req.method !== 'GET' || req.headers.authorization || req.headers.cookie) {
+  if (req.method !== 'GET') {
+    next();
+    return;
+  }
+
+  // Determine if request appears authenticated
+  const hasAuthHeader = Boolean(req.headers.authorization);
+  const authCookieNames = (process.env.CACHE_AUTH_COOKIES || 'accessToken,refreshToken,session,sid,auth,token')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  let hasAuthCookie = false;
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const pairs = cookieHeader.split(';');
+    for (const pair of pairs) {
+      const eq = pair.indexOf('=');
+      const name = (eq >= 0 ? pair.substring(0, eq) : pair).trim().toLowerCase();
+      const value = eq >= 0 ? pair.substring(eq + 1).trim() : '';
+      if (authCookieNames.includes(name) && value.length > 0) {
+        hasAuthCookie = true;
+        break;
+      }
+    }
+  }
+  if (hasAuthHeader || hasAuthCookie) {
     next();
     return;
   }
@@ -110,6 +134,9 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
     }
     return;
   }
+
+  // Default to MISS for cacheable requests; may be overridden to HIT above
+  res.set('X-Cache', 'MISS');
 
   // Capture body across json/send/end
   const originalJson = res.json.bind(res);
@@ -148,7 +175,6 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
       }
     });
     responseCache.set(req, data, headers);
-    res.set('X-Cache', 'MISS');
   };
 
   res.json = function (data: unknown) {
