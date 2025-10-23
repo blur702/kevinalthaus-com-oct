@@ -2,7 +2,7 @@
 # Create required directories for PostgreSQL WAL archiving
 # This script runs before postgres starts to ensure directories exist with correct permissions
 
-set -e
+set -euo pipefail
 
 echo "Creating WAL archive directory..."
 

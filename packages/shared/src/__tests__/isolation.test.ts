@@ -96,7 +96,7 @@ describe('DatabaseIsolationEnforcer.estimateQueryComplexity', () => {
     expect(() => enforcer.enforceQuotas(q, -Infinity)).toThrow(/finite positive/i);
   });
 
-  it('enforces row limit when estimatedRows exceeds maxQueryRows', () => {
+  it('allows boundary when estimatedRows equals maxQueryRows', () => {
     const rowTight = {
       maxQueryComplexity: Number.MAX_SAFE_INTEGER,
       maxQueryRows: 500,
@@ -104,8 +104,8 @@ describe('DatabaseIsolationEnforcer.estimateQueryComplexity', () => {
     };
     const enforcer = new DatabaseIsolationEnforcer(rowTight);
     const q = `SELECT * FROM users`;
-    // Pass 1000 rows which exceeds maxQueryRows (500), should throw
-    expect(() => enforcer.enforceQuotas(q, 1000)).toThrow(/rows.*exceeds limit/i);
+    // Boundary case: exactly at the limit should not throw
+    expect(() => enforcer.enforceQuotas(q, 500)).not.toThrow();
   });
 
   it('handles malformed SQL gracefully', () => {

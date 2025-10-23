@@ -22,6 +22,7 @@ app.all('/plugins/*', (req, res) => {
     message: 'Plugin Engine stub',
     method: req.method,
     path: req.path,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     body: req.body,
   });
 });

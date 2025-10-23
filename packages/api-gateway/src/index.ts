@@ -241,15 +241,22 @@ function buildProxy(target: string, pathRewrite?: Record<string, string>): expre
     onProxyReq: (proxyReq, req) => {
       // propagate request id if present
       const rid = req.headers['x-request-id'];
-      if (rid) proxyReq.setHeader('x-request-id', String(rid));
+      if (rid) {
+        proxyReq.setHeader(
+          'x-request-id',
+          Array.isArray(rid) ? rid[0] : String(rid)
+        );
+      }
     },
   };
   return createProxyMiddleware(options) as unknown as express.RequestHandler;
 }
 
 // Plugins proxy (optional service)
+// Plugins API: proxy to dedicated plugin engine. Protected by JWT.
 app.use(
   '/api/plugins',
+  jwtMiddleware,
   buildProxy(PLUGIN_ENGINE_URL, { '^/api/plugins': '/plugins' })
 );
 
@@ -348,11 +355,7 @@ app.use(
   createProxyMiddleware(createSecureProxy(MAIN_APP_URL, { '^/api/users': '/api/users' }))
 );
 
-app.use(
-  '/api/plugins',
-  jwtMiddleware,
-  createProxyMiddleware(createSecureProxy(MAIN_APP_URL, { '^/api/plugins': '/api/plugins' }))
-);
+// (removed) Previous proxy to main-app for /api/plugins to avoid duplicate registrations
 
 app.use(
   '/api/settings',

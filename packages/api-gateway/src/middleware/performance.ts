@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import type { ParsedQs } from 'qs';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 
@@ -13,14 +14,35 @@ class ResponseCache {
   private maxSize = 1000;
   private defaultTTL = 300000; // 5 minutes
 
+  private canonicalizeQuery(query: ParsedQs): string {
+    const keys = Object.keys(query as Record<string, unknown>);
+    if (keys.length === 0) {return '';}
+    const normalize = (val: unknown): string => {
+      if (val === null || typeof val === 'undefined') {return '';}
+      if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+        return JSON.stringify(val);
+      }
+      if (Array.isArray(val)) {
+        const items = (val as unknown[]).map((v) => normalize(v)).sort();
+        return `[${items.join(',')}]`;
+      }
+      if (typeof val === 'object') {
+        const obj = val as Record<string, unknown>;
+        const objKeys = Object.keys(obj).sort();
+        const parts = objKeys.map((k) => `${k}:${normalize(obj[k])}`);
+        return `{${parts.join(',')}}`;
+      }
+      return JSON.stringify(String(val));
+    };
+    const sortedKeys = keys.sort();
+    const pairs = sortedKeys.map((k) => `${k}=${normalize((query as Record<string, unknown>)[k])}`);
+    return pairs.join('&');
+  }
+
   private generateKey(req: Request): string {
-    // Sort query parameters to ensure consistent cache keys
-    const sortedQuery: Record<string, unknown> = {};
-    const keys = Object.keys(req.query).sort();
-    for (const key of keys) {
-      sortedQuery[key] = req.query[key];
-    }
-    return `${req.method}:${req.path}:${JSON.stringify(sortedQuery)}`;
+    const base = req.originalUrl.split('?')[0];
+    const canonicalQuery = this.canonicalizeQuery(req.query);
+    return `${req.method}:${base}:${canonicalQuery}`;
   }
 
   get(req: Request): CacheEntry | null {

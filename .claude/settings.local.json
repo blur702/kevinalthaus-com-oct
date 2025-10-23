@@ -18,9 +18,10 @@
       "Bash(docker exec shutdown:*)"
     ],
     "ask": [
-      "Bash(docker run:*)",
-      "Bash(docker exec:*)",
-      "Bash(docker:*)"
+      "Bash(docker exec -it kevinalthaus-postgres-1 bash:*)",
+      "Bash(docker exec -it kevinalthaus-main-app-1 sh:*)",
+      "Bash(docker exec -it kevinalthaus-api-gateway-1 sh:*)",
+      "Bash(docker run --rm plugin-engine:local:*)"
     ]
   }
 }

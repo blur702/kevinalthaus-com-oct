@@ -10,7 +10,7 @@ import {
   Alert,
 } from '@mui/material';
 import { TrendingUp, People, Article, Visibility } from '@mui/icons-material';
-import api from '../lib/api';
+import api, { fetchPlugins } from '../lib/api';
 
 interface StatCardProps {
   title: string;
@@ -132,6 +132,15 @@ const Dashboard: React.FC = () => {
 
         const data = response.data;
 
+        // Fetch plugin count from real API
+        let pluginCount: number | undefined;
+        try {
+          const plugins = await fetchPlugins(controller.signal);
+          pluginCount = plugins.plugins.length;
+        } catch {
+          pluginCount = undefined; // leave undefined to fall back to mock
+        }
+
         // Map API response to stat cards with icons and colors
         const fetchedStats: DashboardStat[] = [
           {
@@ -141,6 +150,14 @@ const Dashboard: React.FC = () => {
             change: data.changes?.users ?? mockStats[0].change,
             icon: <People />,
             color: 'primary' as const,
+          },
+          {
+            id: 'plugins',
+            title: 'Plugins',
+            value: pluginCount !== undefined ? pluginCount : 0,
+            change: undefined,
+            icon: <Article />,
+            color: 'secondary' as const,
           },
           {
             id: 'page-views',

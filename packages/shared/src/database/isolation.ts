@@ -1,4 +1,4 @@
-export interface IsolationPolicy {
+﻿export interface IsolationPolicy {
   allowCrossPluginQueries: boolean;
   allowSystemSchemaAccess: boolean;
   maxQueryComplexity: number;
@@ -277,7 +277,7 @@ export class DatabaseIsolationEnforcer {
                   visit(fromObj.table);
                 }
               } else {
-                // Plain table in FROM list — if more than one without join, potential cartesian
+                // Plain table in FROM list â€” if more than one without join, potential cartesian
                 plainTables += 1;
                 const tableOrItem = ('table' in fromObj ? fromObj.table : fromItem) as unknown;
                 visit(tableOrItem);
@@ -402,7 +402,7 @@ export class DatabaseIsolationEnforcer {
       return Math.min(complexity, Number.MAX_SAFE_INTEGER);
     } catch (err) {
       // If parsing fails, log details for debugging, then use configurable fallback complexity
-      // Fallback defaults to maxQueryComplexity to prevent overly aggressive blocking
+      // Fallback uses a validated explicit value (if provided) or a safe low default (1) to avoid over-blocking.
       this.logger('[Isolation] SQL parse failed; using fallback complexity', {
         error: err instanceof Error ? err.message : String(err),
         query,
@@ -458,3 +458,4 @@ export class ResourceQuotaEnforcer {
     return tableIndexCount < this.quota.maxIndexesPerTable;
   }
 }
+

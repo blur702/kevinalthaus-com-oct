@@ -20,6 +20,7 @@ import { healthCheck } from './db';
 import { discoverPlugins } from './plugins';
 import { pluginManager } from './plugins/manager';
 import { adminPluginsRouter } from './routes/adminPlugins';
+import { pluginsRouter } from './routes/plugins';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { asyncHandler } from './utils/asyncHandler';
 import { requestIdMiddleware } from './middleware/requestId';
@@ -166,6 +167,7 @@ app.get('/', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/uploads', uploadsRouter);
+app.use('/api/plugins', authMiddleware, requireRole(Role.ADMIN), pluginsRouter);
 
 // Admin UI for plugin management
 pluginManager.init(app);

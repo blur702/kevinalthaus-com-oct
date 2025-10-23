@@ -206,18 +206,32 @@ function csrfProtection(
     // Validate Origin and Referer headers to prevent cross-origin CSRF attacks
     const origin = req.get('Origin');
     const referer = req.get('Referer');
-    const host = req.get('Host');
+    const hostHeader = req.get('Host') || '';
+    const canonicalHost = hostHeader.split(':')[0];
+
+    // Validate host against allowlist from environment
+    const allowedHosts = (process.env.ALLOWED_HOSTS || 'localhost,127.0.0.1')
+      .split(',')
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean);
+    if (!allowedHosts.includes(canonicalHost.toLowerCase())) {
+      logger.warn('CSRF: Host header not allowed', { providedHost: hostHeader, canonicalHost, allowedHosts });
+      res
+        .status(403)
+        .type('html')
+        .send(
+          layout('Forbidden', "<p>Invalid Host header</p><p><a href='/admin/plugins'>Back</a></p>")
+        );
+      return;
+    }
 
     // Construct allowed origins from current host
-    const allowedOrigins = [
-      `http://${host}`,
-      `https://${host}`,
-    ];
+    const allowedOrigins = [`http://${canonicalHost}`, `https://${canonicalHost}`];
 
     // Check Origin header (preferred)
     if (origin) {
       if (!allowedOrigins.includes(origin)) {
-        logger.warn('CSRF: Invalid Origin header', { origin, host });
+        logger.warn('CSRF: Invalid Origin header', { origin, canonicalHost });
         res
           .status(403)
           .type('html')
@@ -232,7 +246,7 @@ function csrfProtection(
       const refererUrl = new URL(referer);
       const refererOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
       if (!allowedOrigins.includes(refererOrigin)) {
-        logger.warn('CSRF: Invalid Referer header', { referer, host });
+        logger.warn('CSRF: Invalid Referer header', { referer, canonicalHost });
         res
           .status(403)
           .type('html')

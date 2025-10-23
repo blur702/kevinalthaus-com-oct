@@ -5,11 +5,6 @@ const PORT = process.env.PORT || 3001;
 
 const server = http.createServer((req, res) => {
   const url = req.url;
-  if (url === undefined) {
-    res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Bad Request', message: 'Missing request URL' }));
-    return;
-  }
   if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'healthy', service: 'main-app-simple' }));
