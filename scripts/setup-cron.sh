@@ -2,7 +2,7 @@
 # Setup Cron Jobs for Automated Maintenance
 # Usage: sudo ./scripts/setup-cron.sh
 
-set -e
+set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/kevinalthaus}"
 LOG_DIR="$APP_DIR/logs/cron"

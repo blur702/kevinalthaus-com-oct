@@ -292,7 +292,7 @@ LOG_FORMAT=json
 # Features
 ENABLE_PLUGIN_SYSTEM=true
 ENABLE_THEME_SYSTEM=true
-ENABLE_API_DOCS=true
+ENABLE_API_DOCS=false  # Not yet implemented
 ```
 
 ## API Documentation

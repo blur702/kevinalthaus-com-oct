@@ -160,30 +160,22 @@ Each plugin gets its own PostgreSQL schema with the naming convention: `plugin_<
 ### Connection Management
 
 ```typescript
-import { PluginDatabaseConnection, IsolationLevel } from '@monorepo/shared';
-
-// Plugin database configuration
-const dbConfig = {
-  pluginId: 'my-awesome-plugin',
-  schemaName: 'plugin_my_awesome_plugin',
-  maxConnections: 5,
-  isolationLevel: IsolationLevel.READ_COMMITTED,
-  readOnly: false
-};
+import type { PluginExecutionContext } from '@monorepo/shared';
 
 // Example usage in your plugin
 export async function getUsersHandler(context: PluginExecutionContext) {
-  const connection = await context.database.getConnection();
-  
-  try {
-    const users = await connection.query(
-      'SELECT * FROM users WHERE active = $1',
-      [true]
-    );
-    return users;
-  } finally {
-    await connection.close();
+  // Check if database connection is available
+  if (!context.db) {
+    throw new Error('Database connection not available');
   }
+
+  // Use the PostgreSQL Pool directly
+  const result = await context.db.query(
+    'SELECT * FROM users WHERE active = $1',
+    [true]
+  );
+
+  return result.rows;
 }
 ```
 
@@ -312,7 +304,8 @@ interface PluginExecutionContext {
   logger: PluginLogger;
   api: PluginAPI;
   storage: PluginStorage;
-  permissions: PermissionContext;
+  db?: Pool; // PostgreSQL connection pool (optional)
+  app?: Application; // Express app instance (optional)
 }
 ```
 
@@ -610,7 +603,7 @@ export class PluginResourceManager {
 
 ```typescript
 // tests/plugin.test.ts
-import { describe, it, expect, beforeEach } from '@jest/jest-globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import MyAwesomePlugin from '../src/index';
 
 describe('MyAwesomePlugin', () => {
