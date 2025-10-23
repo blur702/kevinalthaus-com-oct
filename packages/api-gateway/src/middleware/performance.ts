@@ -96,15 +96,9 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
 
   const cached = responseCache.get(req);
   if (cached) {
-    // Set cached headers (preserve numeric and array values)
+    // Set cached headers (all values stored as strings)
     Object.entries(cached.headers).forEach(([key, value]) => {
-      if (typeof value === 'number') {
-        res.set(key, String(value));
-      } else if (Array.isArray(value)) {
-        res.set(key, value.map(String));
-      } else {
-        res.set(key, value);
-      }
+      res.set(key, value);
     });
     res.set('X-Cache', 'HIT');
     // Prefer json for objects; send for strings/buffers

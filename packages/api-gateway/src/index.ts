@@ -20,42 +20,9 @@ const app = express();
 
 // Enforce JWT secret handling
 
-let JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-    // Generate a random secret for development to avoid using a static default
-    JWT_SECRET = randomBytes(32).toString('hex');
-    // eslint-disable-next-line no-console
-    console.warn('');
-    // eslint-disable-next-line no-console
-    console.warn('═══════════════════════════════════════════════════════════════');
-    // eslint-disable-next-line no-console
-    console.warn('⚠️  [Gateway] JWT_SECRET not set - using random ephemeral secret');
-    // eslint-disable-next-line no-console
-    console.warn('═══════════════════════════════════════════════════════════════');
-    // eslint-disable-next-line no-console
-    console.warn('This is acceptable for development but has implications:');
-    // eslint-disable-next-line no-console
-    console.warn('  - All JWT tokens become invalid on gateway restart');
-    // eslint-disable-next-line no-console
-    console.warn('  - Must match main-app JWT_SECRET for token verification');
-    // eslint-disable-next-line no-console
-    console.warn('  - Not suitable for any production or staging environment');
-    // eslint-disable-next-line no-console
-    console.warn('');
-    // eslint-disable-next-line no-console
-    console.warn('Set JWT_SECRET in .env to match across services:');
-    // eslint-disable-next-line no-console
-    console.warn('  JWT_SECRET=' + JWT_SECRET);
-    // eslint-disable-next-line no-console
-    console.warn('═══════════════════════════════════════════════════════════════');
-    // eslint-disable-next-line no-console
-    console.warn('');
-  } else {
-    throw new Error(
-      'JWT_SECRET is required for API Gateway in production. Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
-    );
-  }
+  throw new Error('JWT_SECRET is required for API Gateway. Set the same secret for both gateway and main-app.');
 }
 const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3001';
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';

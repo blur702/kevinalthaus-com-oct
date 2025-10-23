@@ -15,7 +15,7 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
     existingId = undefined;
   }
   const requestId = generateOrExtractRequestId(existingId);
-  req.id = requestId;
+  (req as unknown as { id?: string }).id = requestId;
   res.setHeader('X-Request-Id', requestId);
   next();
 }

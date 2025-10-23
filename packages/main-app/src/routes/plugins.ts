@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import { promises as fs, existsSync, mkdirSync } from 'fs';
+import { promises as fs, mkdirSync } from 'fs';
 import { createHash, createVerify } from 'crypto';
 import { authMiddleware } from '../auth';
 import { requireRole } from '../auth/rbac-middleware';
@@ -72,10 +72,14 @@ const PLUGIN_UPLOAD_MAX_SIZE =
     : 52428800; // Default 50MB
 
 function ensureDirSync(dir: string): void {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
-  if (!existsSync(dir)) {
+  try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     mkdirSync(dir, { recursive: true });
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== 'EEXIST') {
+      throw err;
+    }
   }
 }
 

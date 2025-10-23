@@ -151,8 +151,14 @@ const App: React.FC = () => {
 
   const handleLogout = async (e?: React.MouseEvent<HTMLButtonElement>): Promise<void> => {
     e?.preventDefault();
-    await clearTokens();
-    navigate('/login');
+    try {
+      await clearTokens();
+    } catch (err) {
+      // Log and optionally show a notification/toast in the future
+      console.error('Logout failed:', err);
+    } finally {
+      navigate('/login');
+    }
   };
 
   const drawer = (

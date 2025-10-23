@@ -41,7 +41,7 @@ COPY packages/shared/package*.json ./packages/shared/
 COPY packages/main-app/package*.json ./packages/main-app/
 
 # Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Copy built artifacts from builder stage
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist

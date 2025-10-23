@@ -660,7 +660,7 @@ export async function createUserPreference(
   `;
 
   try {
-    const result = await context.database.execute(sql, [userId, JSON.stringify(preferences)]);
+    const result = await context.db.execute(sql, [userId, JSON.stringify(preferences)]);
 
     context.logger.info('User preferences saved', {
       userId,
@@ -683,7 +683,7 @@ export async function transferUserData(
   fromUserId: string,
   toUserId: string
 ) {
-  await context.database.transaction(async (trx) => {
+  await context.db.transaction(async (trx) => {
     // Get data from source user
     const userData = await trx.query('SELECT * FROM user_data WHERE user_id = $1', [fromUserId]);
 

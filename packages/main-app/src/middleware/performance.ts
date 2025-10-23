@@ -164,10 +164,10 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   }
 
   // Track whether we've already cached to prevent double-caching
-  let cached = false;
+  let alreadyCached = false;
 
   const maybeCache = (data: unknown): void => {
-    if (cached || res.statusCode !== 200) {
+    if (alreadyCached || res.statusCode !== 200) {
       return;
     }
 
@@ -194,7 +194,7 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
       });
       responseCache.set(req, data, headers);
       res.set('X-Cache', 'MISS');
-      cached = true;
+      alreadyCached = true;
     } else {
       res.set('X-Cache', 'SKIP');
     }

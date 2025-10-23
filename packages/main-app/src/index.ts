@@ -47,9 +47,11 @@ function verifyInternalToken(req: express.Request, res: express.Response, next: 
     return;
   }
 
-  const providedToken = req.headers['x-internal-token'];
+  const headerVal = req.headers['x-internal-token'];
+  const providedToken = Array.isArray(headerVal) ? headerVal[0] : headerVal;
+  const normalized = typeof providedToken === 'string' ? providedToken.trim() : undefined;
 
-  if (!providedToken || providedToken !== INTERNAL_GATEWAY_TOKEN) {
+  if (!normalized || normalized !== INTERNAL_GATEWAY_TOKEN) {
     logger.warn('Unauthorized direct access attempt - missing or invalid internal token', {
       ip: req.ip,
       path: req.path,

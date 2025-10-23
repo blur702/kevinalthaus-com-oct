@@ -38,24 +38,24 @@ export interface PluginListResponse {
 }
 
 export async function fetchPlugins(signal?: AbortSignal): Promise<PluginListResponse> {
-  const { data } = await api.get<PluginListResponse>('/api/plugins', { signal });
+  const { data } = await api.get<PluginListResponse>('/plugins', { signal });
   return data;
 }
 
 export async function installPlugin(id: string): Promise<void> {
-  await api.post(`/api/plugins/${encodeURIComponent(id)}/install`);
+  await api.post(`/plugins/${encodeURIComponent(id)}/install`);
 }
 
 export async function activatePlugin(id: string): Promise<void> {
-  await api.post(`/api/plugins/${encodeURIComponent(id)}/activate`);
+  await api.post(`/plugins/${encodeURIComponent(id)}/activate`);
 }
 
 export async function deactivatePlugin(id: string): Promise<void> {
-  await api.post(`/api/plugins/${encodeURIComponent(id)}/deactivate`);
+  await api.post(`/plugins/${encodeURIComponent(id)}/deactivate`);
 }
 
 export async function uninstallPlugin(id: string): Promise<void> {
-  await api.post(`/api/plugins/${encodeURIComponent(id)}/uninstall`);
+  await api.post(`/plugins/${encodeURIComponent(id)}/uninstall`);
 }
 
 export interface UploadPluginOptions {
@@ -72,7 +72,7 @@ export async function uploadPluginPackage(file: File, options: UploadPluginOptio
   if (options.signatureBase64) {
     form.append('signature', options.signatureBase64);
   }
-  const { data } = await api.post('/api/plugins/upload', form, {
+  const { data } = await api.post('/plugins/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data;

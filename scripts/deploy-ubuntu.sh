@@ -203,9 +203,14 @@ cd "$APP_DIR"
 # Validate .env file for security issues
 log "Validating .env file for security issues..."
 if [ -f "$APP_DIR/.env" ]; then
-    # Check for common placeholder patterns
-    if grep -qE "(CHANGE_ME|your_|<.*>|placeholder|example)" "$APP_DIR/.env"; then
-        error "Found placeholder values in .env file. Please replace all placeholders with actual values before deployment."
+    # Optional: allow skipping env validation
+    if [ "${SKIP_ENV_VALIDATION:-0}" != "1" ]; then
+        # Refined placeholder detection to reduce false positives
+        if grep -qE '(CHANGE_ME\b)|(<[A-Z0-9_]+>)|(\bplaceholder\b)|(\bexample\b)|(your_[A-Z0-9_]+)' "$APP_DIR/.env"; then
+            error "Found placeholder values in .env file. Please replace all placeholders with actual values before deployment. Set SKIP_ENV_VALIDATION=1 to bypass."
+        fi
+    else
+        warn "SKIP_ENV_VALIDATION=1 set; skipping .env placeholder checks"
     fi
 
     # Source the .env file and check required variables

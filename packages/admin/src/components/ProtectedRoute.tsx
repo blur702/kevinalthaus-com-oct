@@ -17,7 +17,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const [authenticated, setAuthenticated] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
-    void isAuthenticated().then(setAuthenticated);
+    let mounted = true;
+    void isAuthenticated()
+      .then((ok) => {
+        if (mounted) setAuthenticated(ok);
+      })
+      .catch((err) => {
+        console.error('Auth check failed:', err);
+        if (mounted) setAuthenticated(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (authenticated === null) {

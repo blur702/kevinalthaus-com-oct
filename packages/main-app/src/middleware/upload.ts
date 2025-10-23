@@ -1,7 +1,7 @@
 import multer from 'multer';
 import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
-import { promises as fs, existsSync, mkdirSync } from 'fs';
+import { promises as fs, mkdirSync } from 'fs';
 import { sanitizeFilename } from '@monorepo/shared';
 
 // Validate upload max size from environment variables
@@ -12,6 +12,10 @@ const UPLOAD_MAX_SIZE =
 // Use absolute path for upload directory
 const UPLOAD_DIRECTORY = path.resolve(
   process.env.UPLOAD_DIRECTORY || path.join(__dirname, '../../uploads')
+);
+// Quarantine directory for uploads before validation (TOCTOU mitigation)
+const QUARANTINE_DIRECTORY = path.resolve(
+  process.env.UPLOAD_QUARANTINE_DIR || path.join(__dirname, '../../uploads_quarantine')
 );
 
 const ALLOWED_FILE_TYPES = process.env.ALLOWED_FILE_TYPES
@@ -68,16 +72,10 @@ const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     // Use synchronous operations to avoid async callback issues
     try {
-      // Check if directory exists
-      // UPLOAD_DIRECTORY is validated and resolved to absolute path at module initialization
+      // Ensure quarantine directory; write uploaded files here first
       // eslint-disable-next-line security/detect-non-literal-fs-filename
-      if (!existsSync(UPLOAD_DIRECTORY)) {
-        // Create directory if it doesn't exist
-        // UPLOAD_DIRECTORY is validated and resolved to absolute path at module initialization
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        mkdirSync(UPLOAD_DIRECTORY, { recursive: true });
-      }
-      cb(null, UPLOAD_DIRECTORY);
+      mkdirSync(QUARANTINE_DIRECTORY, { recursive: true });
+      cb(null, QUARANTINE_DIRECTORY);
     } catch (error) {
       cb(error as Error, '');
     }
@@ -134,6 +132,9 @@ export async function ensureUploadDirectory(): Promise<void> {
     // UPLOAD_DIRECTORY is validated and resolved to absolute path at module initialization
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     await fs.mkdir(UPLOAD_DIRECTORY, { recursive: true });
+    // Ensure quarantine directory exists with restrictive permissions where supported
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    await fs.mkdir(QUARANTINE_DIRECTORY, { recursive: true, mode: 0o700 });
   } catch (error) {
     throw new Error(`Failed to create upload directory: ${(error as Error).message}`);
   }
@@ -215,7 +216,43 @@ export async function validateUploadedFile(
       }
     }
 
-    // All files valid or no files uploaded, continue to next handler
+    // All files valid: move from quarantine to final directory atomically
+    // Single file
+    if (req.file) {
+      const quarantinePath = (req.file as Express.Multer.File & { path?: string }).path || '';
+      if (quarantinePath) {
+        const filename = path.basename(quarantinePath);
+        const finalPath = path.join(UPLOAD_DIRECTORY, filename);
+        try {
+          // eslint-disable-next-line security/detect-non-literal-fs-filename
+          await fs.rename(quarantinePath, finalPath);
+        } catch {
+          // If rename fails, attempt to unlink quarantine file to avoid leftovers
+          try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
+          throw new Error('Failed to move uploaded file to final destination');
+        }
+      }
+    }
+    // Multiple files
+    if (req.files) {
+      const files = Array.isArray(req.files) ? req.files : Object.values(req.files).flat();
+      for (const f of files) {
+        const quarantinePath = (f as Express.Multer.File & { path?: string }).path || '';
+        if (quarantinePath) {
+          const filename = path.basename(quarantinePath);
+          const finalPath = path.join(UPLOAD_DIRECTORY, filename);
+          try {
+            // eslint-disable-next-line security/detect-non-literal-fs-filename
+            await fs.rename(quarantinePath, finalPath);
+          } catch {
+            try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
+            throw new Error('Failed to move one or more uploaded files to final destination');
+          }
+        }
+      }
+    }
+
+    // Continue to next handler
     next();
   } catch (error) {
     // On unexpected error, try to clean up any uploaded files

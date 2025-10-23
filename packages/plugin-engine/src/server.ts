@@ -1,7 +1,6 @@
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import cors from 'cors';
 
 const app = express();
 const PORT = Number(process.env.PLUGIN_ENGINE_PORT || process.env.PORT || 3004);
@@ -80,4 +79,3 @@ app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`[plugin-engine] listening on ${PORT}`);
 });
-

@@ -1,15 +1,15 @@
-# Kevin Althaus Platform
+﻿# Kevin Althaus Platform
 
 Modern, extensible web platform with microservices architecture and plugin system.
 
 ## Key Features
 
-- 🔌 **Plugin System** - Extensible architecture with security sandboxing
-- 🎨 **Theme System** - Frontend/backend customization via plugins
-- 🔐 **Security** - RBAC, input validation, timing-safe operations
-- 📊 **Admin Dashboard** - User management, plugin management, analytics
-- 🐳 **Docker Ready** - Full containerization with production configs
-- � **Scalable** - Microservices with independent scaling
+- Plugin System - Extensible architecture with security sandboxing
+- Theme System - Frontend/backend customization via plugins
+- Security - RBAC, input validation, timing-safe operations
+- Admin Dashboard - User management, plugin management, analytics
+- Docker Ready - Full containerization with production configs
+- Scalable - Microservices with independent scaling
 
 ## Documentation
 
@@ -500,4 +500,4 @@ For support and questions:
 
 ---
 
-Built with ❤️ by Kevin Althaus
+Built with love by Kevin Althaus

@@ -66,8 +66,31 @@ function getCookieOptions(
   };
 }
 
-// Dummy hash for timing attack prevention - valid bcrypt hash format
-const DUMMY_PASSWORD_HASH = '$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+// Parse a duration string like "15m", "30s", "2h", "1d" to milliseconds
+function parseDurationToMs(input: string, fallbackMs: number): number {
+  const trimmed = String(input).trim();
+  const match = trimmed.match(/^\s*(\d+)\s*([smhdSMHD]?)\s*$/);
+  if (!match) return fallbackMs;
+  const value = Number(match[1]);
+  if (!Number.isFinite(value) || value <= 0) return fallbackMs;
+  const unit = match[2].toLowerCase();
+  switch (unit) {
+    case 's':
+      return value * 1000;
+    case 'm':
+      return value * 60 * 1000;
+    case 'h':
+      return value * 60 * 60 * 1000;
+    case 'd':
+      return value * 24 * 60 * 60 * 1000;
+    default:
+      // No unit provided, assume seconds
+      return value * 1000;
+  }
+}
+
+// Dummy hash for timing attack prevention - valid bcrypt hash of 'dummy-password'
+const DUMMY_PASSWORD_HASH = '$2b$10$rLsUhbUd.4I7BaZ1uNLZWu3dkcUPfVM.orLNsF3ykAD9zYMehtFue';
 
 interface TokenPayload {
   userId: string;
@@ -189,7 +212,7 @@ router.post(
         [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req), userAgent]
       );
 
-      const accessMaxAgeMs = 15 * 60 * 1000; // match JWT_EXPIRES_IN default '15m'
+      const accessMaxAgeMs = parseDurationToMs(JWT_EXPIRES_IN, 15 * 60 * 1000);
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
       res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getCookieOptions(accessMaxAgeMs));
       res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getCookieOptions(thirtyDaysInMs));
@@ -327,7 +350,7 @@ router.post(
         [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req), userAgent]
       );
 
-      const accessMaxAgeMs = 15 * 60 * 1000; // match JWT_EXPIRES_IN default '15m'
+      const accessMaxAgeMs = parseDurationToMs(JWT_EXPIRES_IN, 15 * 60 * 1000);
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
       res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getCookieOptions(accessMaxAgeMs));
       res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getCookieOptions(thirtyDaysInMs));
