@@ -33,6 +33,12 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   process.exit(1);
 }
 
+// Validate JWT secret is provided and non-empty
+if ((process.env.NODE_ENV !== 'test') && (!process.env.JWT_SECRET || String(process.env.JWT_SECRET).trim() === '')) {
+  logger.error('Missing JWT_SECRET environment variable', new Error('JWT_SECRET is required'));
+  process.exit(1);
+}
+
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
 let server: Server | undefined;
@@ -65,7 +71,9 @@ async function start(): Promise<void> {
   }
 }
 
-void start();
+if (process.env.NODE_ENV !== 'test') {
+  void start();
+}
 
 // Graceful shutdown handler
 async function gracefulShutdown(signal: string): Promise<void> {

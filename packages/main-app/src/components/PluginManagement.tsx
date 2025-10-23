@@ -36,6 +36,14 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({
   plugins, 
   csrfToken 
 }) => {
+  const askConfirm = (message: string): boolean => {
+    const g: any = (typeof globalThis !== 'undefined') ? (globalThis as any) : undefined;
+    if (g && typeof g.confirm === 'function') {
+      return g.confirm(message);
+    }
+    // In non-browser contexts (SSR/tests), default to true to avoid blocking
+    return true;
+  };
   const getStatusColor = (status: Plugin['status']) => {
     switch (status) {
       case 'active':
@@ -171,7 +179,7 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({
                                 action={`/admin/plugins/${plugin.id}/uninstall`} 
                                 style={{ display: 'inline' }}
                                 onSubmit={(e) => {
-                                  if (!confirm('Are you sure you want to uninstall this plugin?')) {
+                                  if (!askConfirm('Are you sure you want to uninstall this plugin?')) {
                                     e.preventDefault();
                                   }
                                 }}

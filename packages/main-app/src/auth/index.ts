@@ -11,7 +11,7 @@ const router = Router();
 // Secure JWT_SECRET handling - require real secret in production
 let JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
     JWT_SECRET = 'development_only_insecure_key_change_for_production';
     console.warn('WARNING: Using insecure development JWT secret. Set JWT_SECRET environment variable for production!');
   } else {

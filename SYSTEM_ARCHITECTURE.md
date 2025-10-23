@@ -53,6 +53,14 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
         └──────────────────┘          └───────────────────┘
 ```
 
+**Port Mapping**
+- Frontend: host 3001 -> container 3000
+- Admin Panel: host 3000 -> container 3000
+- API Gateway: 4000
+- Main App: service 3001 (exposed as 4001:3001)
+- PostgreSQL: 5432
+- Redis: 6379
+
 ### Technology Stack
 
 **Frontend Layer:**
@@ -100,7 +108,7 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
 **Configuration:**
 ```typescript
 const apiGatewayConfig = {
-  port: process.env.API_GATEWAY_PORT || 3000,
+  port: process.env.API_GATEWAY_PORT || 4000,
   mainAppUrl: process.env.MAIN_APP_URL || 'http://localhost:3001',
   pythonServiceUrl: process.env.PYTHON_SERVICE_URL || 'http://localhost:8000',
   pluginEngineUrl: process.env.PLUGIN_ENGINE_URL || 'http://localhost:3004'

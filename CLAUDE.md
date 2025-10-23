@@ -235,10 +235,14 @@ The `./scripts/web` tool automatically kills processes on required ports (3000-3
 Manual check: `lsof -i :PORT` or `netstat -ano | findstr :PORT` (Windows)
 
 ### Database Migrations
-- Place in `packages/main-app/src/db/migrations/`
-- Naming: `YYYYMMDD_description.sql`
-- Execute in order via `runMigrations()` in `migrations.ts`
-- Idempotent: Use `IF NOT EXISTS`, `IF EXISTS` clauses
+- Location: `packages/main-app/src/db/migrations/`
+- Naming convention used in this repo: `NN-description.sql` (numeric ordinal prefixes)
+- Execution order: `runMigrations()` sorts by filename to ensure deterministic order
+- Idempotency: migrations must be safe to run multiple times (e.g., use `IF NOT EXISTS` / `IF EXISTS`)
+
+Note: Some teams prefer date-based names like `YYYYMMDD_description.sql`. This codebase intentionally
+uses simple ordinal prefixes (00, 01, 02, …) and orders by filename. The migration runner is
+idempotent and will skip already-applied migrations.
 
 ### Environment Variables
 Development uses `.env`, production uses `.env.production`.

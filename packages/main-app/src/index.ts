@@ -49,8 +49,8 @@ const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
 
 // Performance and security middleware (order matters)
 app.use(requestIdMiddleware);
-app.use(timingMiddleware);
 app.use(compressionMiddleware);
+app.use(timingMiddleware);
 app.use(rateLimitMiddleware);
 
 // Configure Helmet with env toggles - single source of truth

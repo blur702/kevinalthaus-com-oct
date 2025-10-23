@@ -85,43 +85,66 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
       }
     });
     res.set('X-Cache', 'HIT');
-    res.json(cached.data);
+    // Prefer json for objects; send for strings/buffers
+    const body = cached.data as unknown;
+    if (typeof body === 'string' || Buffer.isBuffer(body)) {
+      res.send(body as string);
+    } else {
+      res.json(body);
+    }
     return;
   }
 
-  // Override res.json to cache response
+  // Capture body across json/send/end
   const originalJson = res.json.bind(res);
-  res.json = function(data: unknown) {
-    if (res.statusCode === 200) {
-      // Check Cache-Control header before storing
-      const cacheControl = res.getHeader('Cache-Control');
-      const cacheControlStr = typeof cacheControl === 'string'
-        ? cacheControl.toLowerCase()
-        : Array.isArray(cacheControl)
-          ? cacheControl.join(', ').toLowerCase()
-          : '';
+  const originalSend = res.send.bind(res);
+  const originalEnd = res.end.bind(res);
 
-      const shouldSkipCache = cacheControlStr.includes('no-store') || cacheControlStr.includes('private');
+  const maybeCache = (data: unknown): void => {
+    if (res.statusCode !== 200) return;
+    const cacheControl = res.getHeader('Cache-Control');
+    const cacheControlStr = typeof cacheControl === 'string'
+      ? cacheControl.toLowerCase()
+      : Array.isArray(cacheControl)
+        ? cacheControl.join(', ').toLowerCase()
+        : '';
+    const shouldSkipCache = cacheControlStr.includes('no-store') || cacheControlStr.includes('no-cache') || cacheControlStr.includes('private');
+    if (shouldSkipCache) return;
 
-      if (!shouldSkipCache) {
-        const headers: Record<string, string> = {};
-        Object.entries(res.getHeaders()).forEach(([key, value]) => {
-          if (typeof value === 'string') {
-            headers[key] = value;
-          } else if (typeof value === 'number') {
-            headers[key] = String(value);
-          } else if (Array.isArray(value)) {
-            headers[key] = value.join(', ');
-          } else if (value !== null && value !== undefined) {
-            headers[key] = String(value);
-          }
-        });
-        responseCache.set(req, data, headers);
-        res.set('X-Cache', 'MISS');
+    const headers: Record<string, string> = {};
+    Object.entries(res.getHeaders()).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        headers[key] = value;
+      } else if (typeof value === 'number') {
+        headers[key] = String(value);
+      } else if (Array.isArray(value)) {
+        headers[key] = value.join(', ');
+      } else if (value !== null && value !== undefined) {
+        headers[key] = String(value);
       }
-    }
-    return originalJson(data);
+    });
+    responseCache.set(req, data, headers);
+    res.set('X-Cache', 'MISS');
   };
+
+  res.json = function (data: unknown) {
+    maybeCache(data);
+    return originalJson(data);
+  } as typeof res.json;
+
+  res.send = function (body?: unknown) {
+    // Preserve semantics: res.send can take Buffer|string|object
+    maybeCache(body as unknown);
+    return originalSend(body as any);
+  } as typeof res.send;
+
+  res.end = function (chunk?: any, encoding?: any, cb?: any) {
+    // Only cache if a final chunk is provided
+    if (typeof chunk !== 'undefined') {
+      maybeCache(chunk);
+    }
+    return originalEnd(chunk, encoding, cb);
+  } as typeof res.end;
 
   next();
 };

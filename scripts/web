@@ -4,6 +4,9 @@
 # ========================================
 # Quick script to start and stop all Docker Compose services
 #
+# Requires Docker Compose v2 (the `docker compose` command). If you still have
+# docker-compose v1 installed, please upgrade to Docker Desktop or Docker Compose v2.
+#
 # Usage:
 #   ./scripts/web -on         Start all services
 #   ./scripts/web -off        Stop all services (preserves volumes)
@@ -62,7 +65,16 @@ success() {
 check_port() {
     local port=$1
     set +e
-    lsof -t -i:$port > /dev/null 2>&1
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -t -i:$port > /dev/null 2>&1
+    elif command -v ss >/dev/null 2>&1; then
+        ss -ltn | awk '{print $4}' | grep -E ":$port$" >/dev/null 2>&1
+    elif command -v netstat >/dev/null 2>&1; then
+        netstat -ltn | awk '{print $4}' | grep -E ":$port$" >/dev/null 2>&1
+    else
+        warn "No port-checking tool (lsof/ss/netstat) found; cannot check port $port"
+        return 1
+    fi
     local result=$?
     set -e
     return $result
@@ -71,14 +83,33 @@ check_port() {
 kill_port_process() {
     local port=$1
     set +e
-    local pid=$(lsof -t -i:$port 2>/dev/null)
+    local pid=""
+    if command -v lsof >/dev/null 2>&1; then
+        pid=$(lsof -t -i:$port 2>/dev/null)
+    elif command -v ss >/dev/null 2>&1; then
+        pid=$(ss -lptn 'sport = :'$port 2>/dev/null | awk -F',' '/pid=/ {print $2}' | sed 's/pid=//g' | head -n1)
+    elif command -v netstat >/dev/null 2>&1; then
+        pid=$(netstat -lptn 2>/dev/null | awk -v p=:$port '$4 ~ p {print $7}' | cut -d'/' -f1 | head -n1)
+    fi
     set -e
 
     if [ -n "$pid" ]; then
         local process_name=$(ps -p $pid -o comm= 2>/dev/null || echo "unknown")
-        log "Killing process $process_name (PID: $pid) on port $port"
-        kill -9 $pid 2>/dev/null || true
-        sleep 1
+        log "Sending SIGTERM to $process_name (PID: $pid) on port $port"
+        kill -15 $pid 2>/dev/null || true
+        # Wait up to 5 seconds for graceful shutdown
+        for i in {1..5}; do
+            sleep 1
+            if ! check_port $port; then
+                break
+            fi
+        done
+        # Force kill if still running
+        if check_port $port; then
+            warn "Process still holding port $port; sending SIGKILL"
+            kill -9 $pid 2>/dev/null || true
+            sleep 1
+        fi
 
         # Verify port is freed
         if check_port $port; then
@@ -121,6 +152,18 @@ start_services() {
 
     # Check and kill conflicting processes
     check_and_kill_ports
+
+    # Pre-flight checks for required tools
+    local required=(docker jq lsof)
+    for cmd in "${required[@]}"; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            warn "$cmd is not installed. Some features may not work."
+        fi
+    done
+    # Verify Docker Compose v2 is available
+    if ! docker compose version >/dev/null 2>&1; then
+        error "Docker Compose v2 is required (use 'docker compose'). Please upgrade from docker-compose v1."
+    fi
 
     # Start services
     log "Starting Docker Compose services..."
@@ -229,10 +272,10 @@ display_status() {
     echo ""
 
     success "Services are accessible at:"
-    echo -e "  ${BLUE}API Gateway:${NC}      http://localhost:3000"
-    echo -e "  ${BLUE}Main App:${NC}         http://localhost:3001"
-    echo -e "  ${BLUE}Frontend:${NC}         http://localhost:3002"
-    echo -e "  ${BLUE}Admin:${NC}            http://localhost:3003"
+    echo -e "  ${BLUE}API Gateway:${NC}      http://localhost:4000"
+    echo -e "  ${BLUE}Main App:${NC}         http://localhost:4001"
+    echo -e "  ${BLUE}Frontend:${NC}         http://localhost:3001"
+    echo -e "  ${BLUE}Admin:${NC}            http://localhost:3000"
     echo -e "  ${BLUE}Python Service:${NC}   http://localhost:8000"
     echo -e "  ${BLUE}PostgreSQL:${NC}       localhost:5432"
     echo -e "  ${BLUE}Redis:${NC}            localhost:6379"
@@ -289,19 +332,37 @@ handle_off() {
 
 handle_off_clean() {
     warn "DESTRUCTIVE: This will remove all volumes and delete stateful data!"
-    echo -n "Are you sure you want to continue? (y/N): "
-    read -r response
-    
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
-        log "Clean shutdown cancelled"
-        return 0
+
+    # Abort in production environments
+    if [ "${ENV:-}" = "production" ]; then
+        error "Refusing to run --off-clean in production. Set ENV!=production to proceed."
     fi
-    
+
+    # Ensure backup acknowledgement
+    if [ "${BACKUP_ACK:-0}" != "1" ]; then
+        warn "Please ensure you have a current backup before proceeding."
+        error "Set BACKUP_ACK=1 to acknowledge backups before running --off-clean."
+    fi
+
+    # Non-interactive shell guard
+    if [ ! -t 0 ]; then
+        if [ "${CONFIRM:-0}" != "1" ]; then
+            error "Non-interactive shell detected. Provide CONFIRM=1 to proceed with --off-clean."
+        fi
+    else
+        echo -n "Type CONFIRM to proceed: "
+        read -r response
+        if [ "$response" != "CONFIRM" ]; then
+            log "Clean shutdown cancelled"
+            return 1
+        fi
+    fi
+
     log "Stopping all services and cleaning volumes..."
 
     # Force stop with volume removal
     docker compose down -v --remove-orphans
-    
+
     success "Clean shutdown complete - all volumes removed at $(date +'%Y-%m-%d %H:%M:%S')"
 }
 

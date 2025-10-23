@@ -118,7 +118,7 @@ export class DatabaseIsolationEnforcer {
   private readonly fallbackComplexity: number;
   private readonly logger: (message: string, context?: Record<string, unknown>) => void;
 
-  constructor(limits: QueryExecutionLimits, weights: Partial<ComplexityWeights> = {});
+  constructor(limits: QueryExecutionLimits, weights?: Partial<ComplexityWeights>);
   constructor(options: IsolationEnforcerOptions);
   constructor(
     limitsOrOptions: QueryExecutionLimits | IsolationEnforcerOptions,

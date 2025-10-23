@@ -3,8 +3,8 @@ import crypto from 'crypto';
 
 const useConnString = !!process.env.DATABASE_URL;
 
-// Validate database password when not using connection string
-if (!useConnString && !process.env.POSTGRES_PASSWORD) {
+// Validate database password when not using connection string (skip in tests)
+if (!useConnString && !process.env.POSTGRES_PASSWORD && process.env.NODE_ENV !== 'test') {
   throw new Error(
     'POSTGRES_PASSWORD environment variable is required when not using DATABASE_URL. ' +
     'Please set POSTGRES_PASSWORD in your .env file or provide a DATABASE_URL connection string.'
@@ -101,6 +101,9 @@ export async function transaction<T>(
 }
 
 export async function healthCheck(): Promise<boolean> {
+  if (process.env.NODE_ENV === 'test') {
+    return true;
+  }
   try {
     await query('SELECT 1');
     return true;

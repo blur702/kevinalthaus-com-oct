@@ -168,7 +168,15 @@ function csrfProtection(req: express.Request, res: express.Response, next: expre
     const submitted = headerToken || bodyToken;
 
     if (!submitted || !cookieToken || submitted !== cookieToken || !verifyCsrf(submitted, userId)) {
-      res.status(403).json({ error: 'Invalid CSRF token' });
+      res
+        .status(403)
+        .type('html')
+        .send(
+          layout(
+            'Forbidden',
+            "<p>Invalid CSRF token</p><p><a href='/admin/plugins'>Back</a></p>"
+          )
+        );
       return;
     }
 
@@ -243,109 +251,101 @@ function layout(title: string, body: string, csrfToken?: string): string {
 }
 
 adminPluginsRouter.get('/', csrfProtection, (req, res): void => {
-  const discovered = pluginManager.listDiscovered();
-  const registry = pluginManager.listRegistry();
-  const regMap = new Map(registry.map((r) => [r.id, r]));
+  try {
+    const discovered = pluginManager.listDiscovered();
+    const registry = pluginManager.listRegistry();
+    const regMap = new Map(registry.map((r) => [r.id, r]));
 
-  // Transform plugin data for React component
-  const plugins: Plugin[] = discovered.map((d) => {
-    const manifest = d.manifest;
-    const id = manifest?.name ?? d.name;
-    const reg = id ? regMap.get(id) : undefined;
-    const status = reg?.status ?? 'inactive';
+    const plugins: Plugin[] = discovered.map((d) => {
+      const manifest = d.manifest;
+      const id = manifest?.name ?? d.name;
+      const reg = id ? regMap.get(id) : undefined;
+      const status = reg?.status ?? 'inactive';
 
-    return {
-      id: id,
-      name: manifest?.displayName ?? id,
-      version: manifest?.version,
-      description: manifest?.description,
-      author: manifest?.author?.name,
-      status: String(status) === 'not installed' ? 'inactive' :
-              (String(status) as 'active' | 'installed' | 'inactive' | 'error')
-    };
-  });
+      return {
+        id: id,
+        name: manifest?.displayName ?? id,
+        version: manifest?.version,
+        description: manifest?.description,
+      author: (manifest as unknown as { author?: { name?: string } })?.author?.name,
+        status: String(status) === 'not installed' ? 'inactive' : (String(status) as 'active' | 'installed' | 'inactive' | 'error'),
+      };
+    });
 
-  const requestWithCSRF = req as unknown as { csrfToken?: () => string };
-  const csrfToken = requestWithCSRF.csrfToken ? requestWithCSRF.csrfToken() : undefined;
+    const requestWithCSRF = req as unknown as { csrfToken?: () => string };
+    const csrfToken = requestWithCSRF.csrfToken ? requestWithCSRF.csrfToken() : undefined;
 
-  // Render React component using SSR
-  const component = React.createElement(PluginManagement, { 
-    plugins, 
-    csrfToken 
-  });
+    const component = React.createElement(PluginManagement, {
+      plugins,
+      csrfToken,
+    });
 
-  const html = renderReactSSR(component, {
-    title: 'Plugin Management',
-    csrfToken
-  });
+    const html = renderReactSSR(component, {
+      title: 'Plugin Management',
+      csrfToken,
+    });
 
-  res.type('html').send(html);
+    res.type('html').send(html);
+  } catch (e) {
+    logger.error('Failed to render plugin management', e as Error);
+    res
+      .status(500)
+      .type('html')
+      .send(layout('Server Error', "<p>Failed to load plugins. Please try again later.</p><p><a href='/admin/plugins'>Back</a></p>"));
+  }
 });
 
-adminPluginsRouter.post('/:id/install', csrfProtection, (req, res): void => {
+async function handlePluginAction(
+  req: express.Request,
+  res: express.Response,
+  action: 'install' | 'activate' | 'deactivate' | 'uninstall',
+): Promise<void> {
   const pluginId = req.params.id;
-
-  if (!validatePluginId(pluginId, 'install', res)) {
+  if (!validatePluginId(pluginId, action, res)) {
     return;
   }
+  try {
+    switch (action) {
+      case 'install':
+        await pluginManager.install(pluginId);
+        break;
+      case 'activate':
+        await pluginManager.activate(pluginId);
+        break;
+      case 'deactivate':
+        await pluginManager.deactivate(pluginId);
+        break;
+      case 'uninstall':
+        await pluginManager.uninstall(pluginId);
+        break;
+    }
+    res.redirect('/admin/plugins');
+  } catch (e) {
+    logger.error(`Plugin ${action} failed`, e as Error, { pluginId });
+    const title = `${action.charAt(0).toUpperCase() + action.slice(1)} Error`;
+    res
+      .status(400)
+      .send(
+        layout(
+          title,
+          `<p>Plugin ${action} failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`
+        )
+      );
+  }
+}
 
-  pluginManager.install(pluginId)
-    .then(() => {
-      res.redirect('/admin/plugins');
-    })
-    .catch((e) => {
-      logger.error('Plugin install failed', e as Error, { pluginId });
-      res.status(400).send(layout('Install Error', `<p>Plugin installation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
-    });
+adminPluginsRouter.post('/:id/install', csrfProtection, async (req, res): Promise<void> => {
+  await handlePluginAction(req, res, 'install');
 });
 
-adminPluginsRouter.post('/:id/activate', csrfProtection, (req, res): void => {
-  const pluginId = req.params.id;
-
-  if (!validatePluginId(pluginId, 'activate', res)) {
-    return;
-  }
-
-  pluginManager.activate(pluginId)
-    .then(() => {
-      res.redirect('/admin/plugins');
-    })
-    .catch((e) => {
-      logger.error('Plugin activate failed', e as Error, { pluginId });
-      res.status(400).send(layout('Activate Error', `<p>Plugin activation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
-    });
+adminPluginsRouter.post('/:id/activate', csrfProtection, async (req, res): Promise<void> => {
+  await handlePluginAction(req, res, 'activate');
 });
 
-adminPluginsRouter.post('/:id/deactivate', csrfProtection, (req, res): void => {
-  const pluginId = req.params.id;
-
-  if (!validatePluginId(pluginId, 'deactivate', res)) {
-    return;
-  }
-
-  pluginManager.deactivate(pluginId)
-    .then(() => {
-      res.redirect('/admin/plugins');
-    })
-    .catch((e) => {
-      logger.error('Plugin deactivate failed', e as Error, { pluginId });
-      res.status(400).send(layout('Deactivate Error', `<p>Plugin deactivation failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
-    });
+adminPluginsRouter.post('/:id/deactivate', csrfProtection, async (req, res): Promise<void> => {
+  await handlePluginAction(req, res, 'deactivate');
 });
 
-adminPluginsRouter.post('/:id/uninstall', csrfProtection, (req, res): void => {
-  const pluginId = req.params.id;
-
-  if (!validatePluginId(pluginId, 'uninstall', res)) {
-    return;
-  }
-
-  pluginManager.uninstall(pluginId)
-    .then(() => {
-      res.redirect('/admin/plugins');
-    })
-    .catch((e) => {
-      logger.error('Plugin uninstall failed', e as Error, { pluginId });
-      res.status(400).send(layout('Uninstall Error', `<p>Plugin uninstall failed. Please try again.</p><p><a href='/admin/plugins'>Back</a></p>`));
-    });
+adminPluginsRouter.post('/:id/uninstall', csrfProtection, async (req, res): Promise<void> => {
+  await handlePluginAction(req, res, 'uninstall');
 });

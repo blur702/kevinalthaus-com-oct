@@ -1,13 +1,16 @@
 #!/bin/bash
 # PostgreSQL Backup Script
 # Usage: ./scripts/backup-postgres.sh [backup-directory]
+#
+# Environment variables:
+#   CONTAINER_NAME  - Docker container name for Postgres (default: kevinalthaus-postgres-1)
 
 set -e
 set -o pipefail
 
 BACKUP_DIR="${1:-./backups/postgres}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-CONTAINER_NAME="kevinalthaus-postgres-1"
+CONTAINER_NAME="${CONTAINER_NAME:-kevinalthaus-postgres-1}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-kevinalthaus}"
 RETENTION_DAYS=30
