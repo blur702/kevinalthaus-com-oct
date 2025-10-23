@@ -24,7 +24,10 @@ BEGIN
   END IF;
 END $$;
 -- Use current_database() instead of hardcoded database name
-EXECUTE format('GRANT CONNECT ON DATABASE %I TO monitoring', current_database());
+DO $$
+BEGIN
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO monitoring', current_database());
+END $$ LANGUAGE plpgsql;
 GRANT USAGE ON SCHEMA public TO monitoring;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO monitoring;
 
@@ -46,7 +49,10 @@ BEGIN
   END IF;
 END $$;
 -- Use current_database() instead of hardcoded database name
-EXECUTE format('GRANT CONNECT ON DATABASE %I TO app_user', current_database());
+DO $$
+BEGIN
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO app_user', current_database());
+END $$ LANGUAGE plpgsql;
 GRANT USAGE, CREATE ON SCHEMA public TO app_user;
 
 -- Grant permissions on all current tables
@@ -64,7 +70,10 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ap
 -- Revoke unnecessary permissions from public role
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 -- Use current_database() instead of hardcoded database name
-EXECUTE format('REVOKE ALL ON DATABASE %I FROM PUBLIC', current_database());
+DO $$
+BEGIN
+  EXECUTE format('REVOKE ALL ON DATABASE %I FROM PUBLIC', current_database());
+END $$ LANGUAGE plpgsql;
 
 -- ----------------------------------------
 -- PERFORMANCE INDEXES

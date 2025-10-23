@@ -6,7 +6,7 @@
 # Run with: sudo ./scripts/deploy-ubuntu.sh
 # ========================================
 
-set -e  # Exit on error
+set -euo pipefail  # Exit on error, unset variables, and pipeline failures
 
 # Colors for output
 RED='\033[0;31m'
@@ -253,7 +253,7 @@ $APP_DIR/logs/*.log {
     compress
     delaycompress
     notifempty
-    create 0640 root root
+    copytruncate
     sharedscripts
 }
 EOF

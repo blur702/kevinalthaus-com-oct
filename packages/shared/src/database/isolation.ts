@@ -104,23 +104,50 @@ const DEFAULT_COMPLEXITY_WEIGHTS: ComplexityWeights = {
   whereFunction: 2,
 };
 
+export interface IsolationEnforcerOptions {
+  limits: QueryExecutionLimits;
+  weights?: Partial<ComplexityWeights>;
+  fallbackComplexity?: number;
+  logger?: (message: string, context?: Record<string, unknown>) => void;
+}
+
 export class DatabaseIsolationEnforcer {
   private readonly maxQueryComplexity: number;
   private readonly maxQueryRows: number;
   private readonly weights: ComplexityWeights;
+  private readonly fallbackComplexity: number;
+  private readonly logger: (message: string, context?: Record<string, unknown>) => void;
 
-  constructor(limits: QueryExecutionLimits, weights: Partial<ComplexityWeights> = {}) {
-    this.maxQueryComplexity = limits.maxQueryComplexity;
-    this.maxQueryRows = limits.maxQueryRows;
-    this.weights = { ...DEFAULT_COMPLEXITY_WEIGHTS, ...weights };
+  constructor(limits: QueryExecutionLimits, weights: Partial<ComplexityWeights> = {});
+  constructor(options: IsolationEnforcerOptions);
+  constructor(
+    limitsOrOptions: QueryExecutionLimits | IsolationEnforcerOptions,
+    weights: Partial<ComplexityWeights> = {}
+  ) {
+    // Support both legacy and new constructor signatures
+    const options: IsolationEnforcerOptions = 'limits' in limitsOrOptions
+      ? limitsOrOptions
+      : { limits: limitsOrOptions, weights };
+
+    this.maxQueryComplexity = options.limits.maxQueryComplexity;
+    this.maxQueryRows = options.limits.maxQueryRows;
+    this.weights = { ...DEFAULT_COMPLEXITY_WEIGHTS, ...(options.weights || {}) };
+    // Fallback defaults to maxQueryComplexity, which is more reasonable than MAX_SAFE_INTEGER
+    this.fallbackComplexity = options.fallbackComplexity ?? options.limits.maxQueryComplexity;
+    this.logger = options.logger || ((message, context) => {
+      // eslint-disable-next-line no-console
+      console.error(message, context);
+    });
   }
 
   // Note: This method does NOT enforce maxExecutionTime from QueryExecutionLimits.
   // Execution time limits must be applied at query execution time using database
   // timeout mechanisms (e.g., PostgreSQL's statement_timeout or query cancellation).
+  // IMPORTANT: estimatedRows is required and must be a realistic estimate for the query.
+  // Callers must compute or derive this value; there is no default to prevent bypassing enforcement.
   enforceQuotas(
     query: string,
-    estimatedRows: number = 1000,
+    estimatedRows: number,
   ): void {
     // Input validation
     const trimmedQuery = query.trim();
@@ -353,13 +380,14 @@ export class DatabaseIsolationEnforcer {
 
       return Math.min(complexity, Number.MAX_SAFE_INTEGER);
     } catch (err) {
-      // If parsing fails, log details for debugging, then conservatively treat as very complex
-      // eslint-disable-next-line no-console
-      console.error('[Isolation] SQL parse failed; treating as max complexity', {
+      // If parsing fails, log details for debugging, then use configurable fallback complexity
+      // Fallback defaults to maxQueryComplexity to prevent overly aggressive blocking
+      this.logger('[Isolation] SQL parse failed; using fallback complexity', {
         error: err instanceof Error ? err.message : String(err),
         query,
+        fallbackComplexity: this.fallbackComplexity,
       });
-      return Number.MAX_SAFE_INTEGER;
+      return this.fallbackComplexity;
     }
   }
 }

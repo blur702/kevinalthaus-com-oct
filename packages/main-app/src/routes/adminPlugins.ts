@@ -5,7 +5,7 @@ import { pluginManager } from '../plugins/manager';
 import type { AuthenticatedRequest } from '../auth';
 import { renderReactSSR } from '../utils/ssr-renderer';
 import PluginManagement, { Plugin } from '../components/PluginManagement';
-import { createLogger, LogLevel, type PluginManifest } from '@monorepo/shared';
+import { createLogger, LogLevel } from '@monorepo/shared';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,

@@ -96,8 +96,10 @@ app.use(keepAliveMiddleware);
     })
   );
 app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body size limits must match downstream main-app limits to prevent gateway accepting
+// requests that main-app will reject (1MB for JSON, 100KB for URL-encoded)
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 // Cache middleware for GET requests
 app.use(cacheMiddleware);

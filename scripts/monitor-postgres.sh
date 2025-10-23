@@ -17,28 +17,28 @@ fi
 CONNECTIONS=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT count(*) FROM pg_stat_activity;" 2>/dev/null)
 CONNECTIONS_EXIT=$?
 if [ $CONNECTIONS_EXIT -ne 0 ] || [ -z "$CONNECTIONS" ]; then
-    echo "ERROR: Failed to get connection count"
+    echo "ERROR: Failed to get connection count" >&2
     CONNECTIONS=0
 fi
 
 MAX_CONNECTIONS=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SHOW max_connections;" 2>/dev/null)
 MAX_CONNECTIONS_EXIT=$?
 if [ $MAX_CONNECTIONS_EXIT -ne 0 ] || [ -z "$MAX_CONNECTIONS" ]; then
-    echo "ERROR: Failed to get max connections"
+    echo "ERROR: Failed to get max connections" >&2
     MAX_CONNECTIONS=100
 fi
 
 DB_SIZE=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v dbname="$POSTGRES_DB" -t -c "SELECT pg_size_pretty(pg_database_size(:'dbname'));" 2>/dev/null)
 DB_SIZE_EXIT=$?
 if [ $DB_SIZE_EXIT -ne 0 ] || [ -z "$DB_SIZE" ]; then
-    echo "ERROR: Failed to get database size"
+    echo "ERROR: Failed to get database size" >&2
     DB_SIZE="unknown"
 fi
 
 CACHE_HIT_RATIO=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v dbname="$POSTGRES_DB" -t -c "SELECT ROUND(100.0 * blks_hit / (blks_hit + blks_read), 2) FROM pg_stat_database WHERE datname = :'dbname';" 2>/dev/null)
 CACHE_HIT_RATIO_EXIT=$?
 if [ $CACHE_HIT_RATIO_EXIT -ne 0 ] || [ -z "$CACHE_HIT_RATIO" ]; then
-    echo "ERROR: Failed to get cache hit ratio"
+    echo "ERROR: Failed to get cache hit ratio" >&2
     CACHE_HIT_RATIO=0
 fi
 
@@ -50,7 +50,7 @@ CACHE_HIT_RATIO=$(echo "$CACHE_HIT_RATIO" | xargs)
 
 # Check if bc is available for calculations
 if ! command -v bc >/dev/null 2>&1; then
-    echo "WARNING: bc not available for calculations"
+    echo "WARNING: bc not available for calculations" >&2
     USAGE_PERCENT=0
     CONNECTION_PERCENT=0
 else
@@ -59,17 +59,27 @@ else
         USAGE_PERCENT=$(echo "scale=2; ($CONNECTIONS * 100) / $MAX_CONNECTIONS" | bc)
         CONNECTION_PERCENT=$(echo "scale=0; ($CONNECTIONS * 100) / $MAX_CONNECTIONS" | bc)
     else
-        echo "WARNING: Invalid MAX_CONNECTIONS value: $MAX_CONNECTIONS"
+        echo "WARNING: Invalid MAX_CONNECTIONS value: $MAX_CONNECTIONS" >&2
         USAGE_PERCENT=0
         CONNECTION_PERCENT=0
     fi
 fi
 
+# Determine status based on thresholds (before output)
+# Exit codes: 0 = healthy, 1 = warning, 2 = critical
+STATUS="healthy"
+EXIT_CODE=0
+
+if [ "$CONNECTION_PERCENT" -gt 90 ]; then
+    STATUS="warning"
+    EXIT_CODE=1
+fi
+
 if [ "$FORMAT" == "--json" ]; then
-    # JSON output
+    # JSON output with dynamic status
     cat <<EOF
 {
-  "status": "healthy",
+  "status": "$STATUS",
   "connections": {
     "current": $CONNECTIONS,
     "max": $MAX_CONNECTIONS,
@@ -80,20 +90,19 @@ if [ "$FORMAT" == "--json" ]; then
 }
 EOF
 else
-    # Human-readable output
+    # Human-readable output with dynamic status
     echo "PostgreSQL Health Check - $(date)"
     echo "=================================="
-    echo "Status: Healthy"
+    echo "Status: ${STATUS^}"
     echo "Connections: $CONNECTIONS / $MAX_CONNECTIONS"
     echo "Database Size: $DB_SIZE"
     echo "Cache Hit Ratio: ${CACHE_HIT_RATIO}%"
     echo "=================================="
 fi
 
-# Exit codes: 0 = healthy, 1 = warning, 2 = critical
-if [ "$CONNECTION_PERCENT" -gt 90 ]; then
-    echo "WARNING: Connection pool usage above 90%"
-    exit 1
+# Output warning message if status is warning
+if [ "$EXIT_CODE" -eq 1 ]; then
+    echo "WARNING: Connection pool usage above 90%" >&2
 fi
 
-exit 0
+exit $EXIT_CODE

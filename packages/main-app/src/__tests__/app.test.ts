@@ -22,7 +22,10 @@ describe('Main App', () => {
     // Close DB pool and stop server if running to avoid open handles
     try {
       await closePool();
-    } catch {}
+    } catch (error) {
+      // Log teardown errors but don't fail the test suite
+      console.warn('Error during pool cleanup:', error);
+    }
     const server = getServer?.();
     if (server) {
       await new Promise<void>((resolve) => server.close(() => resolve()));
