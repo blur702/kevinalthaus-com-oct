@@ -11,7 +11,7 @@ import {
   timingMiddleware,
   securityHeadersMiddleware,
   keepAliveMiddleware,
-  cacheMiddleware
+  cacheMiddleware,
 } from './middleware/performance';
 import { requestIdMiddleware } from './middleware/requestId';
 
@@ -25,7 +25,9 @@ if (!JWT_SECRET) {
   }
   JWT_SECRET = 'development_only_insecure_key_do_not_use_in_prod';
   // eslint-disable-next-line no-console
-  console.warn('[Gateway] WARNING: Using development-only JWT secret. Set JWT_SECRET for production.');
+  console.warn(
+    '[Gateway] WARNING: Using development-only JWT secret. Set JWT_SECRET for production.'
+  );
 }
 const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3001';
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
@@ -64,7 +66,10 @@ const hstsSettings = {
   preload: true,
 };
 
-const helmetOptions: { contentSecurityPolicy?: { directives: typeof cspDirectives }; hsts?: typeof hstsSettings } = {};
+const helmetOptions: {
+  contentSecurityPolicy?: { directives: typeof cspDirectives };
+  hsts?: typeof hstsSettings;
+} = {};
 
 if (process.env.HELMET_CSP_ENABLED === 'true') {
   helmetOptions.contentSecurityPolicy = { directives: cspDirectives };
@@ -82,19 +87,19 @@ if (Object.keys(helmetOptions).length > 0) {
 }
 app.use(securityHeadersMiddleware);
 app.use(keepAliveMiddleware);
-  app.use(
-    cors((req, callback) => {
-      const allowAll = corsOrigins.includes('*');
-      if (allowAll) {
-        callback(null, { origin: '*', credentials: false });
-        return;
-      }
-      const origin = req.header('Origin');
-      // Require a present Origin header and membership in the allowlist
-      const isAllowed = Boolean(origin) && corsOrigins.includes(String(origin));
-      callback(null, { origin: isAllowed ? origin : false, credentials: corsCredentials });
-    })
-  );
+app.use(
+  cors((req, callback) => {
+    const allowAll = corsOrigins.includes('*');
+    if (allowAll) {
+      callback(null, { origin: '*', credentials: false });
+      return;
+    }
+    const origin = req.header('Origin');
+    // Require a present Origin header and membership in the allowlist
+    const isAllowed = Boolean(origin) && corsOrigins.includes(String(origin));
+    callback(null, { origin: isAllowed ? origin : false, credentials: corsCredentials });
+  })
+);
 app.use(morgan('combined'));
 // Body size limits must match downstream main-app limits to prevent gateway accepting
 // requests that main-app will reject (1MB for JSON, 100KB for URL-encoded)
@@ -191,7 +196,7 @@ app.get('/', (_req, res) => {
   res.json({
     message: 'Kevin Althaus API Gateway',
     version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
@@ -277,27 +282,37 @@ app.use((req, _res, next) => {
 
 // Auth routes (no JWT required, but stricter rate limiting)
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-app.use('/api/auth', authRateLimit, createProxyMiddleware(
-  createSecureProxy(MAIN_APP_URL, { '^/api/auth': '/api/auth' })
-));
+app.use(
+  '/api/auth',
+  authRateLimit,
+  createProxyMiddleware(createSecureProxy(MAIN_APP_URL, { '^/api/auth': '/api/auth' }))
+);
 
 // Protected routes with JWT verification
-app.use('/api/users', jwtMiddleware, createProxyMiddleware(
-  createSecureProxy(MAIN_APP_URL, { '^/api/users': '/api/users' })
-));
+app.use(
+  '/api/users',
+  jwtMiddleware,
+  createProxyMiddleware(createSecureProxy(MAIN_APP_URL, { '^/api/users': '/api/users' }))
+);
 
-app.use('/api/plugins', jwtMiddleware, createProxyMiddleware(
-  createSecureProxy(MAIN_APP_URL, { '^/api/plugins': '/api/plugins' })
-));
+app.use(
+  '/api/plugins',
+  jwtMiddleware,
+  createProxyMiddleware(createSecureProxy(MAIN_APP_URL, { '^/api/plugins': '/api/plugins' }))
+);
 
-app.use('/api/settings', jwtMiddleware, createProxyMiddleware(
-  createSecureProxy(MAIN_APP_URL, { '^/api/settings': '/api/settings' })
-));
+app.use(
+  '/api/settings',
+  jwtMiddleware,
+  createProxyMiddleware(createSecureProxy(MAIN_APP_URL, { '^/api/settings': '/api/settings' }))
+);
 
 // Python service proxy (JWT required)
-app.use('/api/python', jwtMiddleware, createProxyMiddleware(
-  createSecureProxy(PYTHON_SERVICE_URL, { '^/api/python': '/' })
-));
+app.use(
+  '/api/python',
+  jwtMiddleware,
+  createProxyMiddleware(createSecureProxy(PYTHON_SERVICE_URL, { '^/api/python': '/' }))
+);
 
 // 404 handler
 app.use('*', (req, res) => {

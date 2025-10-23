@@ -1,5 +1,3 @@
-
-
 export interface IsolationPolicy {
   allowCrossPluginQueries: boolean;
   allowSystemSchemaAccess: boolean;
@@ -125,19 +123,20 @@ export class DatabaseIsolationEnforcer {
     weights: Partial<ComplexityWeights> = {}
   ) {
     // Support both legacy and new constructor signatures
-    const options: IsolationEnforcerOptions = 'limits' in limitsOrOptions
-      ? limitsOrOptions
-      : { limits: limitsOrOptions, weights };
+    const options: IsolationEnforcerOptions =
+      'limits' in limitsOrOptions ? limitsOrOptions : { limits: limitsOrOptions, weights };
 
     this.maxQueryComplexity = options.limits.maxQueryComplexity;
     this.maxQueryRows = options.limits.maxQueryRows;
     this.weights = { ...DEFAULT_COMPLEXITY_WEIGHTS, ...(options.weights || {}) };
     // Fallback defaults to maxQueryComplexity, which is more reasonable than MAX_SAFE_INTEGER
     this.fallbackComplexity = options.fallbackComplexity ?? options.limits.maxQueryComplexity;
-    this.logger = options.logger || ((message, context) => {
-      // eslint-disable-next-line no-console
-      console.error(message, context);
-    });
+    this.logger =
+      options.logger ||
+      ((message, context) => {
+        // eslint-disable-next-line no-console
+        console.error(message, context);
+      });
   }
 
   // Note: This method does NOT enforce maxExecutionTime from QueryExecutionLimits.
@@ -145,10 +144,7 @@ export class DatabaseIsolationEnforcer {
   // timeout mechanisms (e.g., PostgreSQL's statement_timeout or query cancellation).
   // IMPORTANT: estimatedRows is required and must be a realistic estimate for the query.
   // Callers must compute or derive this value; there is no default to prevent bypassing enforcement.
-  enforceQuotas(
-    query: string,
-    estimatedRows: number,
-  ): void {
+  enforceQuotas(query: string, estimatedRows: number): void {
     // Input validation
     const trimmedQuery = query.trim();
     if (!trimmedQuery) {
@@ -162,15 +158,11 @@ export class DatabaseIsolationEnforcer {
     const complexity = this.estimateQueryComplexity(trimmedQuery);
 
     if (complexity > this.maxQueryComplexity) {
-      throw new Error(
-        `Query complexity ${complexity} exceeds limit ${this.maxQueryComplexity}`,
-      );
+      throw new Error(`Query complexity ${complexity} exceeds limit ${this.maxQueryComplexity}`);
     }
 
     if (estimatedRows > this.maxQueryRows) {
-      throw new Error(
-        `Estimated rows ${estimatedRows} exceeds limit ${this.maxQueryRows}`,
-      );
+      throw new Error(`Estimated rows ${estimatedRows} exceeds limit ${this.maxQueryRows}`);
     }
   }
 
@@ -207,7 +199,13 @@ export class DatabaseIsolationEnforcer {
         // Detect select columns
         if (n.type === 'select') {
           // WITH RECURSIVE
-          if (n.with && typeof n.with === 'object' && n.with !== null && 'recursive' in n.with && (n.with as Record<string, unknown>).recursive) {
+          if (
+            n.with &&
+            typeof n.with === 'object' &&
+            n.with !== null &&
+            'recursive' in n.with &&
+            (n.with as Record<string, unknown>).recursive
+          ) {
             recursiveCtes += 1;
           }
 
@@ -218,7 +216,9 @@ export class DatabaseIsolationEnforcer {
                 continue;
               }
               const colObj = col as Record<string, unknown>;
-              const expr = ('expr' in colObj ? colObj.expr : colObj) as Record<string, unknown> | undefined;
+              const expr = ('expr' in colObj ? colObj.expr : colObj) as
+                | Record<string, unknown>
+                | undefined;
               if (expr && typeof expr === 'object' && 'type' in expr && expr.type === 'star') {
                 wildcards += 1;
               }
@@ -264,7 +264,7 @@ export class DatabaseIsolationEnforcer {
             }
             if (plainTables > 1) {
               // N plain tables produce N-1 cartesian join operations
-              cartesianJoins += (plainTables - 1);
+              cartesianJoins += plainTables - 1;
             }
           }
 
@@ -361,7 +361,7 @@ export class DatabaseIsolationEnforcer {
 
       // Approximate set operations if parser returned multiple statements (e.g., UNION chains)
       if (statements.length > 1 && unions === 0 && intersects === 0 && excepts === 0) {
-        unions += (statements.length - 1);
+        unions += statements.length - 1;
       }
 
       let complexity = 1;
@@ -410,16 +410,12 @@ export const DEFAULT_RESOURCE_QUOTA: InfraResourceLimits = {
   maxIndexesPerTable: 10,
 };
 
-export function enforceResourceQuota(
-  quota: InfraResourceLimits
-): ResourceQuotaEnforcer {
+export function enforceResourceQuota(quota: InfraResourceLimits): ResourceQuotaEnforcer {
   return new ResourceQuotaEnforcer(quota);
 }
 
 export class ResourceQuotaEnforcer {
-  constructor(
-    private readonly quota: InfraResourceLimits
-  ) {}
+  constructor(private readonly quota: InfraResourceLimits) {}
 
   checkConnectionLimit(currentConnections: number): boolean {
     return currentConnections < this.quota.maxConnections;

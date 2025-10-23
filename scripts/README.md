@@ -5,9 +5,11 @@ This directory contains scripts for deploying and maintaining the Kevin Althaus 
 ## Scripts Overview
 
 ### web
+
 **Purpose**: Quick service management script for starting and stopping all Docker Compose services
 
 **Usage**:
+
 ```bash
 # Start all services
 ./scripts/web -on
@@ -21,19 +23,22 @@ This directory contains scripts for deploying and maintaining the Kevin Althaus 
 
 **What it does**:
 
-*For `-on` flag:*
+_For `-on` flag:_
+
 - Checks if ports (3000, 3001, 3002, 3003, 5432, 6379, 8000, 8080) are in use
 - Detects and kills processes using those ports
 - Starts all Docker Compose services with `docker compose up -d --build`
 - Waits for health checks to pass (up to 2 minutes)
 - Displays service status and access URLs
 
-*For `-off` flag:*
+_For `-off` flag:_
+
 - Gracefully stops all services with `docker compose down`
 - Verifies all containers are stopped
 - Displays shutdown confirmation
 
 **When to use**:
+
 - Quick development environment startup/shutdown
 - Resolving port conflicts before starting services
 - Daily development workflow
@@ -42,12 +47,14 @@ This directory contains scripts for deploying and maintaining the Kevin Althaus 
 
 To use the `web` command from anywhere:
 
-*Option 1 - Create symlink (requires sudo):*
+_Option 1 - Create symlink (requires sudo):_
+
 ```bash
 sudo ln -s $(pwd)/scripts/web /usr/local/bin/web
 ```
 
-*Option 2 - Add to PATH in shell config:*
+_Option 2 - Add to PATH in shell config:_
+
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
 export PATH="$PATH:/path/to/kevinalthaus-com-oct/scripts"
@@ -59,11 +66,13 @@ source ~/.bashrc  # or source ~/.zshrc
 After setup, you can run `web -on` from anywhere.
 
 **Note**: Make script executable first:
+
 ```bash
 chmod +x scripts/web
 ```
 
 **Troubleshooting**:
+
 - **Port already in use**: The script automatically kills conflicting processes, but if issues persist, manually check with `lsof -i :PORT`
 - **Docker not running**: Start Docker daemon with `sudo systemctl start docker` (Linux) or start Docker Desktop (Windows/Mac)
 - **Services not healthy**: Check logs with `docker compose logs -f [service-name]`
@@ -72,14 +81,17 @@ chmod +x scripts/web
 ---
 
 ### deploy-ubuntu.sh
+
 **Purpose**: Automated deployment script for Ubuntu servers
 
 **Usage**:
+
 ```bash
 sudo ./scripts/deploy-ubuntu.sh
 ```
 
 **What it does**:
+
 - Installs Docker and Docker Compose
 - Sets up application directory structure
 - Configures firewall (UFW)
@@ -91,9 +103,11 @@ sudo ./scripts/deploy-ubuntu.sh
 ---
 
 ### backup-postgres.sh
+
 **Purpose**: Creates compressed PostgreSQL database backups
 
 **Usage**:
+
 ```bash
 ./scripts/backup-postgres.sh [backup-directory]
 
@@ -105,6 +119,7 @@ sudo ./scripts/deploy-ubuntu.sh
 ```
 
 **What it does**:
+
 - Creates timestamped database dump
 - Compresses backup with gzip
 - Removes backups older than retention period (30 days)
@@ -115,9 +130,11 @@ sudo ./scripts/deploy-ubuntu.sh
 ---
 
 ### restore-postgres.sh
+
 **Purpose**: Restores PostgreSQL database from backup file
 
 **Usage**:
+
 ```bash
 ./scripts/restore-postgres.sh <backup-file>
 
@@ -126,6 +143,7 @@ sudo ./scripts/deploy-ubuntu.sh
 ```
 
 **What it does**:
+
 - Stops application services
 - Drops and recreates database
 - Restores from backup file
@@ -138,9 +156,11 @@ sudo ./scripts/deploy-ubuntu.sh
 ---
 
 ### monitor-postgres.sh
+
 **Purpose**: Monitors PostgreSQL database health and performance
 
 **Usage**:
+
 ```bash
 # Human-readable output
 ./scripts/monitor-postgres.sh
@@ -150,6 +170,7 @@ sudo ./scripts/deploy-ubuntu.sh
 ```
 
 **What it does**:
+
 - Checks container status
 - Reports active connections vs max connections
 - Shows database size
@@ -159,6 +180,7 @@ sudo ./scripts/deploy-ubuntu.sh
 **When to use**: Manual health checks or scheduled monitoring (every 5 minutes)
 
 **Exit codes**:
+
 - `0`: Healthy
 - `1`: Warning (connection pool > 90%)
 - `2`: Critical (container not running)
@@ -166,14 +188,17 @@ sudo ./scripts/deploy-ubuntu.sh
 ---
 
 ### setup-cron.sh
+
 **Purpose**: Configures automated maintenance tasks using cron
 
 **Usage**:
+
 ```bash
 sudo ./scripts/setup-cron.sh
 ```
 
 **What it does**:
+
 - Installs cron jobs for automated tasks:
   - Daily backup at 2:00 AM
   - PostgreSQL monitoring every 5 minutes
@@ -183,6 +208,7 @@ sudo ./scripts/setup-cron.sh
 **When to use**: After initial deployment to automate maintenance
 
 **View installed cron jobs**:
+
 ```bash
 crontab -l
 ```
@@ -275,6 +301,7 @@ cat /opt/kevinalthaus/.env
 ### Change Backup Retention
 
 Edit `backup-postgres.sh`:
+
 ```bash
 RETENTION_DAYS=30  # Change to desired days
 ```
@@ -282,6 +309,7 @@ RETENTION_DAYS=30  # Change to desired days
 ### Modify Cron Schedule
 
 Edit `setup-cron.sh` and adjust cron expressions:
+
 ```bash
 # Daily at 2 AM
 0 2 * * *
@@ -296,6 +324,7 @@ Edit `setup-cron.sh` and adjust cron expressions:
 ### Custom Application Directory
 
 Set `APP_DIR` environment variable:
+
 ```bash
 export APP_DIR=/custom/path
 sudo ./scripts/deploy-ubuntu.sh
@@ -321,6 +350,7 @@ echo $?  # 0=OK, 1=WARNING, 2=CRITICAL
 ### Webhooks
 
 Add webhook notifications to scripts:
+
 ```bash
 # In backup-postgres.sh, add after successful backup:
 curl -X POST https://your-webhook-url \

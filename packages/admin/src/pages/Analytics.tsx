@@ -1,5 +1,5 @@
-import React from 'react'
-import { Box, Typography, Card, CardContent } from '@mui/material'
+import React from 'react';
+import { Box, Typography, Card, CardContent } from '@mui/material';
 
 const Analytics: React.FC = () => (
   <Box>
@@ -15,12 +15,12 @@ const Analytics: React.FC = () => (
           Website Analytics
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Analytics dashboard with visitor statistics, page views,
-          user engagement metrics, and performance insights.
+          Analytics dashboard with visitor statistics, page views, user engagement metrics, and
+          performance insights.
         </Typography>
       </CardContent>
     </Card>
   </Box>
-)
+);
 
-export default Analytics
+export default Analytics;

@@ -38,6 +38,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -76,6 +77,7 @@ GET /health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -96,6 +98,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -118,12 +121,14 @@ Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `page` (number): Page number (default: 1)
 - `limit` (number): Items per page (default: 20, max: 100)
 - `role` (string): Filter by role
 - `search` (string): Search by username or email
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -198,11 +203,13 @@ Authorization: Bearer <token>
 **Status:** Not yet implemented
 
 **Query Parameters:**
+
 - `status` (string): Filter by status (installed, active, inactive, error)
 - `capabilities` (string): Filter by capabilities (comma-separated)
 - `search` (string): Search by name or description
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -242,6 +249,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -384,11 +392,12 @@ interface PluginLogger {
 ```
 
 **Usage Example:**
+
 ```typescript
 export function myPluginFunction(context: PluginExecutionContext) {
-  context.logger.info('Plugin function started', { 
+  context.logger.info('Plugin function started', {
     pluginId: context.pluginId,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 
   try {
@@ -396,7 +405,7 @@ export function myPluginFunction(context: PluginExecutionContext) {
     context.logger.debug('Processing data', { recordCount: 100 });
   } catch (error) {
     context.logger.error('Plugin function failed', error, {
-      operation: 'myPluginFunction'
+      operation: 'myPluginFunction',
     });
   }
 }
@@ -420,6 +429,7 @@ interface RequestOptions {
 ```
 
 **Usage Example:**
+
 ```typescript
 export async function fetchWeatherData(context: PluginExecutionContext, city: string) {
   try {
@@ -430,16 +440,13 @@ export async function fetchWeatherData(context: PluginExecutionContext, city: st
     });
     const url = `https://api.openweathermap.org/data/2.5/weather?${params.toString()}`;
 
-    const response = await context.api.get(
-      url,
-      {
-        timeout: 5000,
-        retries: 3,
-        headers: {
-          'User-Agent': 'KevinAlthaus-Plugin/1.0'
-        }
-      }
-    );
+    const response = await context.api.get(url, {
+      timeout: 5000,
+      retries: 3,
+      headers: {
+        'User-Agent': 'KevinAlthaus-Plugin/1.0',
+      },
+    });
 
     context.logger.info('Weather data fetched successfully', { city });
     return response.data;
@@ -464,36 +471,34 @@ interface PluginStorage {
 ```
 
 **Usage Example:**
+
 ```typescript
-export async function cacheWeatherData(
-  context: PluginExecutionContext, 
-  city: string, 
-  data: any
-) {
+export async function cacheWeatherData(context: PluginExecutionContext, city: string, data: any) {
   const cacheKey = `weather_${city}_${Date.now()}`;
-  
+
   await context.storage.set(cacheKey, {
     data,
     timestamp: Date.now(),
-    city
+    city,
   });
 
   context.logger.info('Weather data cached', { city, cacheKey });
 }
 
 export async function getCachedWeatherData(
-  context: PluginExecutionContext, 
+  context: PluginExecutionContext,
   city: string
 ): Promise<any> {
   const keys = await context.storage.keys();
-  const weatherKeys = keys.filter(key => key.startsWith(`weather_${city}_`));
-  
+  const weatherKeys = keys.filter((key) => key.startsWith(`weather_${city}_`));
+
   // Get the most recent cache entry
   if (weatherKeys.length > 0) {
     const latestKey = weatherKeys.sort().pop();
     const cached = await context.storage.get(latestKey);
-    
-    if (cached && Date.now() - cached.timestamp < 3600000) { // 1 hour
+
+    if (cached && Date.now() - cached.timestamp < 3600000) {
+      // 1 hour
       context.logger.info('Using cached weather data', { city });
       return cached.data;
     }
@@ -523,6 +528,7 @@ interface QueryResult {
 ```
 
 **Usage Example:**
+
 ```typescript
 export async function createUserPreference(
   context: PluginExecutionContext,
@@ -539,10 +545,10 @@ export async function createUserPreference(
 
   try {
     const result = await context.database.execute(sql, [userId, JSON.stringify(preferences)]);
-    
-    context.logger.info('User preferences saved', { 
-      userId, 
-      preferenceCount: Object.keys(preferences).length 
+
+    context.logger.info('User preferences saved', {
+      userId,
+      preferenceCount: Object.keys(preferences).length,
     });
 
     return result.insertId;
@@ -563,10 +569,7 @@ export async function transferUserData(
 ) {
   await context.database.transaction(async (trx) => {
     // Get data from source user
-    const userData = await trx.query(
-      'SELECT * FROM user_data WHERE user_id = $1',
-      [fromUserId]
-    );
+    const userData = await trx.query('SELECT * FROM user_data WHERE user_id = $1', [fromUserId]);
 
     // Insert data for target user
     for (const record of userData) {
@@ -577,15 +580,12 @@ export async function transferUserData(
     }
 
     // Delete data from source user
-    await trx.execute(
-      'DELETE FROM user_data WHERE user_id = $1',
-      [fromUserId]
-    );
+    await trx.execute('DELETE FROM user_data WHERE user_id = $1', [fromUserId]);
 
     context.logger.info('User data transferred successfully', {
       fromUserId,
       toUserId,
-      recordCount: userData.length
+      recordCount: userData.length,
     });
   });
 }
@@ -603,6 +603,7 @@ Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -645,6 +646,7 @@ interface ThemeAPI {
 ```
 
 **Usage Example (Planned):**
+
 ```typescript
 export async function registerMyTheme(context: PluginExecutionContext) {
   const theme: PluginTheme = {
@@ -664,16 +666,16 @@ export async function registerMyTheme(context: PluginExecutionContext) {
         surface: '#f8fafc',
         text: {
           primary: '#0f172a',
-          secondary: '#475569'
+          secondary: '#475569',
         },
         error: '#dc2626',
         warning: '#d97706',
         info: '#0284c7',
-        success: '#059669'
+        success: '#059669',
       },
       typography: {
         fontFamily: {
-          base: '"Inter", sans-serif'
+          base: '"Inter", sans-serif',
         },
         fontSize: {
           xs: '0.75rem',
@@ -682,20 +684,20 @@ export async function registerMyTheme(context: PluginExecutionContext) {
           lg: '1.125rem',
           xl: '1.25rem',
           '2xl': '1.5rem',
-          '3xl': '1.875rem'
+          '3xl': '1.875rem',
         },
         fontWeight: {
           light: 300,
           normal: 400,
           medium: 500,
           semibold: 600,
-          bold: 700
+          bold: 700,
         },
         lineHeight: {
           tight: 1.25,
           normal: 1.5,
-          relaxed: 1.75
-        }
+          relaxed: 1.75,
+        },
       },
       spacing: {
         unit: 4,
@@ -705,10 +707,10 @@ export async function registerMyTheme(context: PluginExecutionContext) {
           md: '1rem',
           lg: '1.5rem',
           xl: '2rem',
-          '2xl': '3rem'
-        }
-      }
-    }
+          '2xl': '3rem',
+        },
+      },
+    },
   };
 
   // await context.themeAPI.registerTheme(theme);  // NOT YET AVAILABLE - themeAPI will be added in future release
@@ -741,16 +743,16 @@ All API errors follow this format:
 
 ### Error Codes
 
-| Code | Status | Description |
-|------|--------|-------------|
-| `VALIDATION_ERROR` | 400 | Invalid input data |
-| `AUTHENTICATION_REQUIRED` | 401 | Missing or invalid authentication |
-| `PERMISSION_DENIED` | 403 | Insufficient permissions |
-| `RESOURCE_NOT_FOUND` | 404 | Requested resource not found |
-| `CONFLICT` | 409 | Resource conflict (e.g., duplicate email) |
-| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests |
-| `INTERNAL_ERROR` | 500 | Internal server error |
-| `SERVICE_UNAVAILABLE` | 503 | Service temporarily unavailable |
+| Code                      | Status | Description                               |
+| ------------------------- | ------ | ----------------------------------------- |
+| `VALIDATION_ERROR`        | 400    | Invalid input data                        |
+| `AUTHENTICATION_REQUIRED` | 401    | Missing or invalid authentication         |
+| `PERMISSION_DENIED`       | 403    | Insufficient permissions                  |
+| `RESOURCE_NOT_FOUND`      | 404    | Requested resource not found              |
+| `CONFLICT`                | 409    | Resource conflict (e.g., duplicate email) |
+| `RATE_LIMIT_EXCEEDED`     | 429    | Too many requests                         |
+| `INTERNAL_ERROR`          | 500    | Internal server error                     |
+| `SERVICE_UNAVAILABLE`     | 503    | Service temporarily unavailable           |
 
 ### Plugin Error Handling
 
@@ -770,21 +772,14 @@ export class PluginError extends Error {
 // Usage in plugins
 export function validatePluginInput(data: any) {
   if (!data.email) {
-    throw new PluginError(
-      'Email is required',
-      'MISSING_EMAIL',
-      400,
-      { field: 'email' }
-    );
+    throw new PluginError('Email is required', 'MISSING_EMAIL', 400, { field: 'email' });
   }
 
   if (!isValidEmail(data.email)) {
-    throw new PluginError(
-      'Invalid email format',
-      'INVALID_EMAIL',
-      400,
-      { field: 'email', value: data.email }
-    );
+    throw new PluginError('Invalid email format', 'INVALID_EMAIL', 400, {
+      field: 'email',
+      value: data.email,
+    });
   }
 }
 ```
@@ -826,10 +821,10 @@ export async function makeAPICallWithRetry(
         const retryAfter = error.headers['retry-after'] || Math.pow(2, attempt);
         context.logger.warn('Rate limit hit, retrying after delay', {
           attempt,
-          retryAfter
+          retryAfter,
         });
-        
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+
+        await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
         attempt++;
       } else {
         throw error;

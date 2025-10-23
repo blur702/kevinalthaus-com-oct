@@ -31,6 +31,7 @@ The platform uses a modular architecture with the following key components:
 ### Plugin Lifecycle
 
 Plugins go through the following states:
+
 - `installed` - Plugin is uploaded and validated
 - `active` - Plugin is running and available
 - `inactive` - Plugin is disabled but still installed
@@ -146,7 +147,7 @@ settings:
       description: Enable detailed logging for this plugin
       default: false
   defaults:
-    apiKey: ""
+    apiKey: ''
     maxItems: 100
     enableLogging: false
 ```
@@ -170,10 +171,7 @@ export async function getUsersHandler(context: PluginExecutionContext) {
   }
 
   // Use the PostgreSQL Pool directly
-  const result = await context.db.query(
-    'SELECT * FROM users WHERE active = $1',
-    [true]
-  );
+  const result = await context.db.query('SELECT * FROM users WHERE active = $1', [true]);
 
   return result.rows;
 }
@@ -220,7 +218,7 @@ import { PermissionContext, Capability } from '@monorepo/shared';
 export function requiresPermission(capability: Capability) {
   return (target: any, propertyName: string, descriptor: PropertyDescriptor) => {
     const method = descriptor.value;
-    descriptor.value = function(context: PluginExecutionContext, ...args: any[]) {
+    descriptor.value = function (context: PluginExecutionContext, ...args: any[]) {
       if (!hasCapability(context.permissions, capability)) {
         throw new Error(`Permission denied: ${capability} required`);
       }
@@ -241,11 +239,7 @@ class MyPluginService {
 ### Input Validation & Sanitization
 
 ```typescript
-import { 
-  sanitizeHTML, 
-  validatePluginName, 
-  sanitizePluginConfig 
-} from '@monorepo/shared';
+import { sanitizeHTML, validatePluginName, sanitizePluginConfig } from '@monorepo/shared';
 
 // Always sanitize user input
 export function processUserInput(input: string): string {
@@ -274,8 +268,8 @@ const enforcer = new IsolationEnforcer({
     DatabaseOperation.SELECT,
     DatabaseOperation.INSERT,
     DatabaseOperation.UPDATE,
-    DatabaseOperation.DELETE
-  ]
+    DatabaseOperation.DELETE,
+  ],
 });
 
 // Validate queries before execution
@@ -316,21 +310,21 @@ export async function callExternalAPI(context: PluginExecutionContext) {
   try {
     const response = await context.api.get('https://api.example.com/data', {
       headers: {
-        'Authorization': `Bearer ${context.config?.apiKey}`
+        Authorization: `Bearer ${context.config?.apiKey}`,
       },
       timeout: 5000,
-      retries: 3
+      retries: 3,
     });
-    
-    context.logger.info('API call successful', { 
+
+    context.logger.info('API call successful', {
       endpoint: 'https://api.example.com/data',
-      status: response.status 
+      status: response.status,
     });
-    
+
     return response.data;
   } catch (error) {
     context.logger.error('API call failed', error, {
-      endpoint: 'https://api.example.com/data'
+      endpoint: 'https://api.example.com/data',
     });
     throw error;
   }
@@ -374,17 +368,17 @@ const myTheme: FrontendTheme = {
     surface: '#f8fafc',
     text: {
       primary: '#0f172a',
-      secondary: '#475569'
+      secondary: '#475569',
     },
     error: '#dc2626',
     warning: '#d97706',
     info: '#0284c7',
-    success: '#059669'
+    success: '#059669',
   },
   typography: {
     fontFamily: {
       base: '"Inter", sans-serif',
-      heading: '"Inter", sans-serif'
+      heading: '"Inter", sans-serif',
     },
     fontSize: {
       xs: '0.75rem',
@@ -393,20 +387,20 @@ const myTheme: FrontendTheme = {
       lg: '1.125rem',
       xl: '1.25rem',
       '2xl': '1.5rem',
-      '3xl': '1.875rem'
+      '3xl': '1.875rem',
     },
     fontWeight: {
       light: 300,
       normal: 400,
       medium: 500,
       semibold: 600,
-      bold: 700
+      bold: 700,
     },
     lineHeight: {
       tight: 1.25,
       normal: 1.5,
-      relaxed: 1.75
-    }
+      relaxed: 1.75,
+    },
   },
   spacing: {
     unit: 4,
@@ -416,9 +410,9 @@ const myTheme: FrontendTheme = {
       md: '1rem',
       lg: '1.5rem',
       xl: '2rem',
-      '2xl': '3rem'
-    }
-  }
+      '2xl': '3rem',
+    },
+  },
 };
 ```
 
@@ -431,22 +425,22 @@ const backendTheme: BackendTheme = {
   name: 'Admin Dashboard Theme',
   version: '1.0.0',
   templates: {
-    'dashboard': {
+    dashboard: {
       path: 'templates/dashboard.hbs',
       layout: 'admin',
       metadata: {
         title: 'Dashboard',
         description: 'Main admin dashboard',
-        category: 'admin'
-      }
-    }
+        category: 'admin',
+      },
+    },
   },
   layouts: {
-    'admin': {
+    admin: {
       path: 'layouts/admin.hbs',
-      regions: ['header', 'sidebar', 'content', 'footer']
-    }
-  }
+      regions: ['header', 'sidebar', 'content', 'footer'],
+    },
+  },
 };
 ```
 
@@ -551,9 +545,9 @@ export async function safeOperation(context: PluginExecutionContext) {
   } catch (error) {
     context.logger.error('Operation failed', error, {
       operation: 'safeOperation',
-      pluginId: context.pluginId
+      pluginId: context.pluginId,
     });
-    
+
     // Return safe fallback or rethrow as appropriate
     throw new Error(`Plugin operation failed: ${error.message}`);
   }
@@ -568,12 +562,12 @@ import { validatePluginConfig } from '@monorepo/shared';
 export function validateSettings(config: Record<string, unknown>): boolean {
   // Use built-in validation
   const sanitized = validatePluginConfig(config);
-  
+
   // Add custom validation
   if (config.apiKey && typeof config.apiKey !== 'string') {
     throw new Error('API key must be a string');
   }
-  
+
   return true;
 }
 ```
@@ -583,13 +577,13 @@ export function validateSettings(config: Record<string, unknown>): boolean {
 ```typescript
 export class PluginResourceManager {
   private connections: Set<PluginDatabaseConnection> = new Set();
-  
+
   async getConnection(context: PluginExecutionContext) {
     const connection = await context.database.getConnection();
     this.connections.add(connection);
     return connection;
   }
-  
+
   async cleanup() {
     for (const connection of this.connections) {
       await connection.close();
@@ -637,23 +631,23 @@ export class StoragePlugin {
   async storeUserPreference(context: PluginExecutionContext, userId: string, preferences: any) {
     const key = `user_preferences_${userId}`;
     await context.storage.set(key, preferences);
-    
+
     context.logger.info('User preferences stored', {
       userId,
-      preferencesCount: Object.keys(preferences).length
+      preferencesCount: Object.keys(preferences).length,
     });
   }
 
   async getUserPreferences(context: PluginExecutionContext, userId: string) {
     const key = `user_preferences_${userId}`;
     const preferences = await context.storage.get(key);
-    
+
     if (preferences) {
       context.logger.info('User preferences retrieved', { userId });
     } else {
       context.logger.warn('No preferences found for user', { userId });
     }
-    
+
     return preferences || {};
   }
 }
@@ -676,17 +670,14 @@ export class WeatherPlugin {
       // Build URL with properly encoded parameters to handle spaces and special characters
       const params = new URLSearchParams({
         q: city,
-        appid: apiKey
+        appid: apiKey,
       });
       const url = `https://api.openweathermap.org/data/2.5/weather?${params.toString()}`;
 
-      const response = await context.api.get(
-        url,
-        {
-          timeout: 5000,
-          retries: 2
-        }
-      );
+      const response = await context.api.get(url, {
+        timeout: 5000,
+        retries: 2,
+      });
 
       context.logger.info('Weather data retrieved', { city });
       return response.data;
@@ -712,6 +703,7 @@ The platform provides these environment variables to your plugin runtime:
 ### File System Access
 
 Plugins have access to:
+
 - Plugin directory (read-only)
 - Data directory (read/write) at `/app/data/plugins/{plugin-id}/`
 - Temporary directory (read/write) at `/app/temp/plugins/{plugin-id}/`
@@ -719,6 +711,7 @@ Plugins have access to:
 ### Network Restrictions
 
 In production, plugins are restricted to:
+
 - Outbound HTTPS connections on standard ports
 - Connections to approved external APIs only
 - No direct database connections outside the plugin schema

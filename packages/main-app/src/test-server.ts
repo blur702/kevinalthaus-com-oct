@@ -18,17 +18,21 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ message: 'Simple test server running' }));
   } else {
     res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Not Found', message: `Route ${url} not found`, statusCode: 404 }));
+    res.end(
+      JSON.stringify({ error: 'Not Found', message: `Route ${url} not found`, statusCode: 404 })
+    );
   }
 });
 
 /* eslint-disable no-console */
-server.listen(PORT, () => {
-  console.log(`Test server running on port ${PORT}`);
-}).on('error', (err) => {
-  console.error('Server error:', err);
-  process.exit(1);
-});
+server
+  .listen(PORT, () => {
+    console.log(`Test server running on port ${PORT}`);
+  })
+  .on('error', (err) => {
+    console.error('Server error:', err);
+    process.exit(1);
+  });
 
 // Graceful shutdown handler
 function gracefulShutdown(signal: string): void {

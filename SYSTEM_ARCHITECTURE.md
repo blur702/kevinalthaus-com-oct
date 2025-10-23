@@ -20,6 +20,36 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
 ### High-Level Architecture
 
 ```text
++-------------------------+    +-----------------------+    +-----------------------+
+| Frontend (React)        |    | Admin Panel (React)   |    | Mobile App (Future)   |
+| Port 3001               |    | Port 3000             |    |                       |
++-------------------------+    +-----------------------+    +-----------------------+
+             \\                        /
+              \\                      /
+               \\                    /
+                v                  v
+                +----------------------+
+                | API Gateway          |
+                | (Express.js)         |
+                | Port 4000            |
+                +----------------------+
+                           |
+            +--------------+-----------------------------+
+            |                            |               |
+ +------------------------+   +-------------------+  +----------------------+
+ | Main App (Node.js)     |   | Python Service    |  | Plugin Engine        |
+ | Port 3001              |   | Port 8000         |  | Port 3004            |
+ +------------------------+   +-------------------+  +----------------------+
+            |                            |
+            +--------------+-------------+
+                           |
+      +--------------------+---------------------+    +----------------------+
+      | PostgreSQL (Primary DB)                |    | Redis (Caching/Session)|
+      | Port 5432                              |    | Port 6379              |
+      +----------------------------------------+    +----------------------+
+```
+
+```text
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Admin Panel   │    │   Mobile App    │
 │   (React)       │    │   (React)       │    │   (Future)      │
@@ -54,6 +84,7 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
 ```
 
 **Port Mapping**
+
 - Frontend: host 3001 -> container 3000
 - Admin Panel: host 3000 -> container 3000
 - API Gateway: 4000
@@ -64,23 +95,27 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
 ### Technology Stack
 
 **Frontend Layer:**
+
 - React 18 with TypeScript
 - Material UI 5 for component library
 - Vite for build tooling
 - React Router for navigation
 
 **Backend Services:**
+
 - Node.js with Express.js
 - TypeScript for type safety
 - FastAPI (Python) for specialized services
 - Docker for containerization
 
 **Data Layer:**
+
 - PostgreSQL 16 as primary database
 - Redis for caching and sessions
 - Plugin-specific schemas for isolation
 
 **Infrastructure:**
+
 - Docker Compose for local development
 - Nginx for reverse proxy (production)
 - GitHub Actions for CI/CD
@@ -92,6 +127,7 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
 **Purpose:** Central entry point for all client requests, handles routing, authentication, and rate limiting.
 
 **Responsibilities:**
+
 - Request routing to appropriate services
 - Authentication and authorization
 - Rate limiting and throttling
@@ -100,18 +136,20 @@ The Kevin Althaus platform is built as a modern, microservices-based architectur
 - Health check aggregation
 
 **Key Endpoints:**
+
 - `GET /health` - Service health status
 - `/api/main/*` - Proxy to main application
 - `/api/python/*` - Proxy to Python service
 - `/api/plugins/*` - Proxy to plugin engine
 
 **Configuration:**
+
 ```typescript
 const apiGatewayConfig = {
   port: process.env.API_GATEWAY_PORT || 4000,
   mainAppUrl: process.env.MAIN_APP_URL || 'http://localhost:3001',
   pythonServiceUrl: process.env.PYTHON_SERVICE_URL || 'http://localhost:8000',
-  pluginEngineUrl: process.env.PLUGIN_ENGINE_URL || 'http://localhost:3004'
+  pluginEngineUrl: process.env.PLUGIN_ENGINE_URL || 'http://localhost:3004',
 };
 ```
 
@@ -120,6 +158,7 @@ const apiGatewayConfig = {
 **Purpose:** Core business logic and primary API endpoints.
 
 **Responsibilities:**
+
 - User management and authentication
 - Content management
 - Business logic processing
@@ -127,6 +166,7 @@ const apiGatewayConfig = {
 - Plugin coordination
 
 **Key Features:**
+
 - RESTful API design
 - Comprehensive error handling
 - Request logging and monitoring
@@ -138,12 +178,14 @@ const apiGatewayConfig = {
 **Purpose:** Specialized services requiring Python's ecosystem (ML, data processing, etc.).
 
 **Responsibilities:**
+
 - Machine learning models
 - Data analytics and processing
 - Scientific computing tasks
 - Integration with Python libraries
 
 **Key Dependencies:**
+
 - FastAPI for web framework
 - SQLAlchemy for database ORM
 - Pydantic for data validation
@@ -154,6 +196,7 @@ const apiGatewayConfig = {
 **Purpose:** Public-facing user interface.
 
 **Key Features:**
+
 - Responsive design
 - Server-side rendering ready
 - Progressive Web App capabilities
@@ -165,6 +208,7 @@ const apiGatewayConfig = {
 **Purpose:** Administrative interface for system management.
 
 **Key Features:**
+
 - User management
 - Content administration
 - Plugin management
@@ -176,6 +220,7 @@ const apiGatewayConfig = {
 **Purpose:** Common utilities, types, and interfaces shared across services.
 
 **Key Modules:**
+
 - Database utilities and connections
 - Security functions (hashing, validation)
 - Plugin system interfaces
@@ -275,8 +320,8 @@ const dbConfig = {
     min: 2,
     max: 10,
     acquireTimeoutMillis: 30000,
-    idleTimeoutMillis: 30000
-  }
+    idleTimeoutMillis: 30000,
+  },
 };
 ```
 
@@ -285,11 +330,13 @@ const dbConfig = {
 ### Authentication & Authorization
 
 **Authentication Methods:**
+
 - JWT tokens for API access
 - Session-based authentication for web interface
 - API keys for service-to-service communication
 
 **Authorization Levels:**
+
 - `admin` - Full system access
 - `editor` - Content and user management
 - `viewer` - Read-only access
@@ -298,25 +345,28 @@ const dbConfig = {
 ### Plugin Security
 
 **Isolation Mechanisms:**
+
 - Database schema isolation
 - Filesystem sandboxing
 - Network restrictions
 - Resource quotas
 
 **Security Policies:**
+
 ```typescript
 const defaultIsolationPolicy = {
   allowCrossPluginQueries: false,
   allowSystemSchemaAccess: false,
   maxQueryComplexity: 1000,
   maxExecutionTime: 30000,
-  allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
+  allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
 };
 ```
 
 ### Input Validation
 
 All user inputs are validated and sanitized using:
+
 - JSON Schema validation
 - HTML sanitization
 - SQL injection prevention
@@ -326,12 +376,14 @@ All user inputs are validated and sanitized using:
 ### Secrets Management
 
 **Environment Variables:**
+
 - Database credentials
 - API keys
 - JWT secrets
 - Encryption keys
 
 **Best Practices:**
+
 - Rotate secrets regularly
 - Use strong encryption (AES-256)
 - Implement secret scanning
@@ -389,7 +441,7 @@ interface PluginInterface {
 
   // API handlers
   handleRequest?(context: PluginExecutionContext, request: PluginRequest): Promise<PluginResponse>;
-  
+
   // Background tasks
   runScheduledTask?(context: PluginExecutionContext, task: ScheduledTask): Promise<void>;
 }
@@ -422,6 +474,7 @@ npm test
 ### Service Development
 
 **Starting Individual Services:**
+
 ```bash
 # API Gateway
 cd packages/api-gateway && npm run dev
@@ -463,42 +516,45 @@ npm test
 ### Production Environment
 
 **Container Orchestration:**
+
 - Docker Swarm or Kubernetes
 - Load balancing with Nginx
 - SSL termination
 - Auto-scaling based on metrics
 
 **Infrastructure Components:**
+
 ```yaml
 services:
   nginx:
     image: nginx:alpine
-    ports: ["80:80", "443:443"]
-    volumes: ["./nginx.conf:/etc/nginx/nginx.conf"]
+    ports: ['80:80', '443:443']
+    volumes: ['./nginx.conf:/etc/nginx/nginx.conf']
 
   api-gateway:
     image: kevinalthaus/api-gateway:latest
     replicas: 3
-    environment: ["NODE_ENV=production"]
+    environment: ['NODE_ENV=production']
 
   main-app:
     image: kevinalthaus/main-app:latest
     replicas: 3
-    environment: ["NODE_ENV=production"]
+    environment: ['NODE_ENV=production']
 
   postgres:
     image: postgres:16-alpine
-    environment: ["POSTGRES_DB=kevinalthaus_prod"]
-    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    environment: ['POSTGRES_DB=kevinalthaus_prod']
+    volumes: ['postgres_data:/var/lib/postgresql/data']
 
   redis:
     image: redis:7-alpine
-    volumes: ["redis_data:/data"]
+    volumes: ['redis_data:/data']
 ```
 
 ### CI/CD Pipeline
 
 **GitHub Actions Workflow:**
+
 1. Code quality checks (ESLint, Prettier)
 2. Security scanning
 3. Unit and integration tests
@@ -511,6 +567,7 @@ services:
 ### Health Checks
 
 Each service implements health check endpoints:
+
 ```typescript
 app.get('/health', (req, res) => {
   res.json({
@@ -518,7 +575,7 @@ app.get('/health', (req, res) => {
     service: 'service-name',
     timestamp: new Date().toISOString(),
     version: process.env.VERSION || '1.0.0',
-    uptime: process.uptime()
+    uptime: process.uptime(),
   });
 });
 ```
@@ -528,12 +585,14 @@ app.get('/health', (req, res) => {
 ### Logging Strategy
 
 **Log Levels:**
+
 - DEBUG: Detailed information for debugging
 - INFO: General information about system operation
 - WARN: Warning messages about potential issues
 - ERROR: Error messages for actual problems
 
 **Log Format:**
+
 ```json
 {
   "timestamp": "2024-01-15T10:30:00.000Z",
@@ -552,12 +611,14 @@ app.get('/health', (req, res) => {
 ### Metrics Collection
 
 **Application Metrics:**
+
 - Request rate and response time
 - Error rates and types
 - Database query performance
 - Plugin performance metrics
 
 **System Metrics:**
+
 - CPU and memory usage
 - Disk space and I/O
 - Network traffic
@@ -566,6 +627,7 @@ app.get('/health', (req, res) => {
 ### Error Handling
 
 **Global Error Handling:**
+
 ```typescript
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   const errorId = generateErrorId();
@@ -574,11 +636,12 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     errorId,
     url: req.url,
     method: req.method,
-    userAgent: req.get('User-Agent')
+    userAgent: req.get('User-Agent'),
   });
 
   // Only expose detailed error information in strict local development
-  const isLocalDev = process.env.NODE_ENV === 'development' && (process.env.DEPLOY_ENV ?? 'local') === 'local';
+  const isLocalDev =
+    process.env.NODE_ENV === 'development' && (process.env.DEPLOY_ENV ?? 'local') === 'local';
 
   const body: Record<string, unknown> = {
     error: 'Internal Server Error',
@@ -597,6 +660,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 ### Performance Monitoring
 
 **Key Performance Indicators:**
+
 - API response times (p50, p95, p99)
 - Database query performance
 - Plugin execution times
@@ -604,6 +668,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 - Error rates by service
 
 **Alerting Thresholds:**
+
 - API response time > 2000ms
 - Error rate > 5%
 - Database connection pool exhaustion

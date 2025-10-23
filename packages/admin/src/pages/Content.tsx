@@ -1,5 +1,5 @@
-import React from 'react'
-import { Box, Typography, Card, CardContent } from '@mui/material'
+import React from 'react';
+import { Box, Typography, Card, CardContent } from '@mui/material';
 
 const Content: React.FC = () => (
   <Box>
@@ -15,12 +15,12 @@ const Content: React.FC = () => (
           Content Management System
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Content management features will be available here including
-          article creation, media uploads, and SEO optimization tools.
+          Content management features will be available here including article creation, media
+          uploads, and SEO optimization tools.
         </Typography>
       </CardContent>
     </Card>
   </Box>
-)
+);
 
-export default Content
+export default Content;

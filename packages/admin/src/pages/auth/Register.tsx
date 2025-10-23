@@ -2,16 +2,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  Link,
-} from '@mui/material';
+import { Container, Paper, Box, TextField, Button, Typography, Alert, Link } from '@mui/material';
 import api from '../../lib/api';
 import { AuthResponse } from '../../lib/auth';
 
@@ -57,11 +48,8 @@ const Register: React.FC = () => {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
-    } else if (
-      !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)
-    ) {
-      newErrors.password =
-        'Password must contain uppercase, lowercase, and number';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = 'Password must contain uppercase, lowercase, and number';
     }
 
     // Confirm password validation
@@ -124,9 +112,7 @@ const Register: React.FC = () => {
         if (axiosError.response?.status === 409) {
           setApiError('Email or username already exists');
         } else {
-          setApiError(
-            axiosError.response?.data?.message || 'Registration failed'
-          );
+          setApiError(axiosError.response?.data?.message || 'Registration failed');
         }
       } else {
         setApiError('An error occurred. Please try again.');

@@ -172,10 +172,9 @@ async function runMigration(
   name: string,
   migration: (client: PoolClient) => Promise<void>
 ): Promise<void> {
-  const result = await query<{ name: string }>(
-    'SELECT name FROM migrations WHERE name = $1',
-    [name]
-  );
+  const result = await query<{ name: string }>('SELECT name FROM migrations WHERE name = $1', [
+    name,
+  ]);
 
   if (result.rows.length > 0) {
     console.log(`[Migrations] Skipping ${name} (already executed)`);

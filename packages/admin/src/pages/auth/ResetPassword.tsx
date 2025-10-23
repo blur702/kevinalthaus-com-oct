@@ -2,16 +2,7 @@
 
 import React, { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  Link,
-} from '@mui/material';
+import { Container, Paper, Box, TextField, Button, Typography, Alert, Link } from '@mui/material';
 
 const ResetPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -37,9 +28,8 @@ const ResetPassword: React.FC = () => {
           </Typography>
 
           <Alert severity="info" sx={{ mb: 3 }}>
-            Password reset functionality is not yet implemented. This feature
-            will be available in a future release. Please contact your
-            administrator if you need to reset your password.
+            Password reset functionality is not yet implemented. This feature will be available in a
+            future release. Please contact your administrator if you need to reset your password.
           </Alert>
 
           <Box component="form" onSubmit={handleSubmit} noValidate>
@@ -58,13 +48,7 @@ const ResetPassword: React.FC = () => {
               helperText="Password reset will be enabled in a future update"
             />
 
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled
-            >
+            <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }} disabled>
               Request Password Reset
             </Button>
 

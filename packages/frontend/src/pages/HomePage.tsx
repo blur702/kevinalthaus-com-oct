@@ -1,14 +1,6 @@
-import React from 'react'
-import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Grid,
-  Button,
-  Stack,
-} from '@mui/material'
-import { Link as RouterLink } from 'react-router-dom'
+import React from 'react';
+import { Box, Typography, Card, CardContent, Grid, Button, Stack } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 
 const HomePage: React.FC = () => {
   return (
@@ -52,12 +44,7 @@ const HomePage: React.FC = () => {
         <Typography variant="h3" component="h2" textAlign="center" gutterBottom>
           What I Do
         </Typography>
-        <Typography
-          variant="body1"
-          textAlign="center"
-          color="text.secondary"
-          sx={{ mb: 4 }}
-        >
+        <Typography variant="body1" textAlign="center" color="text.secondary" sx={{ mb: 4 }}>
           I specialize in building modern, scalable web applications
         </Typography>
 
@@ -69,8 +56,8 @@ const HomePage: React.FC = () => {
                   Frontend Development
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Creating responsive and interactive user interfaces with React,
-                  TypeScript, and modern design systems like Material UI.
+                  Creating responsive and interactive user interfaces with React, TypeScript, and
+                  modern design systems like Material UI.
                 </Typography>
               </CardContent>
             </Card>
@@ -82,8 +69,8 @@ const HomePage: React.FC = () => {
                   Backend Development
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Building robust APIs and services with Node.js, Express,
-                  and modern database technologies for scalable applications.
+                  Building robust APIs and services with Node.js, Express, and modern database
+                  technologies for scalable applications.
                 </Typography>
               </CardContent>
             </Card>
@@ -95,8 +82,8 @@ const HomePage: React.FC = () => {
                   DevOps & Architecture
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Designing and implementing cloud infrastructure, CI/CD pipelines,
-                  and containerized deployments for reliable systems.
+                  Designing and implementing cloud infrastructure, CI/CD pipelines, and
+                  containerized deployments for reliable systems.
                 </Typography>
               </CardContent>
             </Card>
@@ -113,11 +100,7 @@ const HomePage: React.FC = () => {
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Let's discuss your next project and bring your ideas to life.
           </Typography>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            justifyContent="center"
-          >
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
             {/* Build email on interaction to avoid exposing plain text to scrapers */}
             <Button
               variant="contained"
@@ -130,19 +113,14 @@ const HomePage: React.FC = () => {
             >
               Get In Touch
             </Button>
-            <Button
-              component={RouterLink}
-              to="/about"
-              variant="outlined"
-              size="large"
-            >
+            <Button component={RouterLink} to="/about" variant="outlined" size="large">
               Learn More About Me
             </Button>
           </Stack>
         </CardContent>
       </Card>
     </Box>
-  )
-}
+  );
+};
 
-export default HomePage
+export default HomePage;

@@ -21,6 +21,4 @@ export interface ApiResponse<T = unknown> {
   message?: string;
 }
 
-export type Result<T, E = Error> =
-  | { success: true; value: T }
-  | { success: false; error: E };
+export type Result<T, E = Error> = { success: true; value: T } | { success: false; error: E };

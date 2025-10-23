@@ -78,7 +78,7 @@
     - ✅ General API: 500 req/15min
     - ❌ Missing: `/api/plugins/install`, `/api/uploads` specific limits
     - ❌ Missing: Composite keys (userId + IP)
-    - ❌ Missing: X-RateLimit-* headers
+    - ❌ Missing: X-RateLimit-\* headers
 
 ### ❌ Not Yet Implemented (7/20)
 
@@ -300,19 +300,22 @@ ENABLE_API_DOCS=false  # Not yet implemented
 ### Authentication Endpoints
 
 #### POST /api/auth/register
+
 Register a new user.
 
 **Request:**
+
 ```json
 {
   "email": "user@example.com",
   "username": "username",
   "password": "password123",
-  "role": "viewer"  // optional: admin, editor, viewer, guest
+  "role": "viewer" // optional: admin, editor, viewer, guest
 }
 ```
 
 **Response:**
+
 ```json
 {
   "message": "User registered successfully",
@@ -328,9 +331,11 @@ Register a new user.
 ```
 
 #### POST /api/auth/login
+
 Authenticate a user.
 
 **Request:**
+
 ```json
 {
   "email": "user@example.com",
@@ -339,6 +344,7 @@ Authenticate a user.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Login successful",
@@ -354,9 +360,11 @@ Authenticate a user.
 ```
 
 #### POST /api/auth/refresh
+
 Rotate refresh token.
 
 **Request:**
+
 ```json
 {
   "refreshToken": "current_refresh_token"
@@ -364,6 +372,7 @@ Rotate refresh token.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Token refreshed",
@@ -373,9 +382,11 @@ Rotate refresh token.
 ```
 
 #### POST /api/auth/logout
+
 Revoke refresh token.
 
 **Request:**
+
 ```json
 {
   "refreshToken": "refresh_token"
@@ -383,6 +394,7 @@ Revoke refresh token.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Logout successful"
@@ -390,14 +402,17 @@ Revoke refresh token.
 ```
 
 #### GET /api/auth/me
+
 Get current user (requires JWT).
 
 **Headers:**
+
 ```http
 Authorization: Bearer jwt_token
 ```
 
 **Response:**
+
 ```json
 {
   "user": {
@@ -413,9 +428,11 @@ Authorization: Bearer jwt_token
 All require JWT authentication. Admin-only for create/update/delete.
 
 #### GET /api/users
+
 List users with pagination.
 
 **Query Parameters:**
+
 - `page` (default: 1)
 - `limit` (default: 10)
 - `search` (optional): Search by email or username
@@ -423,6 +440,7 @@ List users with pagination.
 - `active` (optional): Filter by active status
 
 **Response:**
+
 ```json
 {
   "users": [
@@ -446,9 +464,11 @@ List users with pagination.
 ```
 
 #### POST /api/users
+
 Create a new user (admin only).
 
 **Request:**
+
 ```json
 {
   "email": "newuser@example.com",
@@ -459,9 +479,11 @@ Create a new user (admin only).
 ```
 
 #### PATCH /api/users/:id
+
 Update a user (admin only).
 
 **Request:**
+
 ```json
 {
   "email": "updated@example.com",
@@ -472,6 +494,7 @@ Update a user (admin only).
 ```
 
 #### DELETE /api/users/:id
+
 Delete a user (admin only). Cannot delete yourself.
 
 ## Architecture Notes
@@ -500,6 +523,7 @@ The system uses PostgreSQL with the following core tables:
 ### Logging
 
 Structured JSON logging with:
+
 - Service name
 - Log level (DEBUG, INFO, WARN, ERROR)
 - Timestamp (ISO 8601)

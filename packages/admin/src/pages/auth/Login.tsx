@@ -2,16 +2,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  Link,
-} from '@mui/material';
+import { Container, Paper, Box, TextField, Button, Typography, Alert, Link } from '@mui/material';
 import api from '../../lib/api';
 import { AuthResponse } from '../../lib/auth';
 
@@ -101,9 +92,7 @@ const Login: React.FC = () => {
         const axiosError = error as {
           response?: { data?: { message?: string } };
         };
-        setApiError(
-          axiosError.response?.data?.message || 'Invalid email or password'
-        );
+        setApiError(axiosError.response?.data?.message || 'Invalid email or password');
       } else {
         setApiError('An error occurred. Please try again.');
       }
@@ -177,12 +166,7 @@ const Login: React.FC = () => {
             </Button>
 
             <Box sx={{ textAlign: 'center' }}>
-              <Link
-                component={RouterLink}
-                to="/register"
-                variant="body2"
-                sx={{ mr: 2 }}
-              >
+              <Link component={RouterLink} to="/register" variant="body2" sx={{ mr: 2 }}>
                 Don't have an account? Register
               </Link>
               <Link component={RouterLink} to="/reset-password" variant="body2">

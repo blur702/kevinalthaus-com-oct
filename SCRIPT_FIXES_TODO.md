@@ -5,7 +5,9 @@ This document lists script improvements that should be implemented for productio
 ## scripts/monitor-postgres.sh
 
 ### 1. Error Messages to stderr (lines 12, 20, 27, 34, 41, 53, 62)
+
 Change all error/warning echo statements to write to stderr:
+
 ```bash
 # Before
 echo "ERROR: ..."
@@ -15,7 +17,9 @@ echo "ERROR: ..." >&2
 ```
 
 ### 2. Dynamic Status Computation (lines 72, 86)
+
 Compute status variable from threshold checks instead of hardcoding "healthy":
+
 ```bash
 status="healthy"
 if [ $CONNECTION_PERCENT -gt 90 ]; then
@@ -29,7 +33,9 @@ fi
 ```
 
 ### 3. Use docker inspect (line 11)
+
 Replace `docker ps | grep` with precise container lookup:
+
 ```bash
 # Before
 if ! docker ps | grep -q "$CONTAINER_NAME"; then
@@ -45,7 +51,9 @@ fi
 ```
 
 ### 4. Deduplicate Percentage Calculation (lines 59-60)
+
 Compute percentage once and reuse:
+
 ```bash
 RAW_PERCENT=$(echo "scale=2; $ACTIVE * 100 / $MAX_CONNECTIONS" | bc)
 USAGE_PERCENT=$RAW_PERCENT
@@ -53,7 +61,9 @@ CONNECTION_PERCENT=$(echo "$RAW_PERCENT / 1" | bc)  # Truncate to integer
 ```
 
 ### 5. Validate bc Availability (lines 94-96)
+
 Check for bc before computing and validate results:
+
 ```bash
 if ! command -v bc >/dev/null 2>&1; then
   echo "ERROR: bc command not found" >&2
@@ -70,7 +80,9 @@ fi
 ## scripts/restore-postgres.sh
 
 ### Use psql Variables for Database Name (lines 44-50)
+
 Replace sed-escaped variable with psql variables:
+
 ```bash
 # Before
 ESCAPED_DB_NAME=$(echo "$POSTGRES_DB" | sed 's/"/""/g')
@@ -86,7 +98,9 @@ Note: psql's :variable substitution might not work directly for identifiers in a
 ## scripts/setup-cron.sh
 
 ### Safe Log Directory (lines 47-50)
+
 Use fixed, safe location for error logging instead of $FULL_LOG_DIR:
+
 ```bash
 # Define safe error log location at top of script
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

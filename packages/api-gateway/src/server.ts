@@ -31,7 +31,10 @@ const PORT = Number(process.env.API_GATEWAY_PORT || process.env.PORT || 3000);
 
 // Validate PORT is a valid number in range
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
-  logger.error('Invalid PORT value', new Error(`PORT must be an integer between 1 and 65535, got: ${PORT}`));
+  logger.error(
+    'Invalid PORT value',
+    new Error(`PORT must be an integer between 1 and 65535, got: ${PORT}`)
+  );
   process.exit(1);
 }
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds

@@ -11,7 +11,10 @@ export function generatePluginSchemaName(pluginId: string): string {
 
   if (schemaName.length > MAX_IDENTIFIER_LENGTH) {
     const hash = generateShortHash(pluginId);
-    const truncated = sanitized.substring(0, MAX_IDENTIFIER_LENGTH - PLUGIN_SCHEMA_PREFIX.length - hash.length - 1);
+    const truncated = sanitized.substring(
+      0,
+      MAX_IDENTIFIER_LENGTH - PLUGIN_SCHEMA_PREFIX.length - hash.length - 1
+    );
     return `${PLUGIN_SCHEMA_PREFIX}${truncated}_${hash}`;
   }
 
@@ -119,12 +122,11 @@ function generateShortHash(input: string): string {
 
   // Convert to base36 and ensure exactly 8 characters
   const hashStr = Math.abs(hash).toString(36);
-  const result = hashStr.length >= 8
-    ? hashStr.substring(0, 8)
-    : hashStr.padStart(8, '0');
+  const result = hashStr.length >= 8 ? hashStr.substring(0, 8) : hashStr.padStart(8, '0');
 
   // Cache the result
-  if (hashCache.size < 1000) { // Prevent memory leaks
+  if (hashCache.size < 1000) {
+    // Prevent memory leaks
     hashCache.set(input, result);
   }
 

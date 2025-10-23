@@ -48,16 +48,16 @@ class ResponseCache {
   get(req: Request): CacheEntry | null {
     const key = this.generateKey(req);
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return null;
     }
-    
+
     if (Date.now() - entry.timestamp > this.defaultTTL) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return entry;
   }
 
@@ -74,7 +74,7 @@ class ResponseCache {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
-      headers
+      headers,
     });
   }
 
@@ -105,7 +105,9 @@ function isCacheControlNoCacheable(cacheControl: string | string[] | undefined):
   }
   const ccStr = Array.isArray(cacheControl) ? cacheControl.join(', ') : cacheControl;
   const ccLower = ccStr.toLowerCase();
-  return ccLower.includes('no-store') || ccLower.includes('no-cache') || ccLower.includes('private');
+  return (
+    ccLower.includes('no-store') || ccLower.includes('no-cache') || ccLower.includes('private')
+  );
 }
 
 // Helper to check if response Cache-Control allows caching
@@ -161,11 +163,14 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
 
   // Override res.json to cache response
   const originalJson = res.json.bind(res);
-  res.json = function(data: unknown) {
+  res.json = function (data: unknown) {
     if (res.statusCode === 200) {
       // Check response Cache-Control before caching
       const responseCacheControlHeader = res.getHeader('Cache-Control');
-      const responseCacheControl = typeof responseCacheControlHeader === 'number' ? String(responseCacheControlHeader) : responseCacheControlHeader;
+      const responseCacheControl =
+        typeof responseCacheControlHeader === 'number'
+          ? String(responseCacheControlHeader)
+          : responseCacheControlHeader;
       const shouldCache = isCacheControlCacheable(responseCacheControl);
 
       if (shouldCache) {
@@ -207,7 +212,7 @@ export const compressionMiddleware = compression({
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return compression.filter(req, res);
-  }
+  },
 });
 
 // Rate limiting middleware (more restrictive for main app)
@@ -218,12 +223,12 @@ export const rateLimitMiddleware = rateLimit({
   message: {
     error: 'Too many requests',
     message: 'Please try again later',
-    statusCode: 429
+    statusCode: 429,
   },
   standardHeaders: true,
   legacyHeaders: false,
   // Skip rate limiting for health checks
-  skip: (req: Request) => req.path === '/health'
+  skip: (req: Request) => req.path === '/health',
 });
 
 // Request/Response timing middleware
@@ -235,7 +240,7 @@ export const timingMiddleware = (_req: Request, res: Response, next: NextFunctio
   const originalEnd: EndFunction = res.end.bind(res);
 
   // Override res.end to set timing header before headers are sent
-  res.end = function(this: Response, ...args: Parameters<EndFunction>): ReturnType<EndFunction> {
+  res.end = function (this: Response, ...args: Parameters<EndFunction>): ReturnType<EndFunction> {
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1000000; // Convert to milliseconds
     res.setHeader('X-Response-Time', `${duration.toFixed(2)}ms`);
@@ -248,7 +253,11 @@ export const timingMiddleware = (_req: Request, res: Response, next: NextFunctio
 };
 
 // Security headers middleware
-export const securityHeadersMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
+export const securityHeadersMiddleware = (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   // Additional security headers beyond helmet
   res.set({
     'X-DNS-Prefetch-Control': 'off',
@@ -257,9 +266,9 @@ export const securityHeadersMiddleware = (_req: Request, res: Response, next: Ne
     'Referrer-Policy': 'no-referrer',
     'Cross-Origin-Embedder-Policy': 'require-corp',
     'Cross-Origin-Opener-Policy': 'same-origin',
-    'Cross-Origin-Resource-Policy': 'cross-origin'
+    'Cross-Origin-Resource-Policy': 'cross-origin',
   });
-  
+
   next();
 };
 

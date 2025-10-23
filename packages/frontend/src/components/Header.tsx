@@ -1,20 +1,14 @@
-import React from 'react'
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Box,
-} from '@mui/material'
-import { Link as RouterLink, useLocation } from 'react-router-dom'
+import React from 'react';
+import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  const location = useLocation()
+  const location = useLocation();
 
   const navItems = [
     { label: 'Home', path: '/' },
     { label: 'About', path: '/about' },
-  ]
+  ];
 
   return (
     <AppBar position="static" elevation={1}>
@@ -52,7 +46,7 @@ const Header: React.FC = () => {
         </Box>
       </Toolbar>
     </AppBar>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;

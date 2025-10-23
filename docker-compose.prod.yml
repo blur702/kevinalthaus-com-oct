@@ -16,7 +16,8 @@ services:
       - ./docker/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     command: postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-kevinalthaus}"]
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-kevinalthaus}']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -32,10 +33,10 @@ services:
           cpus: '1.0'
           memory: 1G
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
     security_opt:
       - no-new-privileges:true
 
@@ -44,7 +45,7 @@ services:
       context: .
       dockerfile: docker/api-gateway/Dockerfile
     ports:
-      - "4000:4000"
+      - '4000:4000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,7 +56,7 @@ services:
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for api-gateway}
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:4000/health || exit 1"]
+      test: ['CMD-SHELL', 'curl -f http://localhost:4000/health || exit 1']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -63,10 +64,10 @@ services:
     volumes:
       - /app/node_modules
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
     security_opt:
       - no-new-privileges:true
     deploy:
@@ -80,7 +81,7 @@ services:
       context: .
       dockerfile: docker/main-app/Dockerfile
     ports:
-      - "4001:3001"
+      - '4001:3001'
     depends_on:
       postgres:
         condition: service_healthy
@@ -95,7 +96,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      test: ['CMD-SHELL', 'curl -f http://localhost:3001/health || exit 1']
       interval: 20s
       timeout: 5s
       retries: 6
@@ -104,10 +105,10 @@ services:
       - /app/node_modules
       - ./uploads:/app/uploads
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
     security_opt:
       - no-new-privileges:true
     deploy:
@@ -121,7 +122,7 @@ services:
       context: .
       dockerfile: docker/frontend/Dockerfile
     ports:
-      - "3001:3000"
+      - '3001:3000'
     networks:
       - app_network
     restart: always
@@ -130,10 +131,10 @@ services:
     volumes:
       - /app/node_modules
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
     security_opt:
       - no-new-privileges:true
     deploy:
@@ -147,7 +148,7 @@ services:
       context: .
       dockerfile: docker/admin/Dockerfile
     ports:
-      - "3000:3000"
+      - '3000:3000'
     networks:
       - app_network
     restart: always
@@ -156,10 +157,10 @@ services:
     volumes:
       - /app/node_modules
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
     security_opt:
       - no-new-privileges:true
     deploy:

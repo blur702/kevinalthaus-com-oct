@@ -32,12 +32,9 @@ export interface PluginManagementProps {
   csrfToken?: string;
 }
 
-export const PluginManagement: React.FC<PluginManagementProps> = ({ 
-  plugins, 
-  csrfToken 
-}) => {
+export const PluginManagement: React.FC<PluginManagementProps> = ({ plugins, csrfToken }) => {
   const askConfirm = (message: string): boolean => {
-    const g: any = (typeof globalThis !== 'undefined') ? (globalThis as any) : undefined;
+    const g: any = typeof globalThis !== 'undefined' ? (globalThis as any) : undefined;
     if (g && typeof g.confirm === 'function') {
       return g.confirm(message);
     }
@@ -129,9 +126,7 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({
                           )}
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">
-                            {plugin.version || 'Unknown'}
-                          </Typography>
+                          <Typography variant="body2">{plugin.version || 'Unknown'}</Typography>
                         </TableCell>
                         <TableCell>
                           <Chip
@@ -141,14 +136,16 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({
                           />
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">
-                            {plugin.author || 'Unknown'}
-                          </Typography>
+                          <Typography variant="body2">{plugin.author || 'Unknown'}</Typography>
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
                             {plugin.status === 'inactive' && (
-                              <form method="post" action={`/admin/plugins/${plugin.id}/activate`} style={{ display: 'inline' }}>
+                              <form
+                                method="post"
+                                action={`/admin/plugins/${plugin.id}/activate`}
+                                style={{ display: 'inline' }}
+                              >
                                 <input type="hidden" name="_csrf" value={csrfToken || ''} />
                                 <Button
                                   type="submit"
@@ -161,7 +158,11 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({
                               </form>
                             )}
                             {plugin.status === 'active' && (
-                              <form method="post" action={`/admin/plugins/${plugin.id}/deactivate`} style={{ display: 'inline' }}>
+                              <form
+                                method="post"
+                                action={`/admin/plugins/${plugin.id}/deactivate`}
+                                style={{ display: 'inline' }}
+                              >
                                 <input type="hidden" name="_csrf" value={csrfToken || ''} />
                                 <Button
                                   type="submit"
@@ -174,23 +175,20 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({
                               </form>
                             )}
                             {(plugin.status === 'installed' || plugin.status === 'inactive') && (
-                              <form 
-                                method="post" 
-                                action={`/admin/plugins/${plugin.id}/uninstall`} 
+                              <form
+                                method="post"
+                                action={`/admin/plugins/${plugin.id}/uninstall`}
                                 style={{ display: 'inline' }}
                                 onSubmit={(e) => {
-                                  if (!askConfirm('Are you sure you want to uninstall this plugin?')) {
+                                  if (
+                                    !askConfirm('Are you sure you want to uninstall this plugin?')
+                                  ) {
                                     e.preventDefault();
                                   }
                                 }}
                               >
                                 <input type="hidden" name="_csrf" value={csrfToken || ''} />
-                                <Button
-                                  type="submit"
-                                  variant="outlined"
-                                  color="error"
-                                  size="small"
-                                >
+                                <Button type="submit" variant="outlined" color="error" size="small">
                                   Uninstall
                                 </Button>
                               </form>

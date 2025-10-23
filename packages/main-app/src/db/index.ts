@@ -7,7 +7,7 @@ const useConnString = !!process.env.DATABASE_URL;
 if (!useConnString && !process.env.POSTGRES_PASSWORD && process.env.NODE_ENV !== 'test') {
   throw new Error(
     'POSTGRES_PASSWORD environment variable is required when not using DATABASE_URL. ' +
-    'Please set POSTGRES_PASSWORD in your .env file or provide a DATABASE_URL connection string.'
+      'Please set POSTGRES_PASSWORD in your .env file or provide a DATABASE_URL connection string.'
   );
 }
 
@@ -39,7 +39,11 @@ pool.on('error', (err) => {
 });
 
 if (process.env.NODE_ENV === 'development') {
-  console.info('[DB] Using', useConnString ? 'DATABASE_URL' : 'individual env vars', 'for database configuration');
+  console.info(
+    '[DB] Using',
+    useConnString ? 'DATABASE_URL' : 'individual env vars',
+    'for database configuration'
+  );
 }
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
@@ -76,9 +80,7 @@ export async function getClient(): Promise<PoolClient> {
   return client;
 }
 
-export async function transaction<T>(
-  callback: (client: PoolClient) => Promise<T>
-): Promise<T> {
+export async function transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await getClient();
   try {
     await client.query('BEGIN');

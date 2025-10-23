@@ -1,10 +1,5 @@
-import React from 'react'
-import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-} from '@mui/material'
+import React from 'react';
+import { Box, Typography, Card, CardContent } from '@mui/material';
 
 const Users: React.FC = () => {
   return (
@@ -22,14 +17,13 @@ const Users: React.FC = () => {
             User Management
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            User management functionality will be implemented here.
-            This will include user registration, profile management,
-            role assignment, and user analytics.
+            User management functionality will be implemented here. This will include user
+            registration, profile management, role assignment, and user analytics.
           </Typography>
         </CardContent>
       </Card>
     </Box>
-  )
-}
+  );
+};
 
-export default Users
+export default Users;

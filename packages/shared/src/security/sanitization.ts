@@ -50,10 +50,7 @@ const STRICT_SANITIZE_OPTIONS: IOptions = {
   allowedAttributes: {},
 };
 
-export function sanitizeHTML(
-  dirty: string,
-  options: IOptions = DEFAULT_SANITIZE_OPTIONS
-): string {
+export function sanitizeHTML(dirty: string, options: IOptions = DEFAULT_SANITIZE_OPTIONS): string {
   return sanitizeHtml(dirty, options);
 }
 

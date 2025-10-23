@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import React, { useState } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import {
   Box,
   CssBaseline,
@@ -15,7 +15,7 @@ import {
   ListItemText,
   Divider,
   Button,
-} from '@mui/material'
+} from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
@@ -24,29 +24,29 @@ import {
   Analytics as AnalyticsIcon,
   Article as ArticleIcon,
   Logout as LogoutIcon,
-} from '@mui/icons-material'
-import { Link as RouterLink, useLocation } from 'react-router-dom'
+} from '@mui/icons-material';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 
 // Import pages
-import Dashboard from './pages/Dashboard.tsx'
-import Users from './pages/Users.tsx'
-import Content from './pages/Content.tsx'
-import Analytics from './pages/Analytics.tsx'
-import Settings from './pages/Settings.tsx'
+import Dashboard from './pages/Dashboard.tsx';
+import Users from './pages/Users.tsx';
+import Content from './pages/Content.tsx';
+import Analytics from './pages/Analytics.tsx';
+import Settings from './pages/Settings.tsx';
 
 // Import auth components and pages
-import ProtectedRoute from './components/ProtectedRoute.tsx'
-import Login from './pages/auth/Login.tsx'
-import Register from './pages/auth/Register.tsx'
-import ResetPassword from './pages/auth/ResetPassword.tsx'
-import { clearTokens } from './lib/auth.ts'
+import ProtectedRoute from './components/ProtectedRoute.tsx';
+import Login from './pages/auth/Login.tsx';
+import Register from './pages/auth/Register.tsx';
+import ResetPassword from './pages/auth/ResetPassword.tsx';
+import { clearTokens } from './lib/auth.ts';
 
-const drawerWidth = 240
+const drawerWidth = 240;
 
 interface NavItem {
-  label: string
-  path: string
-  icon: React.ReactNode
+  label: string;
+  path: string;
+  icon: React.ReactNode;
 }
 
 const navItems: NavItem[] = [
@@ -55,15 +55,15 @@ const navItems: NavItem[] = [
   { label: 'Content', path: '/content', icon: <ArticleIcon /> },
   { label: 'Analytics', path: '/analytics', icon: <AnalyticsIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
-]
+];
 
 interface ProtectedLayoutProps {
-  children: React.ReactNode
-  drawer: React.ReactNode
-  drawerWidth: number
-  mobileOpen: boolean
-  handleDrawerToggle: () => void
-  handleLogout: () => void
+  children: React.ReactNode;
+  drawer: React.ReactNode;
+  drawerWidth: number;
+  mobileOpen: boolean;
+  handleDrawerToggle: () => void;
+  handleLogout: () => void;
 }
 
 const ProtectedLayout: React.FC<ProtectedLayoutProps> = ({
@@ -95,19 +95,12 @@ const ProtectedLayout: React.FC<ProtectedLayoutProps> = ({
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
           Kevin Althaus - Admin Dashboard
         </Typography>
-        <Button
-          color="inherit"
-          onClick={handleLogout}
-          startIcon={<LogoutIcon />}
-        >
+        <Button color="inherit" onClick={handleLogout} startIcon={<LogoutIcon />}>
           Logout
         </Button>
       </Toolbar>
     </AppBar>
-    <Box
-      component="nav"
-      sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-    >
+    <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
       <Drawer
         variant="temporary"
         open={mobileOpen}
@@ -145,21 +138,21 @@ const ProtectedLayout: React.FC<ProtectedLayoutProps> = ({
       {children}
     </Box>
   </Box>
-)
+);
 
 const App: React.FC = () => {
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const location = useLocation()
-  const navigate = useNavigate()
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const handleDrawerToggle = (): void => {
-    setMobileOpen(!mobileOpen)
-  }
+    setMobileOpen(!mobileOpen);
+  };
 
   const handleLogout = (): void => {
-    clearTokens()
-    navigate('/login')
-  }
+    clearTokens();
+    navigate('/login');
+  };
 
   const drawer = (
     <div>
@@ -184,7 +177,7 @@ const App: React.FC = () => {
         ))}
       </List>
     </div>
-  )
+  );
 
   return (
     <>
@@ -223,7 +216,7 @@ const App: React.FC = () => {
         ))}
       </Routes>
     </>
-  )
-}
+  );
+};
 
-export default App
+export default App;

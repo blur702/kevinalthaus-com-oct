@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'react';
 import {
   Box,
   Typography,
@@ -9,7 +9,7 @@ import {
   Chip,
   Stack,
   Paper,
-} from '@mui/material'
+} from '@mui/material';
 
 const AboutPage: React.FC = () => {
   const skills = [
@@ -23,7 +23,7 @@ const AboutPage: React.FC = () => {
     'Material UI',
     'REST APIs',
     'GraphQL',
-  ]
+  ];
 
   return (
     <Box>
@@ -45,8 +45,8 @@ const AboutPage: React.FC = () => {
           About Kevin Althaus
         </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-          Passionate full-stack developer with expertise in modern web technologies
-          and a commitment to creating exceptional user experiences.
+          Passionate full-stack developer with expertise in modern web technologies and a commitment
+          to creating exceptional user experiences.
         </Typography>
       </Box>
 
@@ -59,23 +59,22 @@ const AboutPage: React.FC = () => {
                 My Story
               </Typography>
               <Typography variant="body1" paragraph>
-                I'm a dedicated full-stack developer with a passion for creating
-                innovative web applications that solve real-world problems. With
-                extensive experience in both frontend and backend technologies,
-                I enjoy the challenge of building complete solutions from concept
-                to deployment.
+                I'm a dedicated full-stack developer with a passion for creating innovative web
+                applications that solve real-world problems. With extensive experience in both
+                frontend and backend technologies, I enjoy the challenge of building complete
+                solutions from concept to deployment.
               </Typography>
               <Typography variant="body1" paragraph>
-                My journey in software development started with curiosity about
-                how things work under the hood. This curiosity has driven me to
-                continuously learn and adapt to new technologies, ensuring that
-                I can deliver modern, efficient, and maintainable solutions.
+                My journey in software development started with curiosity about how things work
+                under the hood. This curiosity has driven me to continuously learn and adapt to new
+                technologies, ensuring that I can deliver modern, efficient, and maintainable
+                solutions.
               </Typography>
               <Typography variant="body1" paragraph>
-                I believe in writing clean, well-documented code and following
-                best practices in software architecture. My experience spans
-                from small personal projects to enterprise-level applications,
-                always with a focus on user experience and performance.
+                I believe in writing clean, well-documented code and following best practices in
+                software architecture. My experience spans from small personal projects to
+                enterprise-level applications, always with a focus on user experience and
+                performance.
               </Typography>
             </CardContent>
           </Card>
@@ -89,12 +88,7 @@ const AboutPage: React.FC = () => {
             </Typography>
             <Stack direction="row" flexWrap="wrap" gap={1}>
               {skills.map((skill) => (
-                <Chip
-                  key={skill}
-                  label={skill}
-                  variant="outlined"
-                  color="primary"
-                />
+                <Chip key={skill} label={skill} variant="outlined" color="primary" />
               ))}
             </Stack>
           </Paper>
@@ -113,9 +107,9 @@ const AboutPage: React.FC = () => {
                     Frontend Development
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Building responsive, accessible, and performant user interfaces
-                    using React, TypeScript, and modern CSS frameworks. I prioritize
-                    user experience and follow design systems for consistency.
+                    Building responsive, accessible, and performant user interfaces using React,
+                    TypeScript, and modern CSS frameworks. I prioritize user experience and follow
+                    design systems for consistency.
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -123,9 +117,8 @@ const AboutPage: React.FC = () => {
                     Backend Architecture
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Designing scalable APIs, implementing security best practices,
-                    and optimizing database performance. I focus on maintainable
-                    code and robust error handling.
+                    Designing scalable APIs, implementing security best practices, and optimizing
+                    database performance. I focus on maintainable code and robust error handling.
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -133,8 +126,8 @@ const AboutPage: React.FC = () => {
                     DevOps & Deployment
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Setting up CI/CD pipelines, containerizing applications with Docker,
-                    and managing cloud infrastructure for reliable deployments.
+                    Setting up CI/CD pipelines, containerizing applications with Docker, and
+                    managing cloud infrastructure for reliable deployments.
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -142,8 +135,8 @@ const AboutPage: React.FC = () => {
                     Code Quality
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Writing tests, implementing linting rules, and following
-                    best practices to ensure maintainable and reliable software.
+                    Writing tests, implementing linting rules, and following best practices to
+                    ensure maintainable and reliable software.
                   </Typography>
                 </Grid>
               </Grid>
@@ -152,7 +145,7 @@ const AboutPage: React.FC = () => {
         </Grid>
       </Grid>
     </Box>
-  )
-}
+  );
+};
 
-export default AboutPage
+export default AboutPage;

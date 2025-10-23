@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -8,30 +8,19 @@ import {
   Chip,
   CircularProgress,
   Alert,
-} from '@mui/material'
-import {
-  TrendingUp,
-  People,
-  Article,
-  Visibility,
-} from '@mui/icons-material'
-import api from '../lib/api'
+} from '@mui/material';
+import { TrendingUp, People, Article, Visibility } from '@mui/icons-material';
+import api from '../lib/api';
 
 interface StatCardProps {
-  title: string
-  value: string | number
-  change?: string
-  icon: React.ReactNode
-  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+  title: string;
+  value: string | number;
+  change?: string;
+  icon: React.ReactNode;
+  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
 }
 
-const StatCard: React.FC<StatCardProps> = ({ 
-  title, 
-  value, 
-  change, 
-  icon, 
-  color = 'primary' 
-}) => (
+const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, color = 'primary' }) => (
   <Card>
     <CardContent>
       <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -43,17 +32,17 @@ const StatCard: React.FC<StatCardProps> = ({
             {value}
           </Typography>
           {change && (
-            <Chip 
-              label={change} 
+            <Chip
+              label={change}
               color={(() => {
-                const trimmedChange = change.trim()
+                const trimmedChange = change.trim();
                 if (trimmedChange.startsWith('+')) {
-                  return 'success'
+                  return 'success';
                 }
                 if (trimmedChange.startsWith('-')) {
-                  return 'error'
+                  return 'error';
                 }
-                return 'default'
+                return 'default';
               })()}
               size="small"
               sx={{ mt: 1 }}
@@ -66,21 +55,21 @@ const StatCard: React.FC<StatCardProps> = ({
       </Box>
     </CardContent>
   </Card>
-)
+);
 
 interface DashboardStat {
-  id: string
-  title: string
-  value: string | number
-  change?: string
-  icon: React.ReactNode
-  color: 'primary' | 'secondary' | 'success' | 'warning' | 'error'
+  id: string;
+  title: string;
+  value: string | number;
+  change?: string;
+  icon: React.ReactNode;
+  color: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
 }
 
 const Dashboard: React.FC = () => {
-  const [stats, setStats] = useState<DashboardStat[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<DashboardStat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fallback mock data
   const mockStats: DashboardStat[] = [
@@ -116,32 +105,32 @@ const Dashboard: React.FC = () => {
       icon: <TrendingUp />,
       color: 'secondary' as const,
     },
-  ]
+  ];
 
   useEffect(() => {
-    const controller = new AbortController()
+    const controller = new AbortController();
 
     const fetchStats = async (): Promise<void> => {
       try {
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
         const response = await api.get<{
-          totalUsers?: number
-          pageViews?: number
-          articles?: number
-          growth?: number
+          totalUsers?: number;
+          pageViews?: number;
+          articles?: number;
+          growth?: number;
           changes?: {
-            users?: string
-            views?: string
-            articles?: string
-            growth?: string
-          }
+            users?: string;
+            views?: string;
+            articles?: string;
+            growth?: string;
+          };
         }>('/api/dashboard/stats', {
           signal: controller.signal,
-        })
+        });
 
-        const data = response.data
+        const data = response.data;
 
         // Map API response to stat cards with icons and colors
         const fetchedStats: DashboardStat[] = [
@@ -172,35 +161,38 @@ const Dashboard: React.FC = () => {
           {
             id: 'growth',
             title: 'Growth',
-            value: (data.growth !== null && data.growth !== undefined) ? `${data.growth}%` : mockStats[3].value,
+            value:
+              data.growth !== null && data.growth !== undefined
+                ? `${data.growth}%`
+                : mockStats[3].value,
             change: data.changes?.growth ?? mockStats[3].change,
             icon: <TrendingUp />,
             color: 'secondary' as const,
           },
-        ]
+        ];
 
-        setStats(fetchedStats)
+        setStats(fetchedStats);
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
           // Request was cancelled, don't update state
-          return
+          return;
         }
-        console.error('Failed to fetch dashboard stats:', err)
-        setError('Failed to load dashboard statistics')
+        console.error('Failed to fetch dashboard stats:', err);
+        setError('Failed to load dashboard statistics');
         // Fall back to mock data on error
-        setStats(mockStats)
+        setStats(mockStats);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    void fetchStats()
+    void fetchStats();
 
     // Cleanup: abort request if component unmounts
     return () => {
-      controller.abort()
-    }
-  }, [])
+      controller.abort();
+    };
+  }, []);
 
   return (
     <Box>
@@ -220,7 +212,12 @@ const Dashboard: React.FC = () => {
 
       {/* Stats Grid */}
       {loading ? (
-        <Box display="flex" justifyContent="center" alignItems="center" sx={{ mb: 4, minHeight: 200 }}>
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          sx={{ mb: 4, minHeight: 200 }}
+        >
           <CircularProgress />
         </Box>
       ) : (
@@ -243,7 +240,8 @@ const Dashboard: React.FC = () => {
               </Typography>
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  No recent activity to display. Start by adding some content or configuring your settings.
+                  No recent activity to display. Start by adding some content or configuring your
+                  settings.
                 </Typography>
               </Box>
             </CardContent>
@@ -274,7 +272,7 @@ const Dashboard: React.FC = () => {
         </Grid>
       </Grid>
     </Box>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

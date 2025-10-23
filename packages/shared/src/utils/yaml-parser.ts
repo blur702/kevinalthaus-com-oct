@@ -80,10 +80,7 @@ export function validatePluginManifest(data: unknown): PluginManifest {
   if (!manifestValidator(data)) {
     // Clone errors immediately to avoid being overwritten by concurrent validations
     const clonedErrors = (manifestValidator.errors || []).map((e) => ({ ...(e as object) }));
-    throw new ManifestValidationError(
-      'Plugin manifest validation failed',
-      clonedErrors
-    );
+    throw new ManifestValidationError('Plugin manifest validation failed', clonedErrors);
   }
 
   return data as PluginManifest;
@@ -93,7 +90,9 @@ export function createManifestValidator(): ValidateFunction<PluginManifest> {
   return manifestValidator;
 }
 
-export function safeParseYAML<T = unknown>(content: string): { success: true; data: T } | { success: false; error: Error } {
+export function safeParseYAML<T = unknown>(
+  content: string
+): { success: true; data: T } | { success: false; error: Error } {
   try {
     const data = parseYAML<T>(content);
     return { success: true, data };
@@ -105,7 +104,9 @@ export function safeParseYAML<T = unknown>(content: string): { success: true; da
   }
 }
 
-export function safeParsePluginManifest(content: string): { success: true; manifest: PluginManifest } | { success: false; error: Error } {
+export function safeParsePluginManifest(
+  content: string
+): { success: true; manifest: PluginManifest } | { success: false; error: Error } {
   try {
     const manifest = parsePluginManifest(content);
     return { success: true, manifest };

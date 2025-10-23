@@ -5,8 +5,10 @@ This document tracks the implementation status of all requested features based o
 ## ✅ Completed Features
 
 ### 1. Authentication Endpoints and Middleware (Comment 1)
+
 **Status:** ✅ COMPLETE
 **Location:** `packages/main-app/src/auth/`
+
 - ✅ Implemented `/api/auth/register` endpoint
 - ✅ Implemented `/api/auth/login` endpoint
 - ✅ Implemented `/api/auth/refresh` endpoint with token rotation
@@ -18,8 +20,10 @@ This document tracks the implementation status of all requested features based o
 - ✅ Integrated with `users` table
 
 ### 2. Database Connection Layer and Migrations (Comment 2)
+
 **Status:** ✅ COMPLETE
 **Location:** `packages/main-app/src/db/`
+
 - ✅ Created PostgreSQL connection pool with proper configuration
 - ✅ Implemented migration system in `migrations.ts`
 - ✅ Created all required tables:
@@ -34,8 +38,10 @@ This document tracks the implementation status of all requested features based o
 - ✅ Migrations run automatically on server start
 
 ### 3. API Gateway Authentication and Security (Comment 3)
+
 **Status:** ✅ COMPLETE
 **Location:** `packages/api-gateway/src/index.ts`
+
 - ✅ Added JWT verification middleware
 - ✅ Forward user context headers (`X-User-Id`, `X-User-Role`, `X-User-Email`)
 - ✅ Stricter rate limits for `/api/auth/*` endpoints (10 requests per 15 minutes)
@@ -46,8 +52,10 @@ This document tracks the implementation status of all requested features based o
 - ✅ Auth routes publicly accessible but rate-limited
 
 ### 4. User CRUD Endpoints with RBAC (Comment 15)
+
 **Status:** ✅ COMPLETE
 **Location:** `packages/main-app/src/users/`
+
 - ✅ Implemented `GET /api/users` with pagination, search, and filters
 - ✅ Implemented `GET /api/users/:id`
 - ✅ Implemented `POST /api/users` (admin only)
@@ -58,8 +66,10 @@ This document tracks the implementation status of all requested features based o
 - ✅ Input validation and sanitization
 
 ### 5. Enhanced Health Endpoints (Comment 16)
+
 **Status:** ✅ COMPLETE
 **Location:** `packages/main-app/src/index.ts`, `packages/api-gateway/src/index.ts`
+
 - ✅ `/health` - Comprehensive health check with dependency checks
 - ✅ `/health/live` - Liveness probe for orchestration
 - ✅ `/health/ready` - Readiness probe for orchestration
@@ -69,8 +79,10 @@ This document tracks the implementation status of all requested features based o
 - ✅ Docker healthchecks updated in `docker-compose.yml`
 
 ### 6. Helmet Security Headers with Environment Toggles (Comment 8)
+
 **Status:** ✅ COMPLETE
 **Location:** `packages/main-app/src/index.ts`, `packages/api-gateway/src/index.ts`
+
 - ✅ CSP configured based on `HELMET_CSP_ENABLED` environment variable
 - ✅ HSTS configured based on `HELMET_HSTS_ENABLED` environment variable
 - ✅ Additional security headers in `securityHeadersMiddleware`:
@@ -82,8 +94,10 @@ This document tracks the implementation status of all requested features based o
   - `X-Permitted-Cross-Domain-Policies`
 
 ### 7. Environment-Based CORS Configuration (Comment 11 & 19)
+
 **Status:** ✅ COMPLETE
 **Location:** All services
+
 - ✅ Main App: Parses `CORS_ORIGIN` and `CORS_CREDENTIALS`
 - ✅ API Gateway: Parses `CORS_ORIGIN` and `CORS_CREDENTIALS`
 - ✅ Python Service: Aligned to use `CORS_ORIGIN` (was `ALLOWED_ORIGINS`)
@@ -92,16 +106,20 @@ This document tracks the implementation status of all requested features based o
 - ✅ Consistent defaults across services: `localhost:3000,3002,3003`
 
 ### 8. Standardized Port Configuration (Comment 18)
+
 **Status:** ✅ COMPLETE
 **Location:** `packages/main-app/src/server.ts`, `packages/api-gateway/src/server.ts`
+
 - ✅ API Gateway: `API_GATEWAY_PORT` || `PORT` || 3000
 - ✅ Main App: `MAIN_APP_PORT` || `PORT` || 3001
 - ✅ Updated `docker-compose.yml` to use correct environment variables
 - ✅ Matches `.env.example` defaults
 
 ### 9. Database Backup Strategy (Comment 13)
+
 **Status:** ✅ COMPLETE
 **Location:** `docker-compose.yml`
+
 - ✅ Added `postgres-backup` service using `prodrigestivill/postgres-backup-local`
 - ✅ Daily automated backups (`@daily` schedule)
 - ✅ Retention policy:
@@ -112,8 +130,10 @@ This document tracks the implementation status of all requested features based o
 - ✅ Healthcheck on port 8080
 
 ### 10. Refresh Token Storage and Rotation (Comment 14)
+
 **Status:** ✅ COMPLETE
 **Location:** `packages/main-app/src/auth/`, `packages/main-app/src/db/migrations.ts`
+
 - ✅ Created `refresh_tokens` table with:
   - `user_id`, `token_hash`, `expires_at`, `revoked_at`
   - `created_at`, `created_by_ip`
@@ -126,21 +146,25 @@ This document tracks the implementation status of all requested features based o
 ## 🚧 Partially Implemented Features
 
 ### 11. Route-Specific Rate Limiting (Comment 10)
+
 **Status:** 🟡 PARTIAL
 **What's done:**
+
 - ✅ Auth endpoints have stricter limits (10 req/15min)
 - ✅ General API rate limit (500 req/15min)
-**What's missing:**
+  **What's missing:**
 - ❌ Stricter limits for `/api/plugins/install`
 - ❌ Stricter limits for `/api/uploads`
 - ❌ Composite keys (userId + IP)
-- ❌ X-RateLimit-* response headers
+- ❌ X-RateLimit-\* response headers
 
 ## ❌ Not Yet Implemented Features
 
 ### 12. Plugin Runtime and Registry APIs (Comment 4)
+
 **Status:** ❌ TODO
 **What's needed:**
+
 - ❌ Implement `/api/plugins` CRUD routes
 - ❌ Multipart upload handler for plugin packages
 - ❌ Plugin manifest validation against schema
@@ -151,8 +175,10 @@ This document tracks the implementation status of all requested features based o
 - ❌ Status transitions (installed → activated → running)
 
 ### 13. Admin Dashboard Integration (Comment 5)
+
 **Status:** ❌ TODO
 **What's needed:**
+
 - ❌ Create `packages/admin/src/lib/api.ts` API client
 - ❌ Replace mock data in Dashboard, Users, Settings pages
 - ❌ Add loading states and error boundaries
@@ -160,8 +186,10 @@ This document tracks the implementation status of all requested features based o
 - ❌ Connect to real `/api/users`, `/api/plugins`, `/api/settings`, `/health`
 
 ### 14. Login/Signup/Reset UI Pages (Comment 6)
+
 **Status:** ❌ TODO
 **What's needed:**
+
 - ❌ Create `packages/admin/src/pages/auth/Login.tsx`
 - ❌ Create `packages/admin/src/pages/auth/Register.tsx`
 - ❌ Create `packages/admin/src/pages/auth/ForgotPassword.tsx`
@@ -172,8 +200,10 @@ This document tracks the implementation status of all requested features based o
 - ❌ Protected route wrapper
 
 ### 15. Structured Logging and Metrics (Comment 7)
+
 **Status:** ❌ TODO
 **What's needed:**
+
 - ❌ Create `packages/shared/src/utils/logger.ts` with JSON logging
 - ❌ Request ID middleware for gateway and main-app
 - ❌ Gate log verbosity with `LOG_LEVEL` env var
@@ -182,8 +212,10 @@ This document tracks the implementation status of all requested features based o
 - ❌ Integrate error tracking (Sentry) via env flags
 
 ### 16. File Upload System (Comment 9)
+
 **Status:** ❌ TODO
 **What's needed:**
+
 - ❌ Install and configure `multer` in main-app
 - ❌ Create `/api/uploads` route with MIME validation
 - ❌ Enforce `UPLOAD_MAX_SIZE` and `ALLOWED_FILE_TYPES`
@@ -192,8 +224,10 @@ This document tracks the implementation status of all requested features based o
 - ❌ Reuse for `/api/plugins/install`
 
 ### 17. OpenAPI/Swagger Documentation (Comment 12)
+
 **Status:** ❌ TODO
 **What's needed:**
+
 - ❌ Add `swagger-jsdoc` and `swagger-ui-express` to api-gateway and main-app
 - ❌ Serve Swagger UI at `/docs` in development
 - ❌ Disable in production via `ENABLE_API_DOCS`
@@ -201,8 +235,10 @@ This document tracks the implementation status of all requested features based o
 - ❌ Keep schemas in `@monorepo/shared` to prevent drift
 
 ### 18. Input Sanitization Application (Comment 17)
+
 **Status:** ❌ TODO
 **What's needed:**
+
 - ❌ Apply `sanitizeInput()` from `@monorepo/shared` to all text inputs
 - ❌ Apply `sanitizeFilename()` for file uploads
 - ❌ Validate payloads with `ajv` schemas
@@ -210,8 +246,10 @@ This document tracks the implementation status of all requested features based o
 - ❌ Document sanitization usage in API_REFERENCE.md
 
 ### 19. Plugin Capabilities Implementation (Comment 20)
+
 **Status:** ❌ TODO
 **What's needed:**
+
 - ❌ Implement quota enforcement class
 - ❌ Hook quotas into database query methods
 - ❌ Implement simple per-plugin key-value storage API
@@ -223,12 +261,14 @@ This document tracks the implementation status of all requested features based o
 The following packages have been installed to support the implemented features:
 
 **Main App (`packages/main-app`):**
+
 ```bash
 npm install --save pg jsonwebtoken multer swagger-jsdoc swagger-ui-express prom-client
 npm install --save-dev @types/pg @types/jsonwebtoken @types/multer @types/swagger-jsdoc @types/swagger-ui-express
 ```
 
 **API Gateway (`packages/api-gateway`):**
+
 ```bash
 npm install --save jsonwebtoken
 npm install --save-dev @types/jsonwebtoken

@@ -1,10 +1,10 @@
-import React from 'react'
-import { Routes, Route } from 'react-router-dom'
-import { Container } from '@mui/material'
-import Header from './components/Header.tsx'
-import Footer from './components/Footer.tsx'
-import HomePage from './pages/HomePage.tsx'
-import AboutPage from './pages/AboutPage.tsx'
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { Container } from '@mui/material';
+import Header from './components/Header.tsx';
+import Footer from './components/Footer.tsx';
+import HomePage from './pages/HomePage.tsx';
+import AboutPage from './pages/AboutPage.tsx';
 
 const App: React.FC = () => {
   return (
@@ -18,7 +18,7 @@ const App: React.FC = () => {
       </Container>
       <Footer />
     </div>
-  )
-}
+  );
+};
 
-export default App
+export default App;

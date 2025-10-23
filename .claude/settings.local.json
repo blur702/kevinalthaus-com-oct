@@ -16,10 +16,6 @@
       "Bash(docker exec rm:*)",
       "Bash(docker exec shutdown:*)"
     ],
-    "ask": [
-      "Bash(docker run:*)",
-      "Bash(docker exec:*)",
-      "Bash(docker:*)"
-    ]
+    "ask": ["Bash(docker run:*)", "Bash(docker exec:*)", "Bash(docker:*)"]
   }
 }

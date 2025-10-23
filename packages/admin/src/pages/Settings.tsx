@@ -1,5 +1,5 @@
-import React from 'react'
-import { Box, Typography, Card, CardContent } from '@mui/material'
+import React from 'react';
+import { Box, Typography, Card, CardContent } from '@mui/material';
 
 const Settings: React.FC = () => (
   <Box>
@@ -15,12 +15,12 @@ const Settings: React.FC = () => (
           Application Settings
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          System configuration, security settings, integrations,
-          and other administrative options will be available here.
+          System configuration, security settings, integrations, and other administrative options
+          will be available here.
         </Typography>
       </CardContent>
     </Card>
   </Box>
-)
+);
 
-export default Settings
+export default Settings;

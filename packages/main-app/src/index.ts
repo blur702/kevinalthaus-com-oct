@@ -9,7 +9,7 @@ import {
   timingMiddleware,
   securityHeadersMiddleware,
   keepAliveMiddleware,
-  cacheMiddleware
+  cacheMiddleware,
 } from './middleware/performance';
 import { authRouter, authMiddleware } from './auth';
 import { requireRole } from './auth/rbac-middleware';
@@ -35,9 +35,11 @@ const app = express();
 // Trust proxy configuration - can be number of hops, specific IPs, or CIDR ranges
 // Defaults to 1 (first proxy hop) for typical reverse proxy setup
 // Set TRUST_PROXY env var to customize (e.g., "1", "loopback", or specific IPs/CIDRs)
-const trustProxyConfig = process.env.TRUST_PROXY ?
-  (Number.isNaN(Number(process.env.TRUST_PROXY)) ? process.env.TRUST_PROXY : Number(process.env.TRUST_PROXY)) :
-  1;
+const trustProxyConfig = process.env.TRUST_PROXY
+  ? Number.isNaN(Number(process.env.TRUST_PROXY))
+    ? process.env.TRUST_PROXY
+    : Number(process.env.TRUST_PROXY)
+  : 1;
 app.set('trust proxy', trustProxyConfig);
 
 // Parse CORS_ORIGIN from environment
@@ -72,7 +74,10 @@ const hstsSettings = {
   preload: true,
 };
 
-const helmetConfig: { contentSecurityPolicy?: { directives: typeof cspDirectives }; hsts?: typeof hstsSettings } = {};
+const helmetConfig: {
+  contentSecurityPolicy?: { directives: typeof cspDirectives };
+  hsts?: typeof hstsSettings;
+} = {};
 
 if (process.env.HELMET_CSP_ENABLED === 'true') {
   helmetConfig.contentSecurityPolicy = { directives: cspDirectives };
@@ -113,41 +118,47 @@ app.use(cookieParser());
 app.use(cacheMiddleware);
 
 // Health check endpoints
-app.get('/health', asyncHandler(async (_req, res) => {
-  const dbHealthy = await healthCheck();
-  const status = dbHealthy ? 'healthy' : 'degraded';
+app.get(
+  '/health',
+  asyncHandler(async (_req, res) => {
+    const dbHealthy = await healthCheck();
+    const status = dbHealthy ? 'healthy' : 'degraded';
 
-  res.status(dbHealthy ? 200 : 503).json({
-    status,
-    service: 'main-app',
-    timestamp: new Date().toISOString(),
-    version: process.env.VERSION || '1.0.0',
-    uptime: process.uptime(),
-    checks: {
-      database: dbHealthy ? 'healthy' : 'unhealthy',
-    },
-  });
-}));
+    res.status(dbHealthy ? 200 : 503).json({
+      status,
+      service: 'main-app',
+      timestamp: new Date().toISOString(),
+      version: process.env.VERSION || '1.0.0',
+      uptime: process.uptime(),
+      checks: {
+        database: dbHealthy ? 'healthy' : 'unhealthy',
+      },
+    });
+  })
+);
 
 app.get('/health/live', (_req, res) => {
   res.json({ status: 'alive' });
 });
 
-app.get('/health/ready', asyncHandler(async (_req, res) => {
-  const dbHealthy = await healthCheck();
-  if (dbHealthy) {
-    res.json({ status: 'ready' });
-  } else {
-    res.status(503).json({ status: 'not ready' });
-  }
-}));
+app.get(
+  '/health/ready',
+  asyncHandler(async (_req, res) => {
+    const dbHealthy = await healthCheck();
+    if (dbHealthy) {
+      res.json({ status: 'ready' });
+    } else {
+      res.status(503).json({ status: 'not ready' });
+    }
+  })
+);
 
 // Root endpoint
 app.get('/', (_req, res) => {
   res.json({
     message: 'Kevin Althaus Main Application',
     version: process.env.VERSION || '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
@@ -179,7 +190,7 @@ app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Not Found',
     message: `Route ${req.originalUrl} not found`,
-    statusCode: 404
+    statusCode: 404,
   });
 });
 
@@ -188,10 +199,11 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
   logger.error('Unhandled error', err, {
     stack: err.stack,
     url: req.url,
-    method: req.method
+    method: req.method,
   });
 
-  const isLocalDev = process.env.NODE_ENV === 'development' && (process.env.DEPLOY_ENV ?? 'local') === 'local';
+  const isLocalDev =
+    process.env.NODE_ENV === 'development' && (process.env.DEPLOY_ENV ?? 'local') === 'local';
   const body: Record<string, unknown> = {
     error: 'Internal Server Error',
     statusCode: 500,

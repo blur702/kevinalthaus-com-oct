@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d
@@ -18,7 +18,7 @@ services:
     networks:
       - app_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -38,7 +38,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
       REDIS_URL: redis://redis:6379
     ports:
-      - "${API_GATEWAY_PORT:-3000}:3000"
+      - '${API_GATEWAY_PORT:-3000}:3000'
     volumes:
       - ./packages:/app/packages
       - ./node_modules:/app/node_modules
@@ -51,7 +51,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -71,7 +71,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env file}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
     ports:
-      - "${MAIN_APP_PORT:-3001}:3001"
+      - '${MAIN_APP_PORT:-3001}:3001'
     volumes:
       - ./packages:/app/packages
       - ./node_modules:/app/node_modules
@@ -85,7 +85,7 @@ services:
       api-gateway:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -103,7 +103,7 @@ services:
       PORT: ${PYTHON_SERVICE_PORT:-8000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
     ports:
-      - "${PYTHON_SERVICE_PORT:-8000}:8000"
+      - '${PYTHON_SERVICE_PORT:-8000}:8000'
     volumes:
       - ./python:/app/python
       - python_logs:/app/logs
@@ -113,7 +113,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -123,13 +123,13 @@ services:
     container_name: kevinalthaus-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
     networks:
       - app_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -145,7 +145,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      SCHEDULE: "@daily"
+      SCHEDULE: '@daily'
       BACKUP_KEEP_DAYS: 7
       BACKUP_KEEP_WEEKS: 4
       BACKUP_KEEP_MONTHS: 6

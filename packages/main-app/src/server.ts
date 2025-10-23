@@ -29,12 +29,18 @@ const PORT = Number(process.env.MAIN_APP_PORT || process.env.PORT || 3001);
 
 // Validate PORT is a valid number in range
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
-  logger.error('Invalid PORT value', new Error(`PORT must be an integer between 1 and 65535, got: ${PORT}`));
+  logger.error(
+    'Invalid PORT value',
+    new Error(`PORT must be an integer between 1 and 65535, got: ${PORT}`)
+  );
   process.exit(1);
 }
 
 // Validate JWT secret is provided and non-empty
-if ((process.env.NODE_ENV !== 'test') && (!process.env.JWT_SECRET || String(process.env.JWT_SECRET).trim() === '')) {
+if (
+  process.env.NODE_ENV !== 'test' &&
+  (!process.env.JWT_SECRET || String(process.env.JWT_SECRET).trim() === '')
+) {
   logger.error('Missing JWT_SECRET environment variable', new Error('JWT_SECRET is required'));
   process.exit(1);
 }
@@ -56,15 +62,17 @@ async function start(): Promise<void> {
     logger.info('Database migrations completed');
 
     // Start server
-    server = app.listen(PORT, () => {
-      logger.info(`Main app server running on port ${PORT}`);
-    }).on('error', (err: Error) => {
-      logger.error('Failed to start server', err, {
-        port: PORT,
-        stack: err.stack
+    server = app
+      .listen(PORT, () => {
+        logger.info(`Main app server running on port ${PORT}`);
+      })
+      .on('error', (err: Error) => {
+        logger.error('Failed to start server', err, {
+          port: PORT,
+          stack: err.stack,
+        });
+        process.exit(1);
       });
-      process.exit(1);
-    });
   } catch (error) {
     logger.error('Failed to start application', error as Error);
     process.exit(1);

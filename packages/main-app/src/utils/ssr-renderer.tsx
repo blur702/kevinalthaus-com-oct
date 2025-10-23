@@ -21,10 +21,7 @@ export interface SSRRenderOptions {
   additionalBody?: string;
 }
 
-export function renderReactSSR(
-  component: React.ReactElement,
-  options: SSRRenderOptions
-): string {
+export function renderReactSSR(component: React.ReactElement, options: SSRRenderOptions): string {
   // Wrap component with Material-UI providers
   const app = (
     <ThemeProvider theme={backendTheme}>

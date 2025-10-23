@@ -34,27 +34,31 @@ A modern, extensible web platform built with React, TypeScript, and Node.js feat
 ### Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone <repository-url>
    cd kevinalthaus-com-oct
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment:**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 4. **Start services:**
+
    ```bash
    # Start database and Redis
    docker-compose up -d postgres redis
-   
+
    # Start all development servers
    npm run dev:all
    ```
@@ -114,28 +118,30 @@ A modern, extensible web platform built with React, TypeScript, and Node.js feat
 ### Manual Setup (Recommended for Development)
 
 1. **Start required services:**
+
    ```bash
    docker-compose up -d postgres redis
    ```
 
 2. **Start individual services in separate terminals:**
+
    ```bash
    # Terminal 1 - API Gateway
    cd packages/api-gateway
    npm run dev
-   
+
    # Terminal 2 - Main App
    cd packages/main-app
    npm run dev
-   
+
    # Terminal 3 - Frontend
    cd packages/frontend
    npm run dev
-   
+
    # Terminal 4 - Admin Panel
    cd packages/admin
    npm run dev
-   
+
    # Terminal 5 - Python Service
    cd python
    uvicorn main:app --reload
@@ -178,6 +184,7 @@ The platform features a comprehensive plugin system allowing developers to exten
 ### Creating a Plugin
 
 1. **Create plugin directory:**
+
    ```bash
    mkdir my-awesome-plugin
    cd my-awesome-plugin
@@ -185,6 +192,7 @@ The platform features a comprehensive plugin system allowing developers to exten
    ```
 
 2. **Create plugin manifest (`plugin.yaml`):**
+
    ```yaml
    name: my-awesome-plugin
    version: 1.0.0
@@ -201,6 +209,7 @@ The platform features a comprehensive plugin system allowing developers to exten
    ```
 
 3. **Implement plugin logic:**
+
    ```typescript
    // src/index.ts
    import { PluginExecutionContext, PluginLifecycleHooks } from '@monorepo/shared';
@@ -240,9 +249,9 @@ await context.database.query('SELECT * FROM users WHERE active = $1', [true]);
 
 // External API calls
 const data = await context.api.get('https://api.example.com/data', {
-  headers: { 'Authorization': `Bearer ${context.config?.apiKey}` },
+  headers: { Authorization: `Bearer ${context.config?.apiKey}` },
   timeout: 5000,
-  retries: 3
+  retries: 3,
 });
 
 // Plugin storage
@@ -284,6 +293,7 @@ curl -H "Authorization: Bearer <jwt_token>" \
 ### Plugin APIs
 
 Plugins have access to:
+
 - **Database API**: Query plugin-specific schema
 - **HTTP API**: Make external requests
 - **Storage API**: Key-value storage
@@ -297,12 +307,14 @@ For complete API documentation, see [API Reference](./API_REFERENCE.md).
 ### Ubuntu Production Deployment
 
 **Quick Start** (Ubuntu 20.04/22.04/24.04 LTS):
+
 ```bash
 # Automated deployment
 sudo ./scripts/deploy-ubuntu.sh
 ```
 
 This script will:
+
 - Install Docker and Docker Compose
 - Setup application directory (`/opt/kevinalthaus`)
 - Configure firewall (UFW)
@@ -311,6 +323,7 @@ This script will:
 **PostgreSQL Setup:**
 
 The simple Docker command:
+
 ```bash
 docker run --name postgres \
   -e POSTGRES_PASSWORD=postgres \
@@ -322,6 +335,7 @@ docker run --name postgres \
 **⚠️ Security Warning:** The hardcoded password `postgres` shown above is for **examples only**. In production, you **must** use a strong, randomly generated password stored securely (e.g., environment secrets, secret manager, or Docker secrets). Rotate credentials regularly. See [Docker secrets documentation](https://docs.docker.com/engine/swarm/secrets/) and [PostgreSQL security best practices](https://www.postgresql.org/docs/current/auth-methods.html).
 
 Our production docker-compose setup improves this with:
+
 - Health checks and automatic restart
 - Persistent volumes for data safety
 - Automated WAL archiving and backups
@@ -330,6 +344,7 @@ Our production docker-compose setup improves this with:
 - Monitoring views and statistics
 
 **Access PostgreSQL:**
+
 ```bash
 # CLI access
 docker exec -it kevinalthaus-postgres-1 psql -U postgres -d kevinalthaus
@@ -342,6 +357,7 @@ docker exec kevinalthaus-postgres-1 pg_isready -U postgres
 ```
 
 **Automated Maintenance:**
+
 ```bash
 # Setup cron jobs for backups and monitoring
 sudo ./scripts/setup-cron.sh
@@ -352,11 +368,13 @@ sudo ./scripts/setup-cron.sh
 ### Production Deployment (Manual)
 
 1. **Build the application:**
+
    ```bash
    npm run build
    ```
 
 2. **Configure environment:**
+
    ```bash
    cp .env.example .env.production
    # Update with production values
@@ -408,6 +426,7 @@ curl http://localhost:8000/health  # Python Service
 ## 🛠 Technology Stack
 
 ### Frontend
+
 - **React 18** - UI library
 - **TypeScript** - Type safety
 - **Material UI 5** - Component library
@@ -415,6 +434,7 @@ curl http://localhost:8000/health  # Python Service
 - **Vite** - Build tool
 
 ### Backend
+
 - **Node.js** - Runtime environment
 - **Express.js** - Web framework
 - **TypeScript** - Type safety
@@ -423,6 +443,7 @@ curl http://localhost:8000/health  # Python Service
 - **Redis** - Caching and sessions
 
 ### DevOps
+
 - **Docker** - Containerization
 - **Docker Compose** - Multi-container orchestration
 - **GitHub Actions** - CI/CD (future)
@@ -500,7 +521,6 @@ For support and questions:
 - **Email**: contact@kevinalthaus.com
 
 ## 🗺 Roadmap
-
 
 - [ ] Advanced theme editor
 - [ ] Mobile application

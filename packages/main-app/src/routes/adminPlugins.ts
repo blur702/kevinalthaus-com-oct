@@ -22,19 +22,17 @@ const VALID_PLUGIN_ID_PATTERN = /^[a-z0-9-_]+$/i;
  * Validate plugin ID format and send error response if invalid
  * @returns true if valid, false if invalid (response already sent)
  */
-function validatePluginId(
-  pluginId: string,
-  routeName: string,
-  res: express.Response
-): boolean {
+function validatePluginId(pluginId: string, routeName: string, res: express.Response): boolean {
   if (!VALID_PLUGIN_ID_PATTERN.test(pluginId)) {
     logger.warn('Invalid plugin ID format', { pluginId, route: routeName });
-    res.status(400).send(
-      layout(
-        'Invalid Plugin ID',
-        `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`
-      )
-    );
+    res
+      .status(400)
+      .send(
+        layout(
+          'Invalid Plugin ID',
+          `<p>Invalid plugin ID format. Only alphanumeric characters, hyphens, and underscores are allowed.</p><p><a href='/admin/plugins'>Back</a></p>`
+        )
+      );
     return false;
   }
   return true;
@@ -89,7 +87,7 @@ function verifyCsrf(token: string, userId: string): boolean {
     return false;
   }
   const expected = createHmac('sha256', CSRF_SECRET).update(`${uid}:${nonce}:${ts}`).digest('hex');
-  
+
   // Use timing-safe comparison to prevent timing attacks on MAC verification
   try {
     const macBuffer = Buffer.from(mac, 'hex');
@@ -129,7 +127,7 @@ function setCsrfCookie(res: express.Response, value: string): void {
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     maxAge: CSRF_MAX_AGE_MS,
-    path: '/'
+    path: '/',
   });
 }
 
@@ -139,14 +137,26 @@ function clearCsrfCookie(res: express.Response): void {
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     maxAge: 0,
-    path: '/'
+    path: '/',
   });
 }
 
-function csrfProtection(req: express.Request, res: express.Response, next: express.NextFunction): void {
+function csrfProtection(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): void {
   const authReq = req as AuthenticatedRequest;
   if (!authReq.user || !authReq.user.userId) {
-    res.status(401).type('html').send(layout('Authentication Required', '<p>You must be authenticated to access this page.</p><p><a href="/admin/plugins">Back to Plugins</a></p>'));
+    res
+      .status(401)
+      .type('html')
+      .send(
+        layout(
+          'Authentication Required',
+          '<p>You must be authenticated to access this page.</p><p><a href="/admin/plugins">Back to Plugins</a></p>'
+        )
+      );
     return;
   }
   const userId = authReq.user.userId;
@@ -162,8 +172,12 @@ function csrfProtection(req: express.Request, res: express.Response, next: expre
   }
 
   if (req.method === 'POST') {
-    const headerToken = typeof req.headers[CSRF_HEADER_NAME] === 'string' ? req.headers[CSRF_HEADER_NAME] : undefined;
-    const bodyToken = typeof (req.body as Record<string, unknown>)?._csrf === 'string' ? ((req.body as Record<string, unknown>)?._csrf as string) : undefined;
+    const headerToken =
+      typeof req.headers[CSRF_HEADER_NAME] === 'string' ? req.headers[CSRF_HEADER_NAME] : undefined;
+    const bodyToken =
+      typeof (req.body as Record<string, unknown>)?._csrf === 'string'
+        ? ((req.body as Record<string, unknown>)?._csrf as string)
+        : undefined;
     const cookieToken = getCookie(req, CSRF_COOKIE_NAME);
     const submitted = headerToken || bodyToken;
 
@@ -172,10 +186,7 @@ function csrfProtection(req: express.Request, res: express.Response, next: expre
         .status(403)
         .type('html')
         .send(
-          layout(
-            'Forbidden',
-            "<p>Invalid CSRF token</p><p><a href='/admin/plugins'>Back</a></p>"
-          )
+          layout('Forbidden', "<p>Invalid CSRF token</p><p><a href='/admin/plugins'>Back</a></p>")
         );
       return;
     }
@@ -267,8 +278,11 @@ adminPluginsRouter.get('/', csrfProtection, (req, res): void => {
         name: manifest?.displayName ?? id,
         version: manifest?.version,
         description: manifest?.description,
-      author: (manifest as unknown as { author?: { name?: string } })?.author?.name,
-        status: String(status) === 'not installed' ? 'inactive' : (String(status) as 'active' | 'installed' | 'inactive' | 'error'),
+        author: (manifest as unknown as { author?: { name?: string } })?.author?.name,
+        status:
+          String(status) === 'not installed'
+            ? 'inactive'
+            : (String(status) as 'active' | 'installed' | 'inactive' | 'error'),
       };
     });
 
@@ -291,14 +305,19 @@ adminPluginsRouter.get('/', csrfProtection, (req, res): void => {
     res
       .status(500)
       .type('html')
-      .send(layout('Server Error', "<p>Failed to load plugins. Please try again later.</p><p><a href='/admin/plugins'>Back</a></p>"));
+      .send(
+        layout(
+          'Server Error',
+          "<p>Failed to load plugins. Please try again later.</p><p><a href='/admin/plugins'>Back</a></p>"
+        )
+      );
   }
 });
 
 async function handlePluginAction(
   req: express.Request,
   res: express.Response,
-  action: 'install' | 'activate' | 'deactivate' | 'uninstall',
+  action: 'install' | 'activate' | 'deactivate' | 'uninstall'
 ): Promise<void> {
   const pluginId = req.params.id;
   if (!validatePluginId(pluginId, action, res)) {

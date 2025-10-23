@@ -4,11 +4,7 @@
   "roots": ["<rootDir>/src"],
   "testMatch": ["**/__tests__/**/*.test.ts"],
   "collectCoverage": true,
-  "collectCoverageFrom": [
-    "src/**/*.ts",
-    "!src/**/*.test.ts",
-    "!src/server.ts"
-  ],
+  "collectCoverageFrom": ["src/**/*.ts", "!src/**/*.test.ts", "!src/server.ts"],
   "coverageDirectory": "coverage",
   "coverageReporters": ["text", "lcov", "html"]
 }

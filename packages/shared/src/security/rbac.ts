@@ -76,10 +76,7 @@ export function hasCapability(context: PermissionContext, capability: Capability
   return context.capabilities.includes(capability);
 }
 
-export function hasAnyCapability(
-  context: PermissionContext,
-  capabilities: Capability[]
-): boolean {
+export function hasAnyCapability(context: PermissionContext, capabilities: Capability[]): boolean {
   return capabilities.some((cap) => hasCapability(context, cap));
 }
 

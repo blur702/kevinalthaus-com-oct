@@ -37,10 +37,7 @@ export function validateAlphanumeric(str: string, locale?: validator.Alphanumeri
   return validator.isAlphanumeric(str, locale);
 }
 
-export function validateLength(
-  str: string,
-  options: { min?: number; max?: number }
-): boolean {
+export function validateLength(str: string, options: { min?: number; max?: number }): boolean {
   return validator.isLength(str, options);
 }
 

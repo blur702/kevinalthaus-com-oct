@@ -41,6 +41,7 @@ sudo ./scripts/setup-cron.sh
 ### Simple Docker Command (Development)
 
 The basic PostgreSQL setup:
+
 ```bash
 docker run --name postgres \
   -e POSTGRES_PASSWORD=postgres \
@@ -52,6 +53,7 @@ docker run --name postgres \
 ### Production Docker Compose Setup
 
 Our production setup improves upon the basic command with:
+
 - **Health checks**: Automatic container restart on failure
 - **Persistent volumes**: Data survives container restarts
 - **Automated backups**: WAL archiving and daily backups
@@ -61,6 +63,7 @@ Our production setup improves upon the basic command with:
 - **Monitoring**: Built-in health check endpoints
 
 Start production services:
+
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
@@ -93,6 +96,7 @@ nano /opt/kevinalthaus/.env
 ```
 
 Required changes:
+
 - `POSTGRES_PASSWORD` - Strong database password
 - `JWT_SECRET` - Random 32-byte hex string
 - `SESSION_SECRET` - Random 32-byte hex string
@@ -111,6 +115,7 @@ DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres:5432/kevinalthaus
 ### Automated Backups
 
 Backups run daily at 2:00 AM via cron:
+
 ```bash
 # Setup automated backups
 sudo ./scripts/setup-cron.sh
@@ -297,6 +302,7 @@ crontab -l | grep -v kevinalthaus | crontab -
 ## Support
 
 For issues or questions:
+
 1. Check logs: `docker compose logs -f`
 2. Review health checks: `./scripts/monitor-postgres.sh`
 3. Consult troubleshooting section above

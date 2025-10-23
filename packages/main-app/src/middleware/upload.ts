@@ -5,9 +5,8 @@ import { sanitizeFilename } from '@monorepo/shared';
 
 // Validate upload max size from environment variables
 const parsedMaxSize = parseInt(process.env.UPLOAD_MAX_SIZE || '10485760', 10);
-const UPLOAD_MAX_SIZE = (Number.isFinite(parsedMaxSize) && parsedMaxSize > 0) 
-  ? parsedMaxSize 
-  : 10485760; // Default 10MB
+const UPLOAD_MAX_SIZE =
+  Number.isFinite(parsedMaxSize) && parsedMaxSize > 0 ? parsedMaxSize : 10485760; // Default 10MB
 
 // Use absolute path for upload directory
 const UPLOAD_DIRECTORY = path.resolve(
@@ -40,21 +39,21 @@ function generateAllowedExtensions(mimeTypes: string[]): Set<string> {
 
     if (exts) {
       // Use predefined mappings only
-      exts.forEach(ext => extensions.add(ext));
+      exts.forEach((ext) => extensions.add(ext));
     } else {
       // Reject unknown MIME types - do not derive extensions for security
       throw new Error(
         `Unsupported MIME type: "${mimeType}". ` +
-        `This MIME type is not in the predefined safe list. ` +
-        `Supported MIME types are: ${Object.keys(MIME_TO_EXTENSIONS).join(', ')}. ` +
-        `Please update MIME_TO_EXTENSIONS if you need to support this type.`
+          `This MIME type is not in the predefined safe list. ` +
+          `Supported MIME types are: ${Object.keys(MIME_TO_EXTENSIONS).join(', ')}. ` +
+          `Please update MIME_TO_EXTENSIONS if you need to support this type.`
       );
     }
   }
 
   // If no MIME types configured, use safe defaults
   if (extensions.size === 0) {
-    ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'].forEach(ext => extensions.add(ext));
+    ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'].forEach((ext) => extensions.add(ext));
   }
 
   return extensions;
@@ -139,7 +138,10 @@ export async function ensureUploadDirectory(): Promise<void> {
 }
 
 // Magic-byte/content sniffing with dynamic import to support ESM-only dependency
-export async function sniffAndValidateFile(filePath: string, originalName: string): Promise<{ valid: boolean; detectedMime?: string; reason?: string }>{
+export async function sniffAndValidateFile(
+  filePath: string,
+  originalName: string
+): Promise<{ valid: boolean; detectedMime?: string; reason?: string }> {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     const fd = await fs.open(filePath, 'r');
@@ -162,7 +164,7 @@ export async function sniffAndValidateFile(filePath: string, originalName: strin
       if (!detectedMime) {
         return {
           valid: false,
-          reason: 'Unable to detect file type from content. File may be corrupted or unsupported.'
+          reason: 'Unable to detect file type from content. File may be corrupted or unsupported.',
         };
       }
 
@@ -171,7 +173,7 @@ export async function sniffAndValidateFile(filePath: string, originalName: strin
         return {
           valid: false,
           detectedMime,
-          reason: `Detected MIME type "${detectedMime}" is not in allowed types list`
+          reason: `Detected MIME type "${detectedMime}" is not in allowed types list`,
         };
       }
 
@@ -182,7 +184,7 @@ export async function sniffAndValidateFile(filePath: string, originalName: strin
         return {
           valid: false,
           detectedMime,
-          reason: `Internal error: No extension mapping for MIME type "${detectedMime}"`
+          reason: `Internal error: No extension mapping for MIME type "${detectedMime}"`,
         };
       }
 
@@ -190,7 +192,7 @@ export async function sniffAndValidateFile(filePath: string, originalName: strin
         return {
           valid: false,
           detectedMime,
-          reason: `File extension "${ext}" does not match detected content type "${detectedMime}". Expected one of: ${allowedExts.join(', ')}`
+          reason: `File extension "${ext}" does not match detected content type "${detectedMime}". Expected one of: ${allowedExts.join(', ')}`,
         };
       }
 
