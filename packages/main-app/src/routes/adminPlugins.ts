@@ -6,7 +6,7 @@ import type { AuthenticatedRequest } from '../auth';
 import { renderReactSSR } from '../utils/ssr-renderer';
 import PluginManagement, { Plugin } from '../components/PluginManagement';
 import { createLogger, LogLevel } from '@monorepo/shared';
-import { escapeHtml } from '@monorepo/shared/utils/html';
+import { escapeHtml } from '@monorepo/shared';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,

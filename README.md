@@ -13,14 +13,16 @@ Modern, extensible web platform with microservices architecture and plugin syste
 
 ## Documentation
 
-For detailed information, see:
+Full docs are now consolidated under `/docs`:
 
-- **[Setup & Development](./assets/docs/development.md)** - Development environment setup
-- **[Architecture Guide](./assets/docs/architecture.md)** - System design and patterns
-- **[Plugin Development](./assets/docs/plugins.md)** - Creating and managing plugins
-- **[API Reference](./assets/docs/api.md)** - Complete API documentation
-- **[Deployment Guide](./assets/docs/deployment.md)** - Production deployment
-- **[Security Guide](./assets/docs/security.md)** - Security implementation details
+- Setup & Development: `docs/getting-started.md`
+- Architecture: `docs/architecture.md`
+- Plugin Development: `docs/plugins.md`
+- API Reference: `docs/api.md`
+- Deployment: `docs/deployment.md`
+- Security: `docs/security.md`
+- Implementation Status: `docs/status.md`
+- Scripts: `docs/scripts.md`
 
 ## Quick Start
 

@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { backendTheme } from '../theme/backend-theme';
-import { escapeHtml } from '@monorepo/shared/utils/html';
+import { escapeHtml } from '@monorepo/shared';
 
 export interface SSRRenderOptions {
   title: string;

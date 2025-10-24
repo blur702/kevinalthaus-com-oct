@@ -436,7 +436,7 @@ Services managed:
   • Frontend (port 3002)
   • Admin (port 3003)
 
-For more information, see scripts/README.md
+For more information, see docs/scripts.md
 EOF
 }
 

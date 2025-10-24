@@ -253,7 +253,7 @@ router.post(
 );
 
 interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -262,21 +262,28 @@ router.post(
   '/login',
   asyncHandler(async (req: Request, res: Response) => {
     try {
-      const { email, password } = req.body as LoginRequest;
+      // Guard against undefined/invalid req.body to avoid destructuring errors
+      const { username, password } = (req.body || {}) as Partial<LoginRequest>;
 
       // Validate input types
-      if (typeof email !== 'string' || typeof password !== 'string') {
+      if (typeof username !== 'string' || typeof password !== 'string') {
         res.status(400).json({
           error: 'Bad Request',
-          message: 'Email and password must be strings',
+          message: 'Username and password must be strings',
         });
         return;
       }
 
-      if (!email || !password) {
+      // Trim username to avoid accidental whitespace-caused failures
+      // Case policy: logins are case-sensitive by design. If business rules
+      // require case-insensitive logins, compare using LOWER(username) and
+      // LOWER($1) and ensure an index exists on LOWER(username).
+      const normalizedUsername = username.trim();
+
+      if (!normalizedUsername || !password) {
         res.status(400).json({
           error: 'Bad Request',
-          message: 'Email and password are required',
+          message: 'Username and password are required',
         });
         return;
       }
@@ -289,7 +296,7 @@ router.post(
         password_hash: string;
         role: string;
         is_active: boolean;
-      }>('SELECT * FROM users WHERE email = $1', [email]);
+      }>('SELECT * FROM users WHERE username = $1', [normalizedUsername]);
 
       const user = result.rows.length > 0 ? result.rows[0] : null;
 
@@ -601,4 +608,3 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
 }
 
 export { router as authRouter, AuthenticatedRequest };
-
