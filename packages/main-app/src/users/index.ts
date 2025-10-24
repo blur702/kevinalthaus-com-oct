@@ -28,8 +28,8 @@ router.get(
       } = req.query;
 
       // Validate and sanitize pagination parameters
-      const pageNum = Math.max(1, parseInt(page as string) || 1);
-      const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 10));
+      const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 10));
       const offset = (pageNum - 1) * limitNum;
 
       let whereClause = 'WHERE 1=1';
@@ -58,6 +58,12 @@ router.get(
       }
 
       if (role) {
+        // Validate role is a known enum value
+        const validRoles = Object.values(Role);
+        if (!validRoles.includes(role as Role)) {
+          res.status(400).json({ error: 'Invalid role parameter' });
+          return;
+        }
         paramCount++;
         whereClause += ` AND role = $${paramCount}`;
         params.push(role);
@@ -74,7 +80,7 @@ router.get(
         `SELECT COUNT(*) as count FROM users ${whereClause}`,
         params
       );
-      const total = parseInt(countResult.rows[0].count);
+      const total = parseInt(countResult.rows[0].count, 10);
 
       // Get users
       const result = await query<{

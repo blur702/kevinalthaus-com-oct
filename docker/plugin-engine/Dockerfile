@@ -25,7 +25,7 @@ COPY package.json package-lock.json ./
 COPY packages/plugin-engine/package.json ./packages/plugin-engine/package.json
 
 # Install only production dependencies for the plugin-engine workspace using lockfile
-RUN npm ci --omit=dev --workspace=packages/plugin-engine && npm cache clean --force
+RUN npm ci --omit=dev --workspace @monorepo/plugin-engine && npm cache clean --force
 
 # Copy built artifacts from builder image
 COPY --from=builder /app/packages/plugin-engine/dist ./packages/plugin-engine/dist

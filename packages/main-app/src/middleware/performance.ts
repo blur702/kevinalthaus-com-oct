@@ -28,8 +28,7 @@ class ResponseCache {
       }
       if (Array.isArray(val)) {
         const mapped = (val as unknown[]).map((v) => canonicalizeValue(v));
-        // Sort canonical strings for deterministic ordering
-        mapped.sort();
+        // Preserve array order (do not sort to maintain ordered semantics)
         return `[${mapped.join(',')}]`;
       }
       if (typeof val === 'object') {

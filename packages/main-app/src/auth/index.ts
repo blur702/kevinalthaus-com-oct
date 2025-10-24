@@ -500,7 +500,7 @@ router.post(
       });
 
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-      const accessMaxAgeMs = parseDurationToMs(JWT_EXPIRES_IN, 15 * 60 * 1000)
+      const accessMaxAgeMs = parseDurationToMs(JWT_EXPIRES_IN, 15 * 60 * 1000);
       res.cookie(ACCESS_TOKEN_COOKIE_NAME, result.accessToken, getCookieOptions(accessMaxAgeMs));
       res.cookie(REFRESH_TOKEN_COOKIE_NAME, result.refreshToken, getCookieOptions(thirtyDaysInMs));
 

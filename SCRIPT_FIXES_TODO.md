@@ -79,21 +79,23 @@ fi
 
 ## scripts/restore-postgres.sh
 
-### Use psql Variables for Database Name (lines 44-50)
+### Validate Database Name Before DROP/CREATE (lines 44-50)
 
-Replace sed-escaped variable with psql variables:
+psql `:variable` substitution does not work for identifiers (database names). Instead, validate the database name before passing it to psql:
 
 ```bash
-# Before
-ESCAPED_DB_NAME=$(echo "$POSTGRES_DB" | sed 's/"/""/g')
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS \"$ESCAPED_DB_NAME\";"
+# Validate database name: allow only safe alphanumeric and underscore characters
+if ! [[ "$POSTGRES_DB" =~ ^[A-Za-z0-9_]+$ ]]; then
+  echo "ERROR: Invalid database name '$POSTGRES_DB'. Only alphanumeric characters and underscores are allowed." >&2
+  exit 1
+fi
 
-# After
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c "DROP DATABASE IF EXISTS :dbname;"
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c "CREATE DATABASE :dbname;"
+# Use validated identifier directly (safe after validation)
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS \"$POSTGRES_DB\";"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "CREATE DATABASE \"$POSTGRES_DB\";"
 ```
 
-Note: psql's :variable substitution might not work directly for identifiers in all contexts. May need to use a different approach or dynamic SQL.
+**Important**: Never use sed-based escaping alone. Always validate database names against a safe pattern (e.g., `/^[A-Za-z0-9_]+$/`) or an explicit allowlist before using them in SQL commands. For maximum safety, reject any value that doesn't match the pattern.
 
 ## scripts/setup-cron.sh
 

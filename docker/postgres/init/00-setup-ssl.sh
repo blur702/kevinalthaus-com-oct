@@ -38,8 +38,8 @@ if [ "$enable_ssl" = true ]; then
   # Toggle SSL on and set cert paths in postgresql.conf (append/replace)
   if [ -f "$CONF_FILE" ]; then
     sed -ri "s/^#?\s*ssl\s*=.*/ssl = on/" "$CONF_FILE" || true
-    sed -ri "s|^#?\s*ssl_cert_file\s*=.*|ssl_cert_file = '${CRT_PATH//'/'\/'}'|" "$CONF_FILE" || true
-    sed -ri "s|^#?\s*ssl_key_file\s*=.*|ssl_key_file = '${KEY_PATH//'/'\/'}'|" "$CONF_FILE" || true
+    sed -ri "s|^#?\s*ssl_cert_file\s*=.*|ssl_cert_file = '${CRT_PATH}'|" "$CONF_FILE" || true
+    sed -ri "s|^#?\s*ssl_key_file\s*=.*|ssl_key_file = '${KEY_PATH}'|" "$CONF_FILE" || true
     # If keys not present in file, append them
     grep -q '^ssl\s*=' "$CONF_FILE" || echo "ssl = on" >> "$CONF_FILE"
     grep -q '^ssl_cert_file\s*=' "$CONF_FILE" || echo "ssl_cert_file = '$CRT_PATH'" >> "$CONF_FILE"

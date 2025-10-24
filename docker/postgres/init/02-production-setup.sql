@@ -53,7 +53,9 @@ DO $$
 BEGIN
   EXECUTE format('GRANT CONNECT ON DATABASE %I TO app_user', current_database());
 END $$ LANGUAGE plpgsql;
-GRANT USAGE, CREATE ON SCHEMA public TO app_user;
+-- Grant USAGE only on public schema (app_user cannot create tables/views at runtime)
+-- CREATE privilege should only be granted to migration tools/roles if needed
+GRANT USAGE ON SCHEMA public TO app_user;
 
 -- Grant permissions on all current tables
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
