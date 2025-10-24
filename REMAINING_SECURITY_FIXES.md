@@ -28,25 +28,60 @@ This document tracks critical security and code quality fixes that still need to
 
 **Fix required:**
 ```typescript
-// Add CSRF token state
-let csrfToken: string | null = null;
+// CSRF token manager to handle concurrent requests safely
+class CSRFTokenManager {
+  private token: string | null = null;
+  private fetchingPromise: Promise<string> | null = null;
+
+  async getToken(): Promise<string> {
+    // Return existing token if available
+    if (this.token) {
+      return this.token;
+    }
+
+    // Return active fetch promise to deduplicate concurrent requests
+    if (this.fetchingPromise) {
+      return this.fetchingPromise;
+    }
+
+    // Start new fetch
+    this.fetchingPromise = this.fetchToken();
+    try {
+      this.token = await this.fetchingPromise;
+      return this.token;
+    } finally {
+      this.fetchingPromise = null;
+    }
+  }
+
+  private async fetchToken(): Promise<string> {
+    try {
+      const { data } = await axios.get('/api/csrf-token');
+      return data.token;
+    } catch (error) {
+      console.error('Failed to fetch CSRF token:', error);
+      throw error;
+    }
+  }
+
+  clearToken(): void {
+    this.token = null;
+    this.fetchingPromise = null;
+  }
+}
+
+const csrfManager = new CSRFTokenManager();
 
 // Request interceptor to add CSRF token
 api.interceptors.request.use(
   async (config) => {
     // Only add CSRF token for state-changing methods
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method?.toUpperCase() || '')) {
-      if (!csrfToken) {
-        // Fetch token if not available
-        try {
-          const { data } = await axios.get('/api/csrf-token');
-          csrfToken = data.token;
-        } catch (error) {
-          console.error('Failed to fetch CSRF token:', error);
-        }
-      }
-      if (csrfToken) {
-        config.headers['X-CSRF-Token'] = csrfToken;
+      try {
+        const token = await csrfManager.getToken();
+        config.headers['X-CSRF-Token'] = token;
+      } catch (error) {
+        console.error('Failed to get CSRF token:', error);
       }
     }
     return config;
@@ -60,7 +95,7 @@ api.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 403 && error.response?.data?.error?.includes('CSRF')) {
       // Token invalid/expired, clear and retry once
-      csrfToken = null;
+      csrfManager.clearToken();
       const originalRequest = error.config;
       if (!originalRequest._retry) {
         originalRequest._retry = true;

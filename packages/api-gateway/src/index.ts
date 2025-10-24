@@ -236,18 +236,33 @@ app.get('/', (_req, res) => {
   });
 });
 
-// Proxy helper
-function buildProxy(target: string, pathRewrite?: Record<string, string>): express.RequestHandler {
-  const options: Options = {
+// Consolidated proxy factory
+interface ProxyOptions {
+  target: string;
+  pathRewrite?: Record<string, string>;
+  includeForwardingHeaders?: boolean;
+  timeout?: number;
+}
+
+function createProxy(options: ProxyOptions): express.RequestHandler {
+  const { target, pathRewrite, includeForwardingHeaders = false, timeout } = options;
+
+  // Validate target is in allowlist
+  if (!ALLOWED_PROXY_TARGETS.includes(target)) {
+    throw new Error(`Proxy target ${target} is not allowed. Must be one of: ${ALLOWED_PROXY_TARGETS.join(', ')}`);
+  }
+
+  const proxyOptions: Options = {
     target,
     changeOrigin: true,
     logLevel: 'warn',
     pathRewrite,
+    ...(timeout && { timeout, proxyTimeout: timeout }),
     onProxyReq: (proxyReq, req) => {
       // Set internal gateway token to verify request origin
       proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN!);
 
-      // propagate request id if present
+      // Propagate request id if present
       const rid = req.headers['x-request-id'];
       if (rid) {
         proxyReq.setHeader(
@@ -271,9 +286,17 @@ function buildProxy(target: string, pathRewrite?: Record<string, string>): expre
       if (req.headers['x-user-email']) {
         proxyReq.setHeader('X-User-Email', req.headers['x-user-email'] as string);
       }
+
+      // Conditionally add forwarding headers
+      if (includeForwardingHeaders) {
+        proxyReq.setHeader('X-Forwarded-Proto', req.protocol);
+        proxyReq.setHeader('X-Forwarded-Host', req.get('Host') || '');
+        proxyReq.setHeader('X-Real-IP', req.ip || '');
+      }
     },
   };
-  return createProxyMiddleware(options) as unknown as express.RequestHandler;
+
+  return createProxyMiddleware(proxyOptions) as unknown as express.RequestHandler;
 }
 
 // Plugins proxy (optional service)
@@ -281,7 +304,7 @@ function buildProxy(target: string, pathRewrite?: Record<string, string>): expre
 app.use(
   '/api/plugins',
   jwtMiddleware,
-  buildProxy(PLUGIN_ENGINE_URL, { '^/api/plugins': '/plugins' })
+  createProxy({ target: PLUGIN_ENGINE_URL, pathRewrite: { '^/api/plugins': '/plugins' } })
 );
 
 // Helper function to extract cookie value
@@ -347,46 +370,6 @@ function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {
   }
 }
 
-// Proxy configuration helper
-function createSecureProxy(target: string, pathRewrite?: Record<string, string>): Options {
-  if (!ALLOWED_PROXY_TARGETS.includes(target)) {
-    throw new Error(`Proxy target ${target} is not allowed`);
-  }
-
-  return {
-    target,
-    changeOrigin: true,
-    pathRewrite,
-    timeout: 30000,
-    proxyTimeout: 30000,
-    onProxyReq: (proxyReq, req) => {
-      // Forward all headers including user context
-      proxyReq.setHeader('X-Forwarded-Proto', req.protocol);
-      proxyReq.setHeader('X-Forwarded-Host', req.get('Host') || '');
-      proxyReq.setHeader('X-Real-IP', req.ip || '');
-
-      // Set internal gateway token to verify request origin
-      proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN!);
-
-      // Drop any incoming spoofed X-User-* headers from clients
-      proxyReq.removeHeader('X-User-Id');
-      proxyReq.removeHeader('X-User-Role');
-      proxyReq.removeHeader('X-User-Email');
-
-      // Forward user context headers only from verified JWT middleware
-      if (req.headers['x-user-id']) {
-        proxyReq.setHeader('X-User-Id', req.headers['x-user-id'] as string);
-      }
-      if (req.headers['x-user-role']) {
-        proxyReq.setHeader('X-User-Role', req.headers['x-user-role'] as string);
-      }
-      if (req.headers['x-user-email']) {
-        proxyReq.setHeader('X-User-Email', req.headers['x-user-email'] as string);
-      }
-    },
-  };
-}
-
 // Upstream safety: strip any X-User-* headers early to avoid accidental use
 app.use((req, _res, next) => {
   delete req.headers['x-user-id'];
@@ -396,18 +379,27 @@ app.use((req, _res, next) => {
 });
 
 // Auth routes (no JWT required, but stricter rate limiting)
-// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 app.use(
   '/api/auth',
   authRateLimit,
-  createProxyMiddleware(createSecureProxy(MAIN_APP_URL, { '^/api/auth': '/api/auth' }))
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/auth': '/api/auth' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
 );
 
 // Protected routes with JWT verification
 app.use(
   '/api/users',
   jwtMiddleware,
-  createProxyMiddleware(createSecureProxy(MAIN_APP_URL, { '^/api/users': '/api/users' }))
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/users': '/api/users' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
 );
 
 // (removed) Previous proxy to main-app for /api/plugins to avoid duplicate registrations
@@ -415,14 +407,24 @@ app.use(
 app.use(
   '/api/settings',
   jwtMiddleware,
-  createProxyMiddleware(createSecureProxy(MAIN_APP_URL, { '^/api/settings': '/api/settings' }))
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/settings': '/api/settings' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
 );
 
 // Python service proxy (JWT required)
 app.use(
   '/api/python',
   jwtMiddleware,
-  createProxyMiddleware(createSecureProxy(PYTHON_SERVICE_URL, { '^/api/python': '/' }))
+  createProxy({
+    target: PYTHON_SERVICE_URL,
+    pathRewrite: { '^/api/python': '/' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
 );
 
 // 404 handler

@@ -17,7 +17,7 @@ const DEFAULT_SANITIZE_OPTIONS: IOptions = {
     'blockquote',
   ],
   allowedAttributes: {
-    a: ['href', 'title', 'target'],
+    a: ['href', 'title', 'target', 'rel'],
     code: ['class'],
   },
   allowedSchemes: ['http', 'https', 'mailto'],
@@ -125,9 +125,19 @@ export function sanitizePluginConfig(config: Record<string, unknown>): Record<st
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       sanitized[sanitizedKey] = sanitizePluginConfig(value as Record<string, unknown>);
     } else if (Array.isArray(value)) {
-      sanitized[sanitizedKey] = value.map((item: unknown) =>
-        typeof item === 'string' ? stripAllHTML(item) : item
-      );
+      // Recursively sanitize nested arrays and objects
+      sanitized[sanitizedKey] = value.map((item: unknown) => {
+        if (typeof item === 'string') {
+          return stripAllHTML(item);
+        } else if (Array.isArray(item)) {
+          // Recursively handle nested arrays
+          return (sanitizePluginConfig({ temp: item }) as Record<string, unknown>).temp;
+        } else if (typeof item === 'object' && item !== null) {
+          // Recursively handle nested objects
+          return sanitizePluginConfig(item as Record<string, unknown>);
+        }
+        return item;
+      });
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       sanitized[sanitizedKey] = value;

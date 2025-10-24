@@ -81,7 +81,7 @@ fi
 
 ### Validate Database Name Before DROP/CREATE (lines 44-50)
 
-psql `:variable` substitution does not work for identifiers (database names). Instead, validate the database name before passing it to psql:
+psql supports variable substitution for identifiers using the `:"variable"` syntax (note the colon before the quotes). For maximum safety, validate the database name before passing it to psql, then use psql's identifier substitution:
 
 ```bash
 # Validate database name: allow only safe alphanumeric and underscore characters
@@ -90,12 +90,12 @@ if ! [[ "$POSTGRES_DB" =~ ^[A-Za-z0-9_]+$ ]]; then
   exit 1
 fi
 
-# Use validated identifier directly (safe after validation)
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS \"$POSTGRES_DB\";"
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "CREATE DATABASE \"$POSTGRES_DB\";"
+# Use psql variable substitution with identifier quoting (:"variable" syntax)
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c 'DROP DATABASE IF EXISTS :"dbname";'
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c 'CREATE DATABASE :"dbname";'
 ```
 
-**Important**: Never use sed-based escaping alone. Always validate database names against a safe pattern (e.g., `/^[A-Za-z0-9_]+$/`) or an explicit allowlist before using them in SQL commands. For maximum safety, reject any value that doesn't match the pattern.
+**Important**: Always validate database names against a safe pattern (e.g., `/^[A-Za-z0-9_]+$/`) or an explicit allowlist before using them in SQL commands. The `:"variable"` syntax properly quotes the identifier and prevents SQL injection, but validation provides defense-in-depth. For maximum safety, reject any value that doesn't match the pattern.
 
 ## scripts/setup-cron.sh
 

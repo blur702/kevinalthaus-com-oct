@@ -70,9 +70,13 @@ function getCookieOptions(
 function parseDurationToMs(input: string, fallbackMs: number): number {
   const trimmed = String(input).trim();
   const match = trimmed.match(/^\s*(\d+)\s*([smhdSMHD]?)\s*$/);
-  if (!match) return fallbackMs;
+  if (!match) {
+    return fallbackMs;
+  }
   const value = Number(match[1]);
-  if (!Number.isFinite(value) || value <= 0) return fallbackMs;
+  if (!Number.isFinite(value) || value <= 0) {
+    return fallbackMs;
+  }
   const unit = match[2].toLowerCase();
   switch (unit) {
     case 's':

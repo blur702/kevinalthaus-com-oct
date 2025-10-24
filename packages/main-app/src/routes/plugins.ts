@@ -116,11 +116,12 @@ const uploadPackage = multer({
   storage,
   limits: { fileSize: PLUGIN_UPLOAD_MAX_SIZE },
   fileFilter: (_req, file, cb) => {
-    // Preliminary check — final decision via magic-byte sniffing
+    // Preliminary MIME check - reject clearly disallowed types early
+    // Final validation via magic-byte sniffing happens after upload
     if (ALLOWED_ARCHIVE_MIME.has(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(null, true); // allow, we will reject after sniffing if needed
+      cb(null, false); // Reject non-allowed MIME types
     }
   },
 });
@@ -207,13 +208,25 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
         const parse = JSON.parse(req.body.manifest) as PluginManifest;
         const validate = createValidator<PluginManifest>(PLUGIN_MANIFEST_SCHEMA);
         if (!validate(parse)) {
-          try { if (filePath) await fs.unlink(filePath); } catch { /* ignore */ }
+          try {
+            if (filePath) {
+              await fs.unlink(filePath);
+            }
+          } catch {
+            /* ignore */
+          }
           res.status(400).json({ error: 'Manifest validation failed', details: validate.errors });
           return;
         }
         manifest = parse;
       } catch (err) {
-        try { if (filePath) await fs.unlink(filePath); } catch { /* ignore */ }
+        try {
+          if (filePath) {
+            await fs.unlink(filePath);
+          }
+        } catch {
+          /* ignore */
+        }
         res.status(400).json({ error: 'Invalid manifest JSON', message: err instanceof Error ? err.message : String(err) });
         return;
       }

@@ -46,16 +46,30 @@ export function getRefreshToken(): string | null {
 /**
  * Clear authentication by calling the server logout endpoint
  * Server will clear the httpOnly cookies
+ * @returns true if logout succeeded, false otherwise
  */
-export async function clearTokens(): Promise<void> {
+export async function clearTokens(): Promise<boolean> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
   try {
-    await fetch('/api/auth/logout', {
+    const response = await fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'include', // Send cookies
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.error('Logout failed with status:', response.status, await response.text());
+      return false;
+    }
+
+    return true;
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error('Logout failed:', error);
-    throw error;
+    return false;
   }
 }
 
@@ -64,13 +78,19 @@ export async function clearTokens(): Promise<void> {
  * Since cookies are httpOnly, we make a request to a validation endpoint
  */
 export async function isAuthenticated(): Promise<boolean> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
   try {
     const response = await fetch('/api/auth/validate', {
       method: 'GET',
       credentials: 'include', // Send cookies
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     return response.ok;
   } catch (error) {
+    clearTimeout(timeoutId);
     return false;
   }
 }

@@ -16,7 +16,9 @@ function ensureAuthenticated(req: AuthenticatedRequest, res: Response) {
 export function requireRole(...roles: Role[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     const user = ensureAuthenticated(req, res);
-    if (!user) return;
+    if (!user) {
+      return;
+    }
 
     if (!roles.includes(user.role)) {
       res.status(403).json({
@@ -33,7 +35,9 @@ export function requireRole(...roles: Role[]) {
 export function requireCapability(...capabilities: Capability[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     const user = ensureAuthenticated(req, res);
-    if (!user) return;
+    if (!user) {
+      return;
+    }
 
     const context = createPermissionContext(user.userId, user.role);
 

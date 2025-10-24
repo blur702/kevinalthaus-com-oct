@@ -18,6 +18,15 @@ import {
   Container,
 } from '@mui/material';
 
+/**
+ * Plugin interface with explicit status semantics.
+ *
+ * Status values:
+ * - 'active': Plugin is currently running and activated
+ * - 'installed': Plugin is installed but has never been activated
+ * - 'inactive': Plugin was previously activated but is now deactivated
+ * - 'error': Plugin encountered an error during lifecycle operation
+ */
 export interface Plugin {
   id: string;
   name: string;

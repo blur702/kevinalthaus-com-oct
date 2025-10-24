@@ -28,8 +28,9 @@ class ResponseCache {
       }
       if (Array.isArray(val)) {
         const mapped = (val as unknown[]).map((v) => canonicalizeValue(v));
-        // Preserve array order (do not sort to maintain ordered semantics)
-        return `[${mapped.join(',')}]`;
+        // Sort array elements to ensure consistent cache keys (matches api-gateway behavior)
+        const sorted = mapped.sort();
+        return `[${sorted.join(',')}]`;
       }
       if (typeof val === 'object') {
         const obj = val as Record<string, unknown>;
@@ -149,6 +150,16 @@ function isCacheControlCacheable(cacheControl: string | string[] | undefined): b
 // Response caching middleware for GET requests
 export const cacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   if (req.method !== 'GET') {
+    next();
+    return;
+  }
+
+  // Bypass cache for authenticated requests to prevent user-specific data leakage
+  // Check for common auth indicators: Authorization header or populated req.user from auth middleware
+  const hasAuthHeader = Boolean(req.headers.authorization);
+  const hasUserContext = Boolean((req as Request & { user?: unknown }).user);
+
+  if (hasAuthHeader || hasUserContext) {
     next();
     return;
   }

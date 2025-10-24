@@ -43,7 +43,6 @@ tests/
 docs/
 *.md
 !README.md
-DEPLOYMENT.md
 
 # Logs
 logs/

@@ -58,8 +58,9 @@ export function validatePluginVersion(version: string): boolean {
   if (typeof version !== 'string' || version.length === 0 || version.length > 256) {
     return false;
   }
-  // Simple, safe semver-like pattern without nested quantifiers
+  // Safe semver-like pattern with explicit dot separators
   // e.g., 1.2.3, 1.2.3-alpha.1, 1.2.3+build.5, 1.2.3-alpha+build
-  const pattern = /^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?(?:\+[A-Za-z0-9.-]+)?$/;
+  // Dots are treated as literal separators, not inside character classes
+  const pattern = /^\d+\.\d+\.\d+(?:-[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)?(?:\+[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)?$/;
   return pattern.test(version);
 }

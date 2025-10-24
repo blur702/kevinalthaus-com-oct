@@ -18,7 +18,6 @@
     "server",
     "express"
   ],
-  "author": "",
   "license": "MIT",
   "dependencies": {
     "@monorepo/shared": "^1.0.0",

@@ -1,19 +1,16 @@
 import { test, expect } from '@playwright/test';
 
-let gatewayAvailable = false;
-
-test.beforeAll(async ({ request }) => {
-  // Pre-flight check for API Gateway availability
-  try {
-    await request.get('http://localhost:3000/health', { timeout: 2000 });
-    gatewayAvailable = true;
-  } catch {
-    gatewayAvailable = false;
-  }
-});
-
 test.describe('Service health', () => {
   test('API Gateway /health responds (if running)', async ({ request }) => {
+    // Pre-flight check for API Gateway availability
+    let gatewayAvailable = false;
+    try {
+      await request.get('http://localhost:3000/health', { timeout: 2000 });
+      gatewayAvailable = true;
+    } catch {
+      gatewayAvailable = false;
+    }
+
     test.skip(!gatewayAvailable, 'API Gateway not running on :3000');
 
     const resp = await request.get('http://localhost:3000/health');

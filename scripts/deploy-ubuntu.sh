@@ -2,7 +2,7 @@
 # ========================================
 # Ubuntu Production Deployment Script
 # ========================================
-# Deploys Kevin Althaus platform on Ubuntu 20.04/22.04 LTS
+# Deploys Kevin Althaus platform on Ubuntu 20.04, 22.04, 24.04 LTS
 # Run with: sudo ./scripts/deploy-ubuntu.sh
 # ========================================
 

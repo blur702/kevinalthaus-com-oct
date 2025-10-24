@@ -1,5 +1,7 @@
 export function escapeHtml(str: string | undefined): string {
-  if (str === undefined) return '';
+  if (str === undefined) {
+    return '';
+  }
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
