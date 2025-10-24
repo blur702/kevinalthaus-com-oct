@@ -9,6 +9,29 @@ set -e
 set -o pipefail
 
 BACKUP_DIR="${1:-./backups/postgres}"
+
+# Validate BACKUP_DIR for safety
+if [ -z "$BACKUP_DIR" ]; then
+  echo "[$(date)] ERROR: BACKUP_DIR is empty" >&2
+  exit 1
+fi
+
+# Prevent dangerous paths
+DANGEROUS_PATHS=("/" "/root" "/home" "/etc" "/usr" "/bin" "/sbin" "/var" "/sys" "/proc" "/dev")
+for dangerous in "${DANGEROUS_PATHS[@]}"; do
+  if [ "$BACKUP_DIR" = "$dangerous" ]; then
+    echo "[$(date)] ERROR: BACKUP_DIR cannot be set to system path: $BACKUP_DIR" >&2
+    exit 1
+  fi
+done
+
+# Resolve and validate path
+RESOLVED_BACKUP_DIR="$(realpath -m "$BACKUP_DIR" 2>/dev/null || echo "$BACKUP_DIR")"
+if [ "$RESOLVED_BACKUP_DIR" = "/" ]; then
+  echo "[$(date)] ERROR: BACKUP_DIR resolves to root directory" >&2
+  exit 1
+fi
+
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 CONTAINER_NAME="${CONTAINER_NAME:-kevinalthaus-postgres-1}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"

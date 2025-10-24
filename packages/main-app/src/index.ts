@@ -141,9 +141,23 @@ app.use(
       return;
     }
     const origin = req.header('Origin');
-    // Only allow requests with valid Origin header that's in allowlist
-    // Missing Origin headers are not allowed by default
-    const isAllowed = origin ? corsOrigins.includes(origin) : false;
+    let isAllowed = false;
+
+    if (origin) {
+      // Request has Origin header - check if it's in allowlist
+      isAllowed = corsOrigins.includes(origin);
+    } else {
+      // No Origin header - check if Host matches allowlist (same-origin requests)
+      const host = req.header('Host') || req.get('Host');
+      if (host) {
+        // Extract hostname without port for comparison
+        const hostname = host.split(':')[0];
+        isAllowed = corsOrigins.some((allowed) => {
+          const allowedHostname = allowed.replace(/^https?:\/\//, '').split(':')[0];
+          return hostname === allowedHostname;
+        });
+      }
+    }
     callback(null, { origin: isAllowed, credentials: corsCredentials });
   })
 );

@@ -71,8 +71,12 @@ if ! command -v bc >/dev/null 2>&1; then
 fi
 
 CONNECTION_PERCENT=$(echo "$RAW_PERCENT / 1" | bc)
-if ! [[ "$CONNECTION_PERCENT" =~ ^[0-9]+$ ]] || [ "$CONNECTION_PERCENT" -lt 0 ] || [ "$CONNECTION_PERCENT" -gt 100 ]; then
+if ! [[ "$CONNECTION_PERCENT" =~ ^[0-9]+$ ]]; then
   echo "ERROR: Invalid connection percentage calculated: $CONNECTION_PERCENT" >&2
+  exit 1
+fi
+if [ "$CONNECTION_PERCENT" -lt 0 ] || [ "$CONNECTION_PERCENT" -gt 100 ]; then
+  echo "ERROR: Connection percentage out of range: $CONNECTION_PERCENT" >&2
   exit 1
 fi
 ```

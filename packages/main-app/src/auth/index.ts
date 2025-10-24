@@ -23,8 +23,9 @@ if (!JWT_SECRET) {
     console.warn('  - Users must re-login after each restart');
     console.warn('  - Not suitable for any production or staging environment');
     console.warn('');
-    console.warn('For persistent development sessions, set JWT_SECRET in .env:');
-    console.warn('  JWT_SECRET=' + JWT_SECRET);
+    console.warn('To persist tokens between restarts, set JWT_SECRET in .env:');
+    console.warn('  Generate a secret with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    console.warn('  Then add: JWT_SECRET=<generated-secret>');
     console.warn('═══════════════════════════════════════════════════════════════');
     console.warn('');
   } else {

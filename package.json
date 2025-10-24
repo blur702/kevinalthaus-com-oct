@@ -28,5 +28,6 @@
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=9.0.0"
-  }
+  },
+  "engineNotes": "BREAKING CHANGE: Minimum Node.js version raised from 18.x to 20.x for @playwright/test compatibility and active LTS support. Node.js 18 reached EOL April 2025. To upgrade: check version with 'node --version', install Node 20.x via nvm (nvm install 20) or from nodejs.org, then run 'npm install' to reinstall dependencies."
 }

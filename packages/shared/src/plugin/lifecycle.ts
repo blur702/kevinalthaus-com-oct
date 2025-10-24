@@ -15,7 +15,7 @@ export interface PluginLogger {
   debug(message: string, metadata?: Record<string, unknown>): void;
   info(message: string, metadata?: Record<string, unknown>): void;
   warn(message: string, metadata?: Record<string, unknown>): void;
-  error(message: string, error?: Error, metadata?: Record<string, unknown>): void;
+  error(message: string, metadata?: Record<string, unknown>, error?: Error): void;
 }
 
 export interface PluginExecutionContext extends PluginLifecycleContext {

@@ -17,19 +17,35 @@ class ResponseCache {
   private canonicalizeQuery(query: ParsedQs): string {
     const keys = Object.keys(query as Record<string, unknown>);
     if (keys.length === 0) {return '';}
+
+    // Track visited objects to prevent circular references
+    const seen = new WeakSet<object>();
+
     const normalize = (val: unknown): string => {
       if (val === null || typeof val === 'undefined') {return '';}
       if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
         return JSON.stringify(val);
       }
       if (Array.isArray(val)) {
+        // Check for circular reference
+        if (seen.has(val)) {
+          return '[Circular]';
+        }
+        seen.add(val);
         const items = (val as unknown[]).map((v) => normalize(v)).sort();
+        seen.delete(val);
         return `[${items.join(',')}]`;
       }
       if (typeof val === 'object') {
+        // Check for circular reference
+        if (seen.has(val as object)) {
+          return '[Circular]';
+        }
         const obj = val as Record<string, unknown>;
+        seen.add(obj);
         const objKeys = Object.keys(obj).sort();
         const parts = objKeys.map((k) => `${k}:${normalize(obj[k])}`);
+        seen.delete(obj);
         return `{${parts.join(',')}}`;
       }
       return JSON.stringify(String(val));

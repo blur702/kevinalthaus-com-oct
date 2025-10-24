@@ -101,15 +101,12 @@ const HomePage: React.FC = () => {
             Let's discuss your next project and bring your ideas to life.
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-            {/* Build email on interaction to avoid exposing plain text to scrapers */}
             <Button
+              component="a"
+              href="mailto:contact@kevinalthaus.com"
               variant="contained"
               size="large"
-              onClick={() => {
-                const local = 'contact';
-                const domain = 'kevinalthaus.com';
-                window.location.href = `mailto:${local}@${domain}`;
-              }}
+              aria-label="Send an email to contact@kevinalthaus.com"
             >
               Get In Touch
             </Button>

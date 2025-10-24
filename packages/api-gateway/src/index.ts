@@ -330,7 +330,12 @@ function getCookie(cookieHeader: string | undefined, name: string): string | und
     const key = cookie.substring(0, eqIndex);
     const value = cookie.substring(eqIndex + 1);
     if (key === name) {
-      return decodeURIComponent(value);
+      try {
+        return decodeURIComponent(value);
+      } catch (error) {
+        // Return undefined for malformed percent-encoding
+        return undefined;
+      }
     }
   }
   return undefined;
@@ -359,16 +364,37 @@ function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET!) as {
-      userId: string;
-      email: string;
-      role: string;
-    };
+    if (!JWT_SECRET) {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'JWT configuration error',
+      });
+      return;
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Validate decoded payload structure
+    if (
+      !decoded ||
+      typeof decoded !== 'object' ||
+      typeof (decoded as { userId?: unknown }).userId !== 'string' ||
+      typeof (decoded as { email?: unknown }).email !== 'string' ||
+      typeof (decoded as { role?: unknown }).role !== 'string'
+    ) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid token payload',
+      });
+      return;
+    }
+
+    const payload = decoded as { userId: string; email: string; role: string };
 
     // Forward user context to downstream services
-    req.headers['x-user-id'] = decoded.userId;
-    req.headers['x-user-role'] = decoded.role;
-    req.headers['x-user-email'] = decoded.email;
+    req.headers['x-user-id'] = payload.userId;
+    req.headers['x-user-role'] = payload.role;
+    req.headers['x-user-email'] = payload.email;
 
     next();
   } catch (error) {

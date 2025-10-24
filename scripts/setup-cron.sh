@@ -51,11 +51,27 @@ cat > "$CRON_FILE" <<EOF
 0 3 * * 0 docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "VACUUM ANALYZE;" >> "$FULL_LOG_DIR"/vacuum.log 2>&1
 
 # Clean up old logs weekly (keep last 30 days)
-0 4 * * 0 mkdir -p /var/log/cron_cleanup && $FULL_APP_DIR/scripts/cleanup-logs.sh "$FULL_LOG_DIR" 2>> /var/log/cron_cleanup/cleanup.error.log
+0 4 * * 0 mkdir -p "$FULL_LOG_DIR/cron_cleanup" && $FULL_APP_DIR/scripts/cleanup-logs.sh "$FULL_LOG_DIR" 2>> "$FULL_LOG_DIR/cron_cleanup/cleanup.error.log"
 EOF
 
-# Install crontab
-crontab "$CRON_FILE"
+# Install crontab - append to existing entries
+# Read existing crontab (suppress error if none exists)
+EXISTING_CRONTAB=$(crontab -l 2>/dev/null || echo "")
+
+# Combine existing and new entries
+if [ -n "$EXISTING_CRONTAB" ]; then
+  # Has existing entries - append new ones
+  {
+    echo "$EXISTING_CRONTAB"
+    echo ""
+    echo "# Kevin Althaus Platform - Automated Maintenance Tasks (added $(date))"
+    cat "$CRON_FILE"
+  } | crontab -
+else
+  # No existing entries - install new ones
+  crontab "$CRON_FILE"
+fi
+
 rm "$CRON_FILE"
 
 echo "Cron jobs installed successfully!"
