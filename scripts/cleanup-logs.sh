@@ -12,7 +12,7 @@ if [ -z "$LOG_DIR" ]; then
   exit 1
 fi
 
-RESOLVED="$(realpath -m "$LOG_DIR" 2>/dev/null || readlink -f "$LOG_DIR" 2>/dev/null || echo "")"
+RESOLVED="$(realpath "$LOG_DIR" 2>/dev/null || readlink -f "$LOG_DIR" 2>/dev/null || echo "")"
 if [ -z "$RESOLVED" ]; then
   echo "[ERROR] Unable to resolve log directory path: '$LOG_DIR'" >&2
   exit 1

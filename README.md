@@ -24,7 +24,7 @@ For detailed information, see:
 
 ## Quick Start
 
-**Prerequisites:** Node.js 18+, Docker, Docker Compose
+**Prerequisites:** Node.js 20+, Docker, Docker Compose
 
 ```bash
 # Clone and setup

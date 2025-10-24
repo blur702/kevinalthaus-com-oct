@@ -14,7 +14,7 @@ import type { PluginManifest } from '@monorepo/shared';
 export const pluginsRouter = express.Router();
 
 // Plugin ID validation pattern (same as adminPlugins)
-const VALID_PLUGIN_ID_PATTERN = /^[a-z0-9-_]+$/i;
+const VALID_PLUGIN_ID_PATTERN = /^[a-z0-9-_]+$/;
 
 /**
  * Validate plugin ID format

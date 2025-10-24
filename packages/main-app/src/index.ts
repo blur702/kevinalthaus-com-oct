@@ -158,7 +158,8 @@ app.use(cacheMiddleware);
 // Verify internal token on all requests except health checks
 // Health checks need to be accessible for container orchestration
 app.use((req, res, next) => {
-  if (req.path.startsWith('/health')) {
+  const allowedHealthPaths = ['/health', '/health/', '/health/live', '/health/ready'];
+  if (allowedHealthPaths.includes(req.path)) {
     next();
   } else {
     verifyInternalToken(req, res, next);

@@ -77,15 +77,19 @@ fi
 
 if [ "$FORMAT" == "--json" ]; then
     # JSON output with dynamic status
+    # Escape string fields for JSON safety
+    STATUS_JSON=$(printf '%s' "$STATUS" | jq -R -s -c '.')
+    DB_SIZE_JSON=$(printf '%s' "$DB_SIZE" | jq -R -s -c '.')
+
     cat <<EOF
 {
-  "status": "$STATUS",
+  "status": $STATUS_JSON,
   "connections": {
     "current": $CONNECTIONS,
     "max": $MAX_CONNECTIONS,
     "usage_percent": $USAGE_PERCENT
   },
-  "database_size": "$DB_SIZE",
+  "database_size": $DB_SIZE_JSON,
   "cache_hit_ratio": $CACHE_HIT_RATIO
 }
 EOF

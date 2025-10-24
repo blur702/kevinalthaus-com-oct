@@ -70,11 +70,15 @@ export function renderReactSSR(component: React.ReactElement, options: SSRRender
       if (token) {
         const forms = document.querySelectorAll('form[method="post"]');
         forms.forEach(form => {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = '_csrf';
-          input.value = token;
-          form.appendChild(input);
+          // Check if CSRF token already exists in this form
+          const existingToken = form.querySelector('input[name="_csrf"]');
+          if (!existingToken) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = '_csrf';
+            input.value = token;
+            form.appendChild(input);
+          }
         });
       }
     });

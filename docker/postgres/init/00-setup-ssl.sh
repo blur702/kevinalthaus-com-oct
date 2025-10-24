@@ -33,6 +33,7 @@ if [ "$enable_ssl" = true ]; then
       -out "$CRT_PATH" -keyout "$KEY_PATH" \
       -subj "/CN=postgres.local"
     chmod 600 "$KEY_PATH"
+    chown postgres:postgres "$CRT_PATH" "$KEY_PATH"
   fi
 
   # Toggle SSL on and set cert paths in postgresql.conf (append/replace)

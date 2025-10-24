@@ -271,11 +271,29 @@ display_status() {
     docker compose ps
     echo ""
 
+    # Detect which compose file is active by checking for the production overlay
+    local is_prod=false
+    if docker compose config --services 2>/dev/null | grep -q .; then
+        # Check if production compose file is being used
+        if [ -f "$PROJECT_ROOT/docker-compose.prod.yml" ] && docker compose -f docker-compose.yml -f docker-compose.prod.yml config 2>/dev/null | grep -q "api-gateway"; then
+            is_prod=true
+        fi
+    fi
+
     success "Services are accessible at:"
-    echo -e "  ${BLUE}API Gateway:${NC}      http://localhost:3000"
-    echo -e "  ${BLUE}Main App:${NC}         http://localhost:3001"
-    echo -e "  ${BLUE}Frontend:${NC}         http://localhost:3002"
-    echo -e "  ${BLUE}Admin:${NC}            http://localhost:3003"
+    if [ "$is_prod" = true ]; then
+        # Production port mappings
+        echo -e "  ${BLUE}API Gateway:${NC}      http://localhost:4000"
+        echo -e "  ${BLUE}Main App:${NC}         (internal only - no published port)"
+        echo -e "  ${BLUE}Frontend:${NC}         http://localhost:3002"
+        echo -e "  ${BLUE}Admin:${NC}            http://localhost:3003"
+    else
+        # Development port mappings
+        echo -e "  ${BLUE}API Gateway:${NC}      http://localhost:3000"
+        echo -e "  ${BLUE}Main App:${NC}         http://localhost:3001"
+        echo -e "  ${BLUE}Frontend:${NC}         http://localhost:3002"
+        echo -e "  ${BLUE}Admin:${NC}            http://localhost:3003"
+    fi
     echo -e "  ${BLUE}Python Service:${NC}   http://localhost:8000"
     echo -e "  ${BLUE}PostgreSQL:${NC}       localhost:5432"
     echo -e "  ${BLUE}Redis:${NC}            localhost:6379"

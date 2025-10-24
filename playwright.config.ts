@@ -8,7 +8,8 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     trace: 'retain-on-failure',
-    baseURL: 'http://localhost:3000',
+    // baseURL removed - tests should use full URLs or environment variables
+    // Use process.env.BASE_URL in tests or provide specific URLs for each service
   },
   projects: [
     {

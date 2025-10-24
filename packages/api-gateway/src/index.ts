@@ -79,6 +79,15 @@ const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
 // Performance and security middleware (order matters)
 app.use(requestIdMiddleware);
 app.use(timingMiddleware);
+
+// Upstream safety: strip any X-User-* headers early to avoid accidental use
+app.use((req, _res, next) => {
+  delete req.headers['x-user-id'];
+  delete req.headers['x-user-role'];
+  delete req.headers['x-user-email'];
+  next();
+});
+
 app.use(compressionMiddleware);
 
 // Configure Helmet with env toggles - single source of truth
@@ -369,14 +378,6 @@ function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {
     });
   }
 }
-
-// Upstream safety: strip any X-User-* headers early to avoid accidental use
-app.use((req, _res, next) => {
-  delete req.headers['x-user-id'];
-  delete req.headers['x-user-role'];
-  delete req.headers['x-user-email'];
-  next();
-});
 
 // Auth routes (no JWT required, but stricter rate limiting)
 app.use(

@@ -36,11 +36,40 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
       }
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const fs = require('fs');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const path = require('path');
+
       try {
+        // Validate and sanitize the certificate path
+        const resolvedPath = path.resolve(path.normalize(ca));
+
+        // Ensure the path is absolute
+        if (!path.isAbsolute(resolvedPath)) {
+          throw new Error('PGSSLROOTCERT must be an absolute path');
+        }
+
+        // Check if file exists and is a regular file
         // eslint-disable-next-line security/detect-non-literal-fs-filename
-        const caContent = fs.readFileSync(ca, 'utf8');
+        const stats = fs.statSync(resolvedPath);
+        if (!stats.isFile()) {
+          throw new Error('PGSSLROOTCERT must point to a regular file');
+        }
+
+        // Read the certificate file
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
+        const caContent = fs.readFileSync(resolvedPath, 'utf8');
         return { rejectUnauthorized: true, ca: caContent };
       } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          throw new Error(
+            `SSL certificate file not found at PGSSLROOTCERT=${ca}`
+          );
+        }
+        if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+          throw new Error(
+            `Permission denied reading SSL certificate at PGSSLROOTCERT=${ca}`
+          );
+        }
         throw new Error(
           `Failed to read SSL certificate from PGSSLROOTCERT=${ca}: ${(error as Error).message}`
         );

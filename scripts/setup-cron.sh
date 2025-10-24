@@ -48,7 +48,7 @@ cat > "$CRON_FILE" <<EOF
 */5 * * * * cd $FULL_APP_DIR && $FULL_APP_DIR/scripts/monitor-postgres.sh >> $FULL_LOG_DIR/monitor.log 2>&1
 
 # Weekly database optimization (VACUUM ANALYZE) on Sundays at 3 AM
-0 3 * * 0 /usr/bin/docker exec "$CONTAINER_NAME" /usr/bin/psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "VACUUM ANALYZE;" >> "$FULL_LOG_DIR"/vacuum.log 2>&1
+0 3 * * 0 docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "VACUUM ANALYZE;" >> "$FULL_LOG_DIR"/vacuum.log 2>&1
 
 # Clean up old logs weekly (keep last 30 days)
 0 4 * * 0 mkdir -p /var/log/cron_cleanup && $FULL_APP_DIR/scripts/cleanup-logs.sh "$FULL_LOG_DIR" 2>> /var/log/cron_cleanup/cleanup.error.log
