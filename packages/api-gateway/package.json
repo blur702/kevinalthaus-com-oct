@@ -9,7 +9,7 @@
     "clean": "rimraf dist",
     "watch": "tsc -b --watch",
     "start": "node dist/server.js",
-    "dev": "ts-node src/server.ts"
+    "dev": "ts-node --transpile-only src/server.ts"
   },
   "keywords": [
     "api-gateway",
