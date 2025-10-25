@@ -6,29 +6,27 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Create non-root user and group for security (before copying/installing deps)
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
 # Set working directory
 WORKDIR /app
 
-# Copy requirements file
-COPY python/requirements.txt ./
+# Copy requirements file as non-root
+USER appuser
+COPY --chown=appuser:appuser python/requirements.txt ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies (user scope)
+RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Copy Python source code
-COPY python ./python
+# Copy Python source code as non-root
+COPY --chown=appuser:appuser python ./python
 
 # Create logs directory
 RUN mkdir -p /app/logs
 
-# Create non-root user and group for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
-# Change ownership of app directory to non-root user
-RUN chown -R appuser:appuser /app
-
-# Switch to non-root user for running the application
-USER appuser
+# Ensure container runs as non-root user
+# (USER already set earlier for build steps)
 
 # Expose port
 EXPOSE 8000

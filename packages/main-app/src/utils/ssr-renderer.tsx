@@ -2,6 +2,9 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { CacheProvider } from '@emotion/react';
+import createCache from '@emotion/cache';
+import { extractCriticalToChunks } from '@emotion/server';
 import { backendTheme } from '../theme/backend-theme';
 import { escapeHtml } from '@monorepo/shared';
 
@@ -23,18 +26,29 @@ export interface SSRRenderOptions {
 }
 
 export function renderReactSSR(component: React.ReactElement, options: SSRRenderOptions): string {
-  // Wrap component with Material-UI providers
+  // Create Emotion cache for SSR and extract critical CSS
+  const cache = createCache({ key: 'css', prepend: true });
+
   const app = (
-    <ThemeProvider theme={backendTheme}>
-      <CssBaseline />
-      {component}
-    </ThemeProvider>
+    <CacheProvider value={cache}>
+      <ThemeProvider theme={backendTheme}>
+        <CssBaseline />
+        {component}
+      </ThemeProvider>
+    </CacheProvider>
   );
 
-  // Render to string
+  // Render to string and extract critical Emotion CSS chunks
   const html = renderToString(app);
+  const chunks = extractCriticalToChunks(html, { cache });
+  const styleTags = chunks.styles
+    .map((style) => {
+      const dataAttr = `${style.key} ${style.ids.join(' ')}`.trim();
+      return `<style data-emotion="${dataAttr}">${style.css}</style>`;
+    })
+    .join('');
 
-  // Create full HTML document with Material-UI styling
+  // Create full HTML document with Material-UI + Emotion SSR styling
   const bodyAttrs = options.csrfToken ? ` data-csrf-token="${escapeHtml(options.csrfToken)}"` : '';
   return `<!DOCTYPE html>
 <html lang="en">
@@ -44,6 +58,7 @@ export function renderReactSSR(component: React.ReactElement, options: SSRRender
   <title>${escapeHtml(options.title)}</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  ${styleTags}
   <style>
     /* Material-UI CSS Reset and Base Styles */
     * {

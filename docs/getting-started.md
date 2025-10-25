@@ -17,10 +17,10 @@ docker compose up -d
 ```
 
 Access points (development):
-- API Gateway: http://localhost:3000
-- Frontend: http://localhost:3002
-- Admin: http://localhost:3003
-- Main App health: http://localhost:3001/health (internal)
+- API Gateway: [http://localhost:3000](http://localhost:3000)
+- Frontend: [http://localhost:3002](http://localhost:3002)
+- Admin: [http://localhost:3003](http://localhost:3003)
+- Main App health: [http://localhost:3001/health](http://localhost:3001/health) (internal)
 
 ## Quick Start (Dev mode without Docker)
 
@@ -58,4 +58,3 @@ Use the `scripts/web` helper to start/stop the full stack quickly:
 ```
 
 See `docs/scripts.md` for details.
-

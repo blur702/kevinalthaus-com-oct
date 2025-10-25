@@ -1,6 +1,6 @@
 #!/bin/bash
 # Setup Cron Jobs for Automated Maintenance
-# Usage: sudo ./scripts/setup-cron.sh
+# Usage: ./scripts/setup-cron.sh
 
 set -euo pipefail
 

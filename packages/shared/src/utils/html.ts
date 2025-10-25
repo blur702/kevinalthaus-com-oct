@@ -1,13 +1,15 @@
-export function escapeHtml(str: string | undefined): string {
-  if (str === undefined) {
+export function escapeHtml(str: string | null | undefined): string {
+  if (str === null || str === undefined) {
     return '';
   }
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/`/g, '&#96;');
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+    '`': '&#96;',
+  };
+  const re = /[&<>"'`]/g;
+  return String(str).replace(re, (ch) => map[ch]);
 }
-

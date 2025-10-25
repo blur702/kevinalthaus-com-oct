@@ -278,7 +278,13 @@ pluginsRouter.post('/:id/install', async (req, res) => {
     await pluginManager.install(id);
     res.status(200).json({ message: 'Installed', id });
   } catch (error) {
-    res.status(400).json({ error: 'Bad Request', message: (error as Error).message });
+    logger.error('Plugin install failed', error as Error, { id });
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({
+      error: 'PluginError',
+      code: 'PLUGIN_INSTALL_FAILED',
+      message: isProduction ? 'Failed to install plugin' : (error as Error).message,
+    });
   }
 });
 
@@ -293,7 +299,13 @@ pluginsRouter.post('/:id/activate', async (req, res) => {
     await pluginManager.activate(id);
     res.status(200).json({ message: 'Activated', id });
   } catch (error) {
-    res.status(400).json({ error: 'Bad Request', message: (error as Error).message });
+    logger.error('Plugin activate failed', error as Error, { id });
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({
+      error: 'PluginError',
+      code: 'PLUGIN_ACTIVATE_FAILED',
+      message: isProduction ? 'Failed to activate plugin' : (error as Error).message,
+    });
   }
 });
 
@@ -308,7 +320,13 @@ pluginsRouter.post('/:id/deactivate', async (req, res) => {
     await pluginManager.deactivate(id);
     res.status(200).json({ message: 'Deactivated', id });
   } catch (error) {
-    res.status(400).json({ error: 'Bad Request', message: (error as Error).message });
+    logger.error('Plugin deactivate failed', error as Error, { id });
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({
+      error: 'PluginError',
+      code: 'PLUGIN_DEACTIVATE_FAILED',
+      message: isProduction ? 'Failed to deactivate plugin' : (error as Error).message,
+    });
   }
 });
 
@@ -323,12 +341,17 @@ pluginsRouter.post('/:id/uninstall', async (req, res) => {
     await pluginManager.uninstall(id);
     res.status(200).json({ message: 'Uninstalled', id });
   } catch (error) {
-    res.status(400).json({ error: 'Bad Request', message: (error as Error).message });
+    logger.error('Plugin uninstall failed', error as Error, { id });
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({
+      error: 'PluginError',
+      code: 'PLUGIN_UNINSTALL_FAILED',
+      message: isProduction ? 'Failed to uninstall plugin' : (error as Error).message,
+    });
   }
 });
 
 export default pluginsRouter;
-
 
 
 

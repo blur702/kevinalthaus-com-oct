@@ -9,7 +9,7 @@
 ## Quick Start (Ubuntu)
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/kevinalthaus/kevinalthaus-com-oct.git
 cd kevinalthaus-com-oct
 sudo ./scripts/deploy-ubuntu.sh
 
@@ -121,4 +121,3 @@ DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres:5432/kevinalthaus
 - Only API Gateway is publicly exposed
 - Internal services (main-app, python) should not publish host ports
 - Use strong secrets and configure firewall (UFW)
-

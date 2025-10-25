@@ -195,8 +195,8 @@ export const PLUGIN_MANIFEST_SCHEMA: JSONSchemaType<PluginManifest> = {
   ],
   additionalProperties: false,
   // Note: Some fields use nullable in schema for Ajv, which is compatible with
-  // PluginManifest optional fields. The overall object is asserted to JSONSchemaType.
-} as unknown as JSONSchemaType<PluginManifest>;
+  // PluginManifest optional fields.
+};
 
 export const PLUGIN_SETTINGS_FIELD_SCHEMA = {
   type: 'object',

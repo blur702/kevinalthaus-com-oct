@@ -133,34 +133,23 @@ if (Object.keys(helmetConfig).length > 0) {
 }
 app.use(securityHeadersMiddleware);
 app.use(keepAliveMiddleware);
-app.use(
-  cors((req, callback) => {
-    const allowAll = corsOrigins.includes('*');
-    if (allowAll) {
-      callback(null, { origin: '*', credentials: false });
-      return;
-    }
-    const origin = req.header('Origin');
-    let isAllowed = false;
-
-    if (origin) {
-      // Request has Origin header - check if it's in allowlist
-      isAllowed = corsOrigins.includes(origin);
-    } else {
-      // No Origin header - check if Host matches allowlist (same-origin requests)
-      const host = req.header('Host') || req.get('Host');
-      if (host) {
-        // Extract hostname without port for comparison
-        const hostname = host.split(':')[0];
-        isAllowed = corsOrigins.some((allowed) => {
-          const allowedHostname = allowed.replace(/^https?:\/\//, '').split(':')[0];
-          return hostname === allowedHostname;
-        });
+  app.use(
+    cors((req, callback) => {
+      const allowAll = corsOrigins.includes('*');
+      if (allowAll) {
+        callback(null, { origin: '*', credentials: false });
+        return;
       }
-    }
-    callback(null, { origin: isAllowed, credentials: corsCredentials });
-  })
-);
+      const origin = req.header('Origin');
+      let isAllowed = false;
+
+      if (origin) {
+        // Request has Origin header - check if it's in allowlist
+        isAllowed = corsOrigins.includes(origin);
+      }
+      callback(null, { origin: isAllowed, credentials: corsCredentials });
+    })
+  );
 app.use(morgan('combined'));
 app.use(express.json({ limit: '1mb' })); // Reduced from 10mb to prevent DoS
 app.use(express.urlencoded({ extended: true, limit: '100kb' })); // Reduced from 10mb

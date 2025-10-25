@@ -161,7 +161,7 @@ export async function validateUploadedFile(
   try {
     // Check for single file upload (req.file)
     if (req.file) {
-      const filePath = (req.file as Express.Multer.File & { path?: string }).path || '';
+      const filePath = req.file?.path || '';
       const originalName = req.file.originalname;
 
       const validation = await sniffAndValidateFile(filePath, originalName);
@@ -190,14 +190,14 @@ export async function validateUploadedFile(
         : Object.values(req.files).flat();
 
       for (const file of files) {
-        const filePath = (file as Express.Multer.File & { path?: string }).path || '';
+        const filePath = ('path' in (file as object) ? (file as { path?: string }).path : undefined) || '';
         const originalName = file.originalname;
 
         const validation = await sniffAndValidateFile(filePath, originalName);
         if (!validation.valid) {
           // Remove ALL uploaded files if any one fails validation
           for (const f of files) {
-            const fp = (f as Express.Multer.File & { path?: string }).path;
+            const fp = 'path' in (f as object) ? (f as { path?: string }).path : undefined;
             if (fp) {
               try {
                 await fs.unlink(fp);
@@ -220,18 +220,25 @@ export async function validateUploadedFile(
     // All files valid: move from quarantine to final directory atomically
     // Single file
     if (req.file) {
-      const quarantinePath = (req.file as Express.Multer.File & { path?: string }).path || '';
+      const quarantinePath = req.file?.path || '';
       if (quarantinePath) {
         const filename = path.basename(quarantinePath);
         const finalPath = path.join(UPLOAD_DIRECTORY, filename);
         try {
           // eslint-disable-next-line security/detect-non-literal-fs-filename
           await fs.rename(quarantinePath, finalPath);
+          // Update request file path to final location
+          if (req.file && 'path' in req.file) {
+            (req.file as unknown as { path: string }).path = finalPath;
+          }
         } catch (renameErr) {
           // Fallback: copy then unlink to handle cross-device moves
           try {
             await fs.copyFile(quarantinePath, finalPath);
             await fs.unlink(quarantinePath);
+            if (req.file && 'path' in req.file) {
+              (req.file as unknown as { path: string }).path = finalPath;
+            }
           } catch (fallbackErr) {
             // Attempt to cleanup quarantine file to avoid leftovers
             try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
@@ -253,17 +260,23 @@ export async function validateUploadedFile(
     if (req.files) {
       const files = Array.isArray(req.files) ? req.files : Object.values(req.files).flat();
       for (const f of files) {
-        const quarantinePath = (f as Express.Multer.File & { path?: string }).path || '';
+        const quarantinePath = ('path' in (f as object) ? (f as { path?: string }).path : undefined) || '';
         if (quarantinePath) {
           const filename = path.basename(quarantinePath);
           const finalPath = path.join(UPLOAD_DIRECTORY, filename);
           try {
             // eslint-disable-next-line security/detect-non-literal-fs-filename
             await fs.rename(quarantinePath, finalPath);
+            if ('path' in (f as object)) {
+              (f as unknown as { path: string }).path = finalPath;
+            }
           } catch (renameErr) {
             try {
               await fs.copyFile(quarantinePath, finalPath);
               await fs.unlink(quarantinePath);
+              if ('path' in (f as object)) {
+                (f as unknown as { path: string }).path = finalPath;
+              }
             } catch (fallbackErr) {
               try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
               // Log full details for debugging (server-side only)
@@ -287,7 +300,7 @@ export async function validateUploadedFile(
   } catch (error) {
     // On unexpected error, try to clean up any uploaded files
     if (req.file) {
-      const filePath = (req.file as Express.Multer.File & { path?: string }).path;
+      const filePath = req.file?.path;
       if (filePath) {
         try {
           await fs.unlink(filePath);
@@ -301,7 +314,7 @@ export async function validateUploadedFile(
         ? req.files
         : Object.values(req.files).flat();
       for (const f of files) {
-        const fp = (f as Express.Multer.File & { path?: string }).path;
+        const fp = 'path' in (f as object) ? (f as { path?: string }).path : undefined;
         if (fp) {
           try {
             await fs.unlink(fp);
