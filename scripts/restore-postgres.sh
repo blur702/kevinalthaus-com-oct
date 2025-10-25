@@ -14,6 +14,14 @@ if [ -z "$BACKUP_FILE" ]; then
     exit 1
 fi
 
+# Validate database name to prevent SQL injection
+# Allow only alphanumeric, underscore, and hyphen characters
+if [[ ! "$POSTGRES_DB" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "ERROR: Invalid database name. Only alphanumeric, underscore, and hyphen characters are allowed."
+    echo "Database name: $POSTGRES_DB"
+    exit 1
+fi
+
 if [ ! -f "$BACKUP_FILE" ]; then
     echo "Error: Backup file not found: $BACKUP_FILE"
     exit 1
@@ -41,11 +49,11 @@ echo "[$(date)] Starting PostgreSQL restore from $BACKUP_FILE..."
 echo "[$(date)] Stopping application services..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api-gateway main-app
 
-# Drop and recreate database (using psql variable substitution for safe identifier quoting)
+# Drop and recreate database (database name validated above to prevent SQL injection)
 echo "[$(date)] Recreating database..."
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = :'dbname' AND pid <> pg_backend_pid();"
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c 'DROP DATABASE IF EXISTS :"dbname";'
-docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -v dbname="$POSTGRES_DB" -c 'CREATE DATABASE :"dbname";'
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$POSTGRES_DB' AND pid <> pg_backend_pid();"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS $POSTGRES_DB;"
+docker exec -t "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -c "CREATE DATABASE $POSTGRES_DB;"
 
 # Restore from backup
 echo "[$(date)] Restoring from backup..."

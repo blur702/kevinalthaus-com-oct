@@ -62,7 +62,24 @@ const CSRF_SECRET: string = (() => {
     const fs = require('fs') as typeof import('fs');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const path = require('path') as typeof import('path');
-    const secretFilePath: string = process.env.CSRF_SECRET_FILE || path.join(process.cwd(), '.csrf-secret');
+
+    // Validate secretFilePath to prevent path traversal
+    const baseDir = process.cwd();
+    const requestedPath = process.env.CSRF_SECRET_FILE || path.join(baseDir, '.csrf-secret');
+    const resolvedPath = path.resolve(requestedPath);
+    const relativePath = path.relative(baseDir, resolvedPath);
+
+    // Reject paths outside baseDir or starting with '..'
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      logger.error('CSRF_SECRET_FILE path traversal attempt blocked', undefined, {
+        requested: requestedPath,
+        resolved: resolvedPath,
+        baseDir,
+      });
+      throw new Error('Invalid CSRF_SECRET_FILE path: must be within project directory');
+    }
+
+    const secretFilePath: string = resolvedPath;
 
     try {
       // Try to read existing secret from file

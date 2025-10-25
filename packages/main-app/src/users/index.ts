@@ -7,6 +7,14 @@ import { requireRole, requireCapability } from '../auth/rbac-middleware';
 
 const router = Router();
 
+/**
+ * Escape special characters in LIKE patterns to prevent SQL injection
+ * Escapes: % (wildcard), _ (single char), \ (escape char itself)
+ */
+function escapeLikePattern(input: string): string {
+  return input.replace(/[\\%_]/g, '\\$&');
+}
+
 // All routes require authentication
 router.use(authMiddleware);
 
@@ -41,20 +49,20 @@ router.get(
       if (email) {
         paramCount++;
         whereClause += ` AND email ILIKE $${paramCount}`;
-        params.push(`%${String(email)}%`);
+        params.push(`%${escapeLikePattern(String(email))}%`);
       }
 
       if (username) {
         paramCount++;
         whereClause += ` AND username ILIKE $${paramCount}`;
-        params.push(`%${String(username)}%`);
+        params.push(`%${escapeLikePattern(String(username))}%`);
       }
 
       // Legacy search parameter - searches both email and username if no specific params given
       if (search && !email && !username) {
         paramCount++;
         whereClause += ` AND (email ILIKE $${paramCount} OR username ILIKE $${paramCount})`;
-        params.push(`%${String(search)}%`);
+        params.push(`%${escapeLikePattern(String(search))}%`);
       }
 
       if (role) {
@@ -172,7 +180,7 @@ router.post(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { email, username, password, role = 'viewer' } = req.body;
+      const { email, username, password, role = Role.VIEWER } = req.body;
 
       // Validate input
       if (!email || !username || !password) {
@@ -293,6 +301,14 @@ router.patch(
       }
 
       if (is_active !== undefined) {
+        // Validate is_active is a boolean or can be coerced to boolean
+        if (typeof is_active !== 'boolean') {
+          res.status(400).json({
+            error: 'Bad Request',
+            message: 'is_active must be a boolean',
+          });
+          return;
+        }
         paramCount++;
         updates.push(`is_active = $${paramCount}`);
         params.push(is_active);

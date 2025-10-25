@@ -29,7 +29,15 @@ class ResponseCache {
       if (Array.isArray(val)) {
         const mapped = (val as unknown[]).map((v) => canonicalizeValue(v));
         // Sort array elements to ensure consistent cache keys (matches api-gateway behavior)
-        const sorted = mapped.sort();
+        // Use numeric-aware sorting for numeric strings
+        const sorted = mapped.sort((a, b) => {
+          const aNum = parseFloat(a);
+          const bNum = parseFloat(b);
+          if (isFinite(aNum) && isFinite(bNum)) {
+            return aNum - bNum;
+          }
+          return a.localeCompare(b);
+        });
         return `[${sorted.join(',')}]`;
       }
       if (typeof val === 'object') {
