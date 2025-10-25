@@ -6,7 +6,7 @@ const limits = {
   maxExecutionTime: 30000,
 };
 
-describe('DatabaseIsolationEnforcer.estimateQueryComplexity', () => {
+describe('DatabaseIsolationEnforcer.enforceQuotas', () => {
   it('ignores keywords inside strings and comments', () => {
     const enforcer = new DatabaseIsolationEnforcer(limits);
     const q = `

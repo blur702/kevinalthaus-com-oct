@@ -153,17 +153,26 @@ start_services() {
     # Check and kill conflicting processes
     check_and_kill_ports
 
-    # Pre-flight checks for required tools
-    local required=(docker jq lsof)
+    # Pre-flight checks for truly required tools
+    local required=(docker)
     for cmd in "${required[@]}"; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
-            warn "$cmd is not installed. Some features may not work."
+            error "$cmd is required but not installed. Please install $cmd."
         fi
     done
+
     # Verify Docker Compose v2 is available
     if ! docker compose version >/dev/null 2>&1; then
         error "Docker Compose v2 is required (use 'docker compose'). Please upgrade from docker-compose v1."
     fi
+
+    # Check optional tools and warn if missing
+    local optional=(jq lsof)
+    for cmd in "${optional[@]}"; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            warn "$cmd is not installed. Some features will use fallbacks or degrade functionality."
+        fi
+    done
 
     # Start services
     log "Starting Docker Compose services..."

@@ -10,6 +10,18 @@ CONTAINER_NAME="${CONTAINER_NAME:-kevinalthaus-postgres-1}"
 POSTGRES_DB="${POSTGRES_DB:-kevinalthaus}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 
+# Validate POSTGRES variables to prevent injection
+# Only allow alphanumeric, underscores, and hyphens
+if [[ ! "$POSTGRES_USER" =~ ^[a-zA-Z0-9_-]+$ ]] || [ -z "$POSTGRES_USER" ]; then
+    echo "ERROR: POSTGRES_USER contains invalid characters or is empty. Only alphanumeric, underscores, and hyphens are allowed."
+    exit 1
+fi
+
+if [[ ! "$POSTGRES_DB" =~ ^[a-zA-Z0-9_-]+$ ]] || [ -z "$POSTGRES_DB" ]; then
+    echo "ERROR: POSTGRES_DB contains invalid characters or is empty. Only alphanumeric, underscores, and hyphens are allowed."
+    exit 1
+fi
+
 # Create log directory
 mkdir -p "$LOG_DIR"
 

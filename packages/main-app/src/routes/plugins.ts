@@ -25,6 +25,13 @@ function validatePluginId(pluginId: string): boolean {
   return VALID_PLUGIN_ID_PATTERN.test(pluginId);
 }
 
+// Logger for plugin routes
+const logger = createLogger({
+  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
+  service: 'main-app',
+  format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
+});
+
 // Require admin for all plugin management endpoints
 pluginsRouter.use(authMiddleware, requireRole(Role.ADMIN));
 
@@ -60,12 +67,6 @@ pluginsRouter.get('/', (_req, res) => {
 });
 
 // Archive validation helpers for plugin package uploads
-const logger = createLogger({
-  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
-  service: 'main-app',
-  format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
-});
-
 const PLUGIN_UPLOAD_DIR = path.resolve(
   process.env.PLUGIN_UPLOAD_DIR || path.join(process.cwd(), 'data', 'plugin-uploads')
 );

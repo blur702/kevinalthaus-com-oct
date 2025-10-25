@@ -24,6 +24,7 @@ Client -> API Gateway (:3000 dev / :4000 prod)
             |
             +--> Main App (:3001) -> PostgreSQL (:5432), Redis (:6379)
             +--> Python Service (:8000)
+            +--> Plugin Engine (:3004)
 Frontend (:3002) / Admin (:3003) -> API Gateway
 ```
 
