@@ -26,6 +26,16 @@ RETRY_DELAY=1
 WAL_PATH="${1:?WAL path required}"
 WAL_FILE="${2:?WAL filename required}"
 
+# Ensure log directory exists before any logging
+LOG_DIR="$(dirname "$LOG_FILE")"
+if [ ! -d "$LOG_DIR" ]; then
+    if ! mkdir -p "$LOG_DIR" 2>/dev/null; then
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] Failed to create log directory: $LOG_DIR" >&2
+        exit 1
+    fi
+    chmod 755 "$LOG_DIR" || true
+fi
+
 # Logging function
 log() {
     local level="$1"

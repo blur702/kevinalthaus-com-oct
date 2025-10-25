@@ -54,7 +54,9 @@ if (!INTERNAL_GATEWAY_TOKEN) {
     // eslint-disable-next-line no-console
     console.warn('Set INTERNAL_GATEWAY_TOKEN in .env to match across services:');
     // eslint-disable-next-line no-console
-    console.warn('  INTERNAL_GATEWAY_TOKEN=' + INTERNAL_GATEWAY_TOKEN);
+    console.warn('  Generate a token with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    // eslint-disable-next-line no-console
+    console.warn('  Then set: INTERNAL_GATEWAY_TOKEN=<generated-token>');
     // eslint-disable-next-line no-console
     console.warn('═══════════════════════════════════════════════════════════════');
     // eslint-disable-next-line no-console
@@ -94,10 +96,10 @@ app.use(compressionMiddleware);
 const cspDirectives = {
   defaultSrc: ["'self'"],
   scriptSrc: ["'self'"],
-  styleSrc: ["'self'"],
+  styleSrc: ["'self'", 'https://fonts.googleapis.com'],
   imgSrc: ["'self'", 'data:', 'https:'],
   connectSrc: ["'self'"],
-  fontSrc: ["'self'"],
+  fontSrc: ["'self'", 'https://fonts.gstatic.com'],
   objectSrc: ["'none'"],
   mediaSrc: ["'self'"],
   frameSrc: ["'none'"],
@@ -308,14 +310,6 @@ function createProxy(options: ProxyOptions): express.RequestHandler {
   return createProxyMiddleware(proxyOptions) as unknown as express.RequestHandler;
 }
 
-// Plugins proxy (optional service)
-// Plugins API: proxy to dedicated plugin engine. Protected by JWT.
-app.use(
-  '/api/plugins',
-  jwtMiddleware,
-  createProxy({ target: PLUGIN_ENGINE_URL, pathRewrite: { '^/api/plugins': '/plugins' } })
-);
-
 // Helper function to extract cookie value
 function getCookie(cookieHeader: string | undefined, name: string): string | undefined {
   if (!cookieHeader) {
@@ -404,6 +398,14 @@ function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {
     });
   }
 }
+
+// Plugins proxy (optional service)
+// Plugins API: proxy to dedicated plugin engine. Protected by JWT.
+app.use(
+  '/api/plugins',
+  jwtMiddleware,
+  createProxy({ target: PLUGIN_ENGINE_URL, pathRewrite: { '^/api/plugins': '/plugins' } })
+);
 
 // Auth routes (no JWT required, but stricter rate limiting)
 app.use(

@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(sc.exe query:*)",
       "Bash(where:*)",
       "Bash(docker compose -f docker-compose.yml up:*)",
       "Bash(docker compose -f docker-compose.yml down:*)",

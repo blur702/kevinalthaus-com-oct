@@ -9,7 +9,7 @@ FORMAT="${1}"
 
 # Check if container is running
 if ! docker ps | grep -q "$CONTAINER_NAME"; then
-    echo "ERROR: PostgreSQL container is not running"
+    echo "ERROR: PostgreSQL container is not running" >&2
     exit 2
 fi
 

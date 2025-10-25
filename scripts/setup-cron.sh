@@ -54,9 +54,19 @@ cat > "$CRON_FILE" <<EOF
 0 4 * * 0 mkdir -p "$FULL_LOG_DIR/cron_cleanup" && $FULL_APP_DIR/scripts/cleanup-logs.sh "$FULL_LOG_DIR" 2>> "$FULL_LOG_DIR/cron_cleanup/cleanup.error.log"
 EOF
 
-# Install crontab - append to existing entries
+# Install crontab - check for existing marker to prevent duplicates
 # Read existing crontab (suppress error if none exists)
 EXISTING_CRONTAB=$(crontab -l 2>/dev/null || echo "")
+MARKER="# Kevin Althaus Platform - Automated Maintenance Tasks"
+
+# Check if marker already exists in crontab
+if echo "$EXISTING_CRONTAB" | grep -qF "$MARKER"; then
+  echo "ERROR: Kevin Althaus Platform cron jobs already exist in crontab"
+  echo "To re-install, first remove existing entries with: crontab -e"
+  echo "Or remove lines containing '$MARKER'"
+  rm "$CRON_FILE"
+  exit 1
+fi
 
 # Combine existing and new entries
 if [ -n "$EXISTING_CRONTAB" ]; then
@@ -64,12 +74,15 @@ if [ -n "$EXISTING_CRONTAB" ]; then
   {
     echo "$EXISTING_CRONTAB"
     echo ""
-    echo "# Kevin Althaus Platform - Automated Maintenance Tasks (added $(date))"
+    echo "$MARKER (added $(date))"
     cat "$CRON_FILE"
   } | crontab -
 else
   # No existing entries - install new ones
-  crontab "$CRON_FILE"
+  {
+    echo "$MARKER (added $(date))"
+    cat "$CRON_FILE"
+  } | crontab -
 fi
 
 rm "$CRON_FILE"

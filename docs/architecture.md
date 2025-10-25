@@ -10,6 +10,7 @@ The platform uses a microservices architecture designed for scalability, securit
 - Main App: 3001 (internal service)
 - Frontend: 3002 (host mapped to container 3000 in prod)
 - Admin: 3003 (host mapped to container 3000 in prod)
+- Plugin Engine: 3004 (internal service, host mapped to container 3004 in prod)
 - Python Service: 8000 (internal service)
 - PostgreSQL: 5432
 - Redis: 6379

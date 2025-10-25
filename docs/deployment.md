@@ -31,7 +31,7 @@ sudo ./scripts/setup-cron.sh
 - Access: `docker exec -it <postgres-container> psql -U postgres -d kevinalthaus`
 
 Connection string example:
-```
+```bash
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres:5432/kevinalthaus
 ```
 

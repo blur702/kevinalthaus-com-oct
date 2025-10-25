@@ -100,6 +100,23 @@ export class ConfigKeyCollisionError extends Error {
   }
 }
 
+/**
+ * Helper to recursively sanitize array elements.
+ * Handles nested arrays and objects without introducing temp keys.
+ */
+function sanitizeArray(arr: unknown[]): unknown[] {
+  return arr.map((item: unknown) => {
+    if (typeof item === 'string') {
+      return stripAllHTML(item);
+    } else if (Array.isArray(item)) {
+      return sanitizeArray(item);
+    } else if (typeof item === 'object' && item !== null) {
+      return sanitizePluginConfig(item as Record<string, unknown>);
+    }
+    return item;
+  });
+}
+
 export function sanitizePluginConfig(config: Record<string, unknown>): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {};
   const keyMapping = new Map<string, string>();
@@ -125,19 +142,7 @@ export function sanitizePluginConfig(config: Record<string, unknown>): Record<st
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       sanitized[sanitizedKey] = sanitizePluginConfig(value as Record<string, unknown>);
     } else if (Array.isArray(value)) {
-      // Recursively sanitize nested arrays and objects
-      sanitized[sanitizedKey] = value.map((item: unknown) => {
-        if (typeof item === 'string') {
-          return stripAllHTML(item);
-        } else if (Array.isArray(item)) {
-          // Recursively handle nested arrays
-          return (sanitizePluginConfig({ temp: item }) as Record<string, unknown>).temp;
-        } else if (typeof item === 'object' && item !== null) {
-          // Recursively handle nested objects
-          return sanitizePluginConfig(item as Record<string, unknown>);
-        }
-        return item;
-      });
+      sanitized[sanitizedKey] = sanitizeArray(value);
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       sanitized[sanitizedKey] = value;

@@ -234,12 +234,14 @@ router.post(
     } catch (error: unknown) {
       const err = error as { code?: string; constraint?: string };
       if (err.code === '23505') {
-        // Unique violation
+        // Unique violation - log details internally but return generic message
+        console.error('[Auth] Registration conflict:', {
+          constraint: err.constraint,
+          timestamp: new Date().toISOString(),
+        });
         res.status(409).json({
           error: 'Conflict',
-          message: err.constraint?.includes('email')
-            ? 'Email already exists'
-            : 'Username already exists',
+          message: 'User already exists',
         });
         return;
       }

@@ -19,6 +19,9 @@ class ResponseCache {
       return '';
     }
 
+    // Use WeakSet to track circular references
+    const seen = new WeakSet<object>();
+
     const canonicalizeValue = (val: unknown): string => {
       if (val === null || typeof val === 'undefined') {
         return '';
@@ -27,6 +30,11 @@ class ResponseCache {
         return JSON.stringify(val);
       }
       if (Array.isArray(val)) {
+        // Check for circular reference
+        if (seen.has(val)) {
+          return '[Circular]';
+        }
+        seen.add(val);
         const mapped = (val as unknown[]).map((v) => canonicalizeValue(v));
         // Sort array elements to ensure consistent cache keys (matches api-gateway behavior)
         // Use numeric-aware sorting for numeric strings
@@ -42,6 +50,11 @@ class ResponseCache {
       }
       if (typeof val === 'object') {
         const obj = val as Record<string, unknown>;
+        // Check for circular reference
+        if (seen.has(obj)) {
+          return '[Circular]';
+        }
+        seen.add(obj);
         const keys = Object.keys(obj).sort();
         const parts = keys.map((k) => `${k}:${canonicalizeValue(obj[k])}`);
         return `{${parts.join(',')}}`;

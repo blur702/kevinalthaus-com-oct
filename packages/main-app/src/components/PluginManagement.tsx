@@ -38,10 +38,14 @@ export interface Plugin {
 
 export interface PluginManagementProps {
   plugins: Plugin[];
-  csrfToken?: string;
+  csrfToken: string;
 }
 
 export const PluginManagement: React.FC<PluginManagementProps> = ({ plugins, csrfToken }) => {
+  // Warn developers if csrfToken is missing
+  if (!csrfToken && typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn('[PluginManagement] csrfToken is required but not provided - forms will be disabled');
+  }
   const askConfirm = (message: string): boolean => {
     // Only call confirm in browser environment
     if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
@@ -90,7 +94,7 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({ plugins, csr
   const PluginActionButton: React.FC<{
     pluginId: string;
     action: PluginAction;
-    csrfToken?: string;
+    csrfToken: string;
     onConfirm?: () => boolean;
   }> = ({ pluginId, action, csrfToken, onConfirm }) => {
     const actionProps: Record<PluginAction, { label: string; variant: 'contained' | 'outlined'; color: 'primary' | 'warning' | 'error' }> = {
@@ -99,19 +103,20 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({ plugins, csr
       uninstall: { label: 'Uninstall', variant: 'outlined', color: 'error' },
     };
     const { label, variant, color } = actionProps[action];
+    const isDisabled = !csrfToken;
     return (
       <form
         method="post"
         action={`/admin/plugins/${pluginId}/${action}`}
         style={{ display: 'inline' }}
         onSubmit={(e) => {
-          if (onConfirm && onConfirm() === false) {
+          if (isDisabled || (onConfirm && onConfirm() === false)) {
             e.preventDefault();
           }
         }}
       >
-        <input type="hidden" name="_csrf" value={csrfToken || ''} />
-        <Button type="submit" variant={variant} color={color} size="small">
+        <input type="hidden" name="_csrf" value={csrfToken} />
+        <Button type="submit" variant={variant} color={color} size="small" disabled={isDisabled}>
           {label}
         </Button>
       </form>
@@ -187,7 +192,7 @@ export const PluginManagement: React.FC<PluginManagementProps> = ({ plugins, csr
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            {plugin.status === 'inactive' && (
+                            {(plugin.status === 'inactive' || plugin.status === 'installed') && (
                               <PluginActionButton pluginId={plugin.id} action="activate" csrfToken={csrfToken} />
                             )}
                             {plugin.status === 'active' && (

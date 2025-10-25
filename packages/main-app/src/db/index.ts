@@ -1,5 +1,7 @@
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 const useConnString = !!process.env.DATABASE_URL;
 
@@ -34,10 +36,6 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
           'Provide the path to the root certificate file.'
         );
       }
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const fs = require('fs');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const path = require('path');
 
       try {
         // Validate and sanitize the certificate path

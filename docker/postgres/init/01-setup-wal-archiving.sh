@@ -38,9 +38,25 @@ LOG_FILE="/var/log/postgresql/wal-cleanup.log"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Starting WAL cleanup (retention: ${RETENTION_DAYS} days)" >> "$LOG_FILE"
 
 if [ -d "$WAL_DIR" ]; then
-    find "$WAL_DIR" -type f -name "*.tmp*" -delete 2>&1 | tee -a "$LOG_FILE" || true
-    deleted=$(find "$WAL_DIR" -type f -mtime +${RETENTION_DAYS} -delete -print 2>&1 | tee -a "$LOG_FILE" | wc -l)
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Deleted $deleted WAL files older than ${RETENTION_DAYS} days" >> "$LOG_FILE"
+    # Clean up temporary files
+    tmp_files=$(find "$WAL_DIR" -type f -name "*.tmp*" -print 2>>"$LOG_FILE")
+    if [ -n "$tmp_files" ]; then
+        echo "$tmp_files" >> "$LOG_FILE"
+        tmp_count=$(echo "$tmp_files" | wc -l)
+        find "$WAL_DIR" -type f -name "*.tmp*" -delete 2>>"$LOG_FILE"
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Deleted $tmp_count temporary files" >> "$LOG_FILE"
+    fi
+
+    # Clean up old WAL files
+    old_files=$(find "$WAL_DIR" -type f -mtime +${RETENTION_DAYS} -print 2>>"$LOG_FILE")
+    if [ -n "$old_files" ]; then
+        echo "$old_files" >> "$LOG_FILE"
+        deleted=$(echo "$old_files" | wc -l)
+        find "$WAL_DIR" -type f -mtime +${RETENTION_DAYS} -delete 2>>"$LOG_FILE"
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Deleted $deleted WAL files older than ${RETENTION_DAYS} days" >> "$LOG_FILE"
+    else
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] No WAL files older than ${RETENTION_DAYS} days to delete" >> "$LOG_FILE"
+    fi
 else
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] WAL directory not found: $WAL_DIR" >> "$LOG_FILE"
 fi

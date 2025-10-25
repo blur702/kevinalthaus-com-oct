@@ -235,7 +235,16 @@ export async function validateUploadedFile(
           } catch (fallbackErr) {
             // Attempt to cleanup quarantine file to avoid leftovers
             try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
-            throw new Error(`Failed to move uploaded file. file=${filename}, quarantinePath=${quarantinePath}, finalPath=${finalPath}, renameError=${(renameErr as Error).message}, fallbackError=${(fallbackErr as Error).message}`);
+            // Log full details for debugging (server-side only)
+            console.error('Failed to move file to final destination', {
+              filename: path.basename(req.file?.originalname || 'unknown'),
+              quarantinePath,
+              finalPath,
+              renameError: (renameErr as Error).message,
+              fallbackError: (fallbackErr as Error).message,
+            });
+            // Return sanitized error to client (no paths exposed)
+            throw new Error('Failed to move uploaded file');
           }
         }
       }
@@ -257,7 +266,16 @@ export async function validateUploadedFile(
               await fs.unlink(quarantinePath);
             } catch (fallbackErr) {
               try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
-              throw new Error(`Failed to move uploaded file. file=${filename}, quarantinePath=${quarantinePath}, finalPath=${finalPath}, renameError=${(renameErr as Error).message}, fallbackError=${(fallbackErr as Error).message}`);
+              // Log full details for debugging (server-side only)
+              console.error('Failed to move file to final destination', {
+                filename,
+                quarantinePath,
+                finalPath,
+                renameError: (renameErr as Error).message,
+                fallbackError: (fallbackErr as Error).message,
+              });
+              // Return sanitized error to client (no paths exposed)
+              throw new Error('Failed to move uploaded file');
             }
           }
         }
@@ -293,9 +311,15 @@ export async function validateUploadedFile(
         }
       }
     }
+    // Log the full error server-side for debugging
+    console.error('[Upload] File validation error:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
     res.status(500).json({
       error: 'File validation failed',
-      message: (error as Error).message,
+      message: 'An internal error occurred during file validation',
     });
   }
 }

@@ -5,6 +5,18 @@
 
 set -euo pipefail
 
+# Production validation: Require SSL in production environments
+NODE_ENV="${NODE_ENV:-development}"
+if [ "$NODE_ENV" = "production" ]; then
+  POSTGRES_USE_SSL_LOWER="${POSTGRES_USE_SSL:-}"
+  POSTGRES_USE_SSL_LOWER="${POSTGRES_USE_SSL_LOWER,,}"
+  if [ "$POSTGRES_USE_SSL_LOWER" != "true" ] && [ "$POSTGRES_USE_SSL_LOWER" != "1" ]; then
+    echo "[init] ERROR: NODE_ENV=production requires POSTGRES_USE_SSL=true for secure connections" >&2
+    echo "[init] Deployment aborted: SSL must be enabled in production" >&2
+    exit 1
+  fi
+fi
+
 POSTGRES_USE_SSL_LOWER="${POSTGRES_USE_SSL:-false}"
 POSTGRES_USE_SSL_LOWER="${POSTGRES_USE_SSL_LOWER,,}"
 

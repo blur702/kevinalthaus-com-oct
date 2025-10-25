@@ -58,6 +58,19 @@ fi
 TEMP_FILE="${BACKUP_FILE}.tmp"
 docker exec "$CONTAINER_NAME" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "$TEMP_FILE"
 
+# Verify pipeline succeeded and temp file is non-empty
+if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+    echo "[$(date)] ERROR: pg_dump command failed"
+    rm -f "$TEMP_FILE"
+    exit 1
+fi
+
+if [ ! -s "$TEMP_FILE" ]; then
+    echo "[$(date)] ERROR: Backup file is empty or does not exist"
+    rm -f "$TEMP_FILE"
+    exit 1
+fi
+
 # Move to final location only on success
 mv "$TEMP_FILE" "$BACKUP_FILE"
 

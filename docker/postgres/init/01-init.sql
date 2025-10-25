@@ -18,8 +18,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 --
 -- (b) Use an external init script (shell/psql) that reads an environment variable:
 --     #!/bin/bash
---     docker exec postgres psql -U postgres -c "CREATE ROLE monitor WITH LOGIN PASSWORD '$MONITOR_PASSWORD';"
---     docker exec postgres psql -U postgres -c "GRANT pg_monitor TO monitor;"
+--     docker exec kevinalthaus-postgres-1 psql -U postgres -c "CREATE ROLE monitor WITH LOGIN PASSWORD '$MONITOR_PASSWORD';"
+--     docker exec kevinalthaus-postgres-1 psql -U postgres -c "GRANT pg_monitor TO monitor;"
 --     This approach is recommended for container deployments using docker-compose env files.
 --
 -- Uncomment below if using approach (a):

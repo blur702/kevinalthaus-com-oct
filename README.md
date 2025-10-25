@@ -30,7 +30,10 @@ Full docs are now consolidated under `/docs`:
 
 ```bash
 # Clone and setup
-git clone <repository-url>
+# Replace with your actual repository URL (HTTPS or SSH)
+git clone https://github.com/your-username/kevinalthaus-com-oct.git
+# Or using SSH:
+# git clone git@github.com:your-username/kevinalthaus-com-oct.git
 cd kevinalthaus-com-oct
 npm install
 

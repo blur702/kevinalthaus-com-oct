@@ -4,6 +4,20 @@
 
 set -euo pipefail
 
+# Track whether services were stopped for cleanup
+SERVICES_STOPPED=0
+
+# Cleanup function to restart services if script exits early
+cleanup() {
+  if [ "$SERVICES_STOPPED" = "1" ]; then
+    echo "[$(date)] Restarting services from cleanup trap..."
+    docker compose -f docker-compose.yml -f docker-compose.prod.yml start api-gateway main-app
+  fi
+}
+
+# Register cleanup function to run on script exit
+trap cleanup EXIT
+
 BACKUP_FILE="$1"
 CONTAINER_NAME="${CONTAINER_NAME:-kevinalthaus-postgres-1}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
@@ -47,6 +61,7 @@ echo "[$(date)] Starting PostgreSQL restore from $BACKUP_FILE..."
 
 # Stop application services
 echo "[$(date)] Stopping application services..."
+SERVICES_STOPPED=1
 docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api-gateway main-app
 
 # Drop and recreate database (database name validated above to prevent SQL injection)
@@ -62,6 +77,7 @@ gunzip < "$BACKUP_FILE" | docker exec -i "$CONTAINER_NAME" psql -U "$POSTGRES_US
 # Restart application services
 echo "[$(date)] Restarting application services..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml start api-gateway main-app
+SERVICES_STOPPED=0
 
 echo "[$(date)] Restore completed successfully"
 

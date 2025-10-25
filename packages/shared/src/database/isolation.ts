@@ -139,7 +139,7 @@ export class DatabaseIsolationEnforcer {
     this.maxQueryComplexity = Math.floor(mc);
     this.maxQueryRows = Math.floor(mr);
     this.weights = { ...DEFAULT_COMPLEXITY_WEIGHTS, ...(options.weights || {}) };
-    // Fallback complexity: validated explicit value or safe low default (1)
+    // Fallback complexity: validated explicit value or conservative default
     const fc = options.fallbackComplexity;
     if (fc !== undefined) {
       if (!Number.isFinite(fc) || Math.floor(fc) < 1) {
@@ -147,7 +147,8 @@ export class DatabaseIsolationEnforcer {
       }
       this.fallbackComplexity = Math.floor(fc);
     } else {
-      this.fallbackComplexity = 1;
+      // Conservative default: 50% of max complexity, minimum 1, maximum 100
+      this.fallbackComplexity = Math.max(1, Math.min(100, Math.floor(this.maxQueryComplexity * 0.5)));
     }
     this.logger =
       options.logger ||
