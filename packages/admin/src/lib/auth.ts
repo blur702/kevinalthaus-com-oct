@@ -1,18 +1,16 @@
 // Authentication utility using httpOnly cookies for secure token storage
 // Tokens are stored server-side in httpOnly cookies to prevent XSS attacks
 
-// TypeScript interfaces matching backend response structure
-export interface User {
-  id: string;
-  email: string;
-  username: string;
-  role: string;
-}
+import { User, Role } from '@monorepo/shared';
 
+// TypeScript interfaces matching backend response structure
 export interface AuthResponse {
   user: User;
   message?: string;
 }
+
+// Re-export shared types for convenience
+export type { User, Role };
 
 /**
  * NOT USED - Tokens are managed via httpOnly cookies
@@ -61,7 +59,10 @@ export async function clearTokens(): Promise<boolean> {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.error('Logout failed with status:', response.status, await response.text());
+      console.error('Logout failed:', {
+        status: response.status,
+        statusText: response.statusText,
+      });
       return false;
     }
 

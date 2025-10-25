@@ -40,6 +40,17 @@ if [ "$enable_ssl" = true ]; then
   mkdir -p "$CERT_DIR" "$KEY_DIR"
 
   if [ ! -f "$CRT_PATH" ] || [ ! -f "$KEY_PATH" ]; then
+    # In production, require CA-signed certificates
+    if [ "$NODE_ENV" = "production" ]; then
+      echo "[init] ERROR: Production environment requires CA-signed SSL certificates" >&2
+      echo "[init] Missing certificates at:" >&2
+      [ ! -f "$CRT_PATH" ] && echo "[init]   - $CRT_PATH" >&2
+      [ ! -f "$KEY_PATH" ] && echo "[init]   - $KEY_PATH" >&2
+      echo "[init] Please provide valid CA-signed certificates before starting" >&2
+      exit 1
+    fi
+
+    # Non-production: generate self-signed certificate
     echo "[init] Generating self-signed SSL certificate for PostgreSQL (development)" >&2
     openssl req -new -x509 -days 365 -nodes -text \
       -out "$CRT_PATH" -keyout "$KEY_PATH" \

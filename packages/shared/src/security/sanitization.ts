@@ -144,7 +144,6 @@ export function sanitizePluginConfig(config: Record<string, unknown>): Record<st
     } else if (Array.isArray(value)) {
       sanitized[sanitizedKey] = sanitizeArray(value);
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       sanitized[sanitizedKey] = value;
     }
   }

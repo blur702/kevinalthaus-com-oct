@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { promises as fs, mkdirSync } from 'fs';
 import { createHash, createVerify, randomBytes } from 'crypto';
+import { fileTypeFromBuffer } from 'file-type';
 import { authMiddleware } from '../auth';
 import { requireRole } from '../auth/rbac-middleware';
 import { Role, sanitizeFilename, createLogger, LogLevel } from '@monorepo/shared';
@@ -49,7 +50,12 @@ pluginsRouter.get('/', (_req, res) => {
 
     res.json({ plugins: items });
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error', message: (error as Error).message });
+    logger.error('Error listing plugins', undefined, { error });
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: isProduction ? 'An error occurred while listing plugins' : (error as Error).message,
+    });
   }
 });
 
@@ -132,9 +138,7 @@ async function sniffMime(filePath: string): Promise<string | undefined> {
     const fd = await fs.open(filePath, 'r');
     try {
       const { buffer } = await fd.read(Buffer.alloc(4100), 0, 4100, 0);
-      const mod = await import('file-type');
-      const ft = (mod as unknown as { fileTypeFromBuffer: (b: Buffer) => Promise<{ mime?: string } | undefined> }).fileTypeFromBuffer;
-      const type = await ft(buffer as unknown as Buffer);
+      const type = await fileTypeFromBuffer(buffer);
       return type?.mime;
     } finally {
       await fd.close();
@@ -197,7 +201,8 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
       } catch {
         /* ignore */
       }
-      res.status(400).json({ error: 'Invalid file type', message: `Detected MIME: ${detectedMime || 'unknown'}` });
+      logger.warn('Invalid plugin package MIME type', { detectedMime, filePath });
+      res.status(400).json({ error: 'Invalid file type', message: 'Uploaded file is not a supported archive format' });
       return;
     }
 
@@ -215,7 +220,8 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
           } catch {
             /* ignore */
           }
-          res.status(400).json({ error: 'Manifest validation failed', details: validate.errors });
+          logger.warn('Plugin manifest validation failed', { errors: validate.errors });
+          res.status(400).json({ error: 'Manifest validation failed', message: 'The plugin manifest does not meet the required schema' });
           return;
         }
         manifest = parse;
@@ -227,7 +233,8 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
         } catch {
           /* ignore */
         }
-        res.status(400).json({ error: 'Invalid manifest JSON', message: err instanceof Error ? err.message : String(err) });
+        logger.warn('Plugin manifest JSON parse error', { error: err });
+        res.status(400).json({ error: 'Invalid manifest JSON', message: 'Failed to parse manifest JSON' });
         return;
       }
     }
@@ -251,7 +258,12 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
       manifest,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error', message: (error as Error).message });
+    logger.error('Error uploading plugin package', undefined, { error });
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: isProduction ? 'An error occurred while uploading the package' : (error as Error).message,
+    });
   }
 });
 

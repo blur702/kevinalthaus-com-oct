@@ -137,7 +137,14 @@ const Dashboard: React.FC = () => {
         try {
           const plugins = await fetchPlugins(controller.signal);
           pluginCount = plugins.plugins.length;
-        } catch {
+        } catch (error) {
+          // Check if request was aborted
+          if (error instanceof Error && error.name === 'AbortError') {
+            // Request was cancelled, rethrow to handle in outer catch
+            throw error;
+          }
+          // Log other errors and fall back to mock count
+          console.error('Failed to fetch plugins:', error);
           pluginCount = 5; // fall back to mock count
         }
 

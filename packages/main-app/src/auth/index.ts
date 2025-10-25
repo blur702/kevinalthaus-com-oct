@@ -8,6 +8,23 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
+/**
+ * Validates password strength
+ * Requires: at least 8 characters, one uppercase, one lowercase, one digit, one special character
+ */
+function isValidPassword(password: string): boolean {
+  if (password.length < 8) {
+    return false;
+  }
+
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  return hasUpperCase && hasLowerCase && hasDigit && hasSpecialChar;
+}
+
 // Secure JWT_SECRET handling - require real secret in production, generate random in development
 let JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -172,10 +189,24 @@ router.post(
       }
 
       // Validate password strength
-      if (password.length < 8) {
+      if (!isValidPassword(password)) {
         res.status(400).json({
           error: 'Bad Request',
-          message: 'Password must be at least 8 characters long',
+          message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character',
+        });
+        return;
+      }
+
+      // Check for existing username (case-insensitive)
+      const existingUser = await query<{ id: string }>(
+        'SELECT id FROM users WHERE LOWER(username) = LOWER($1)',
+        [username]
+      );
+
+      if (existingUser.rows.length > 0) {
+        res.status(409).json({
+          error: 'Conflict',
+          message: 'Username already exists',
         });
         return;
       }
@@ -277,9 +308,8 @@ router.post(
       }
 
       // Trim username to avoid accidental whitespace-caused failures
-      // Case policy: logins are case-sensitive by design. If business rules
-      // require case-insensitive logins, compare using LOWER(username) and
-      // LOWER($1) and ensure an index exists on LOWER(username).
+      // Case policy: logins are case-insensitive. Username lookups use LOWER()
+      // and a functional index on LOWER(username) exists for performance.
       const normalizedUsername = username.trim();
 
       if (!normalizedUsername || !password) {
@@ -298,7 +328,7 @@ router.post(
         password_hash: string;
         role: string;
         is_active: boolean;
-      }>('SELECT * FROM users WHERE username = $1', [normalizedUsername]);
+      }>('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [normalizedUsername]);
 
       const user = result.rows.length > 0 ? result.rows[0] : null;
 
@@ -340,9 +370,6 @@ router.post(
         return;
       }
 
-      // Update last login
-      await query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
-
       // Generate tokens
       const tokenPayload: TokenPayload = {
         userId: user.id,
@@ -353,16 +380,22 @@ router.post(
       const accessToken = generateAccessToken(tokenPayload);
       const refreshToken = generateRefreshToken();
 
-      // Store refresh token with context binding (user agent, IP) for security
+      // Store refresh token and update last_login in a transaction
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS);
       const userAgent = req.get('User-Agent') || 'Unknown';
 
-      await query(
-        `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip, user_agent)
-       VALUES ($1, $2, $3, $4, $5)`,
-        [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req), userAgent]
-      );
+      await transaction(async (client) => {
+        // Store refresh token with context binding (user agent, IP) for security
+        await client.query(
+          `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, created_by_ip, user_agent)
+         VALUES ($1, $2, $3, $4, $5)`,
+          [user.id, hashSHA256(refreshToken), expiresAt, getClientIp(req), userAgent]
+        );
+
+        // Update last login only after successful token storage
+        await client.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+      });
 
       const accessMaxAgeMs = parseDurationToMs(JWT_EXPIRES_IN, 15 * 60 * 1000);
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;

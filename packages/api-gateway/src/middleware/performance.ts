@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import type { ParsedQs } from 'qs';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import cookie from 'cookie';
 
 interface CacheEntry {
   data: unknown;
@@ -118,15 +119,17 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   let hasAuthCookie = false;
   const cookieHeader = req.headers.cookie;
   if (cookieHeader) {
-    const pairs = cookieHeader.split(';');
-    for (const pair of pairs) {
-      const eq = pair.indexOf('=');
-      const name = (eq >= 0 ? pair.substring(0, eq) : pair).trim().toLowerCase();
-      const value = eq >= 0 ? pair.substring(eq + 1).trim() : '';
-      if (authCookieNames.includes(name) && value.length > 0) {
-        hasAuthCookie = true;
-        break;
+    try {
+      const cookies = cookie.parse(cookieHeader);
+      for (const name of authCookieNames) {
+        if (cookies[name] && cookies[name].length > 0) {
+          hasAuthCookie = true;
+          break;
+        }
       }
+    } catch (error) {
+      // If cookie parsing fails, treat as no auth cookie
+      hasAuthCookie = false;
     }
   }
   if (hasAuthHeader || hasAuthCookie) {
@@ -175,6 +178,12 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
       cacheControlStr.includes('no-cache') ||
       cacheControlStr.includes('private');
     if (shouldSkipCache) {
+      return;
+    }
+
+    // Skip caching if response has Vary header (too complex to handle correctly)
+    const varyHeader = res.getHeader('Vary');
+    if (varyHeader) {
       return;
     }
 

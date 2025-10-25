@@ -1,5 +1,6 @@
 import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
 import validator from 'validator';
+import semver from 'semver';
 
 const ajv = new Ajv({ allErrors: true, strict: true });
 
@@ -54,13 +55,9 @@ export function validatePluginName(name: string): boolean {
 }
 
 export function validatePluginVersion(version: string): boolean {
-  // Guard against extremely long inputs to prevent ReDoS-style behavior
-  if (typeof version !== 'string' || version.length === 0 || version.length > 256) {
+  // Use battle-tested semver library to avoid ReDoS issues
+  if (typeof version !== 'string') {
     return false;
   }
-  // Safe semver-like pattern with explicit dot separators
-  // e.g., 1.2.3, 1.2.3-alpha.1, 1.2.3+build.5, 1.2.3-alpha+build
-  // Dots are treated as literal separators, not inside character classes
-  const pattern = /^\d+\.\d+\.\d+(?:-[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)?(?:\+[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)?$/;
-  return pattern.test(version);
+  return semver.valid(version) !== null;
 }

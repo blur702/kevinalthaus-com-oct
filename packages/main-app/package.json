@@ -2,7 +2,7 @@
   "name": "@monorepo/main-app",
   "version": "1.0.0",
   "description": "Main application server",
-  "main": "dist/index.js",
+  "main": "dist/server.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -b",
@@ -19,6 +19,10 @@
     "express"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
     "@monorepo/shared": "^1.0.0",
     "@mui/material": "^5.18.0",

@@ -1,9 +1,15 @@
 import { Router, Response } from 'express';
 import { query } from '../db';
-import { hashPassword, validateEmail } from '@monorepo/shared';
+import { hashPassword, validateEmail, createLogger, LogLevel } from '@monorepo/shared';
 import { Role, Capability } from '@monorepo/shared';
 import { AuthenticatedRequest, authMiddleware } from '../auth';
 import { requireRole, requireCapability } from '../auth/rbac-middleware';
+
+const logger = createLogger({
+  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
+  service: 'main-app',
+  format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
+});
 
 const router = Router();
 
@@ -120,7 +126,7 @@ router.get(
         },
       });
     } catch (error) {
-      console.error('[Users] List error:', error);
+      logger.error('List users error', error as Error);
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to fetch users',
@@ -163,7 +169,7 @@ router.get(
 
       res.json({ user: result.rows[0] });
     } catch (error) {
-      console.error('[Users] Get error:', error);
+      logger.error('Get user error', error as Error);
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to fetch user',
@@ -242,7 +248,7 @@ router.post(
         });
         return;
       }
-      console.error('[Users] Create error:', error);
+      logger.error('Create user error', error as Error);
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to create user',
@@ -363,7 +369,7 @@ router.patch(
         });
         return;
       }
-      console.error('[Users] Update error:', error);
+      logger.error('Update user error', error as Error);
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to update user',
@@ -402,7 +408,7 @@ router.delete(
 
       res.json({ message: 'User deleted successfully' });
     } catch (error) {
-      console.error('[Users] Delete error:', error);
+      logger.error('Delete user error', error as Error);
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to delete user',

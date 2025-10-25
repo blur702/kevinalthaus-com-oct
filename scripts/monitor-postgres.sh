@@ -7,9 +7,10 @@ POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-kevinalthaus}"
 FORMAT="${1}"
 
-# Check if container is running
-if ! docker ps | grep -q "$CONTAINER_NAME"; then
-    echo "ERROR: PostgreSQL container is not running" >&2
+# Check if container is running using exact name match
+RUNNING_CONTAINERS=$(docker ps --filter "name=^${CONTAINER_NAME}$" --format "{{.Names}}" 2>/dev/null)
+if [ -z "$RUNNING_CONTAINERS" ]; then
+    echo "ERROR: PostgreSQL container '$CONTAINER_NAME' is not running" >&2
     exit 2
 fi
 
@@ -76,6 +77,13 @@ if [ "$CONNECTION_PERCENT" -gt 90 ]; then
 fi
 
 if [ "$FORMAT" == "--json" ]; then
+    # Check if jq is available for JSON escaping
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "ERROR: jq is required for JSON output but is not installed" >&2
+        echo "Install jq with: apt-get install jq (Debian/Ubuntu) or brew install jq (macOS)" >&2
+        exit 3
+    fi
+
     # JSON output with dynamic status
     # Escape string fields for JSON safety
     STATUS_JSON=$(printf '%s' "$STATUS" | jq -R -s -c '.')

@@ -130,8 +130,8 @@ function generateShortHash(input: string): string {
     hash = Math.imul(hash, 16777619);
   }
 
-  // Convert to base36 and ensure fixed hash length
-  const hashStr = Math.abs(hash).toString(36);
+  // Convert to base36 using unsigned right shift to avoid edge case with most-negative 32-bit int
+  const hashStr = (hash >>> 0).toString(36);
   const result = hashStr.length >= HASH_LENGTH ? hashStr.substring(0, HASH_LENGTH) : hashStr.padStart(HASH_LENGTH, '0');
 
   // Cache the result

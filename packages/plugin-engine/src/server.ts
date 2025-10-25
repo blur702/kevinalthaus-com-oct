@@ -28,7 +28,8 @@ function verifyInternalToken(req: express.Request, res: express.Response, next: 
   const expectedStr = INTERNAL_GATEWAY_TOKEN || '';
   const a = Buffer.from(providedStr);
   const b = Buffer.from(expectedStr);
-  const valid = a.length === b.length && timingSafeEqual(a, b);
+  // Require non-empty tokens and use timing-safe comparison
+  const valid = a.length > 0 && b.length > 0 && a.length === b.length && timingSafeEqual(a, b);
 
   if (!valid) {
     // eslint-disable-next-line no-console

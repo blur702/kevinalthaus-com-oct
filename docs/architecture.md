@@ -6,14 +6,16 @@ The platform uses a microservices architecture designed for scalability, securit
 
 ## Services and Ports
 
-- API Gateway: 3000 (dev), 4000 (prod container mapping)
-- Main App: 3001 (internal service)
-- Frontend: 3002 (host mapped to container 3000 in prod)
-- Admin: 3003 (host mapped to container 3000 in prod)
-- Plugin Engine: 3004 (internal service, host mapped to container 3004 in prod)
-- Python Service: 8000 (internal service)
-- PostgreSQL: 5432
-- Redis: 6379
+- API Gateway: host mapped (4000:3000 in prod, 3000:3000 in dev) - external access point
+- Main App: internal only (3001, no host port in prod) - accessed via API Gateway
+- Frontend: host mapped (3002:3000 in prod) - serves static assets
+- Admin: host mapped (3003:3000 in prod) - serves admin UI
+- Plugin Engine: internal only (3004, no host port in prod) - accessed via API Gateway
+- Python Service: internal only (8000, no host port in prod) - accessed via API Gateway
+- PostgreSQL: internal only (5432, no host port in prod)
+- Redis: internal only (6379, no host port in prod)
+
+**Note:** In production, external access to backend services should route through the API Gateway (port 4000) unless a service has an explicit host mapping listed above. Internal services communicate directly using container networking.
 
 ## High-Level Diagram
 

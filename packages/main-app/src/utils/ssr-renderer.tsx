@@ -35,6 +35,7 @@ export function renderReactSSR(component: React.ReactElement, options: SSRRender
   const html = renderToString(app);
 
   // Create full HTML document with Material-UI styling
+  const bodyAttrs = options.csrfToken ? ` data-csrf-token="${escapeHtml(options.csrfToken)}"` : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -64,7 +65,7 @@ export function renderReactSSR(component: React.ReactElement, options: SSRRender
   </style>
   ${options.additionalHead || ''}
 </head>
-<body>
+<body${bodyAttrs}>
   ${html}
   ${options.additionalBody || ''}
 </body>

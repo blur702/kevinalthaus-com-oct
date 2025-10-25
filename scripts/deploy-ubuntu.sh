@@ -206,17 +206,24 @@ if [ -f "$APP_DIR/.env" ]; then
     # Optional: allow skipping env validation
     if [ "${SKIP_ENV_VALIDATION:-0}" != "1" ]; then
         # Refined placeholder detection to reduce false positives
-        if grep -qE '(CHANGE_ME\b)|(<[A-Z0-9_]+>)|(\bplaceholder\b)|(\bexample\b)|(your_[A-Z0-9_]+)' "$APP_DIR/.env"; then
-            error "Found placeholder values in .env file. Please replace all placeholders with actual values before deployment. Set SKIP_ENV_VALIDATION=1 to bypass."
+        # Only match placeholders in assignment context (after =) to ignore comments
+        if grep -qE '=(.*)(CHANGE_ME\b)|(<[A-Z0-9_]+>)|(\bplaceholder\b)|(\bexample\b)|(your_[A-Z0-9_]+)' "$APP_DIR/.env"; then
+            error "Found placeholder values in .env file. Please replace all placeholders with actual values before deployment. If this detection is incorrect, set SKIP_ENV_VALIDATION=1 to bypass the check."
         fi
     else
         warn "SKIP_ENV_VALIDATION=1 set; skipping .env placeholder checks"
     fi
 
-    # Source the .env file and check required variables
-    set -a
-    source "$APP_DIR/.env"
-    set +a
+    # Parse the .env file safely (without executing commands)
+    # Only extract simple KEY=VALUE lines, ignore comments and blank lines
+    while IFS='=' read -r key value; do
+        # Skip blank lines and comments
+        [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+        # Remove leading/trailing whitespace and quotes from value
+        value=$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/")
+        # Export the variable (sanitized - no command execution)
+        export "$key=$value"
+    done < "$APP_DIR/.env"
 
     # Validate JWT_SECRET
     if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" = "" ]; then

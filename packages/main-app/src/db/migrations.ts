@@ -199,6 +199,17 @@ export async function runMigrations(): Promise<void> {
       `);
     });
 
+    await runMigration('08-add-case-insensitive-username-index', async (client: PoolClient) => {
+      // Create functional index on LOWER(username) for case-insensitive lookups
+      await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower ON users(LOWER(username));
+      `);
+
+      // Note: The existing UNIQUE constraint on username column remains for backward compatibility
+      // The functional index ensures case-insensitive uniqueness enforcement
+      // Logins now use LOWER(username) = LOWER($1) with this index for performance
+    });
+
     // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');
   } catch (error) {

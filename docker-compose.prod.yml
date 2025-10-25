@@ -18,8 +18,7 @@ services:
       - ./secrets/server.key:/etc/ssl/private/server.key:ro
     command: postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
     healthcheck:
-      test:
-        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-kevinalthaus}']
+      test: 'pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-kevinalthaus}'
       interval: 30s
       timeout: 10s
       retries: 5

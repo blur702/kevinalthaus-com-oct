@@ -69,8 +69,8 @@ const CSRF_SECRET: string = (() => {
     const resolvedPath = path.resolve(requestedPath);
     const relativePath = path.relative(baseDir, resolvedPath);
 
-    // Reject paths outside baseDir or starting with '..'
-    if (relativePath.startsWith('..')) {
+    // Reject paths outside baseDir (check for '..' or path separator at start)
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
       logger.error('CSRF_SECRET_FILE path traversal attempt blocked', undefined, {
         requested: requestedPath,
         resolved: resolvedPath,
@@ -164,7 +164,15 @@ function getCookie(req: express.Request, name: string): string | undefined {
     const k = c.substring(0, eqIndex);
     const v = c.substring(eqIndex + 1);
     if (k === name) {
-      return decodeURIComponent(v || '');
+      try {
+        return decodeURIComponent(v || '');
+      } catch (error) {
+        // Handle malformed cookie values - only catch URIError
+        if (error instanceof URIError) {
+          return undefined;
+        }
+        throw error;
+      }
     }
   }
   return undefined;
@@ -267,7 +275,23 @@ function csrfProtection(
     }
     // Fallback to Referer if Origin not present
     else if (referer) {
-      const refererUrl = new URL(referer);
+      let refererUrl: URL;
+      try {
+        refererUrl = new URL(referer);
+      } catch (error) {
+        // Handle malformed Referer URL
+        if (error instanceof TypeError) {
+          logger.warn('CSRF: Malformed Referer header', { referer });
+          res
+            .status(403)
+            .type('html')
+            .send(
+              layout('Forbidden', "<p>Malformed Referer header</p><p><a href='/admin/plugins'>Back</a></p>")
+            );
+          return;
+        }
+        throw error;
+      }
       const refererOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
       if (!allowedOrigins.includes(refererOrigin)) {
         logger.warn('CSRF: Invalid Referer header', { referer, refererOrigin, allowedOrigins });
