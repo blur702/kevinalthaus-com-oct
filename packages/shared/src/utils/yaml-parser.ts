@@ -78,8 +78,9 @@ export function parsePluginManifest(content: string): PluginManifest {
 
 export function validatePluginManifest(data: unknown): PluginManifest {
   if (!manifestValidator(data)) {
-    // Clone errors immediately to avoid being overwritten by concurrent validations
-    const clonedErrors = (manifestValidator.errors || []).map((e) => ({ ...(e as object) }));
+    // Deep clone errors to avoid mutation from concurrent validations
+    // Using structuredClone (available in Node.js 20+) for immutable snapshot
+    const clonedErrors = structuredClone(manifestValidator.errors || []);
     throw new ManifestValidationError('Plugin manifest validation failed', clonedErrors);
   }
 

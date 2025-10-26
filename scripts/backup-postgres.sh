@@ -16,17 +16,34 @@ if [ -z "$BACKUP_DIR" ]; then
   exit 1
 fi
 
-# Prevent dangerous paths
+# Resolve path early to handle symlinks and normalize
+if ! RESOLVED_BACKUP_DIR="$(realpath -m "$BACKUP_DIR" 2>/dev/null)"; then
+  echo "[$(date)] ERROR: Failed to resolve BACKUP_DIR path: $BACKUP_DIR" >&2
+  exit 1
+fi
+
+# Validate realpath succeeded and returned non-empty result
+if [ -z "$RESOLVED_BACKUP_DIR" ]; then
+  echo "[$(date)] ERROR: realpath returned empty path for: $BACKUP_DIR" >&2
+  exit 1
+fi
+
+# Prevent dangerous paths (exact match and prefix match)
 DANGEROUS_PATHS=("/" "/root" "/home" "/etc" "/usr" "/bin" "/sbin" "/var" "/sys" "/proc" "/dev")
 for dangerous in "${DANGEROUS_PATHS[@]}"; do
-  if [ "$BACKUP_DIR" = "$dangerous" ]; then
-    echo "[$(date)] ERROR: BACKUP_DIR cannot be set to system path: $BACKUP_DIR" >&2
+  # Check exact match
+  if [ "$RESOLVED_BACKUP_DIR" = "$dangerous" ]; then
+    echo "[$(date)] ERROR: BACKUP_DIR cannot be set to system path: $RESOLVED_BACKUP_DIR" >&2
+    exit 1
+  fi
+  # Check prefix match (subpath of dangerous directory)
+  if [[ "$RESOLVED_BACKUP_DIR" == "$dangerous"/* ]]; then
+    echo "[$(date)] ERROR: BACKUP_DIR cannot be under system path $dangerous: $RESOLVED_BACKUP_DIR" >&2
     exit 1
   fi
 done
 
-# Resolve and validate path
-RESOLVED_BACKUP_DIR="$(realpath -m "$BACKUP_DIR" 2>/dev/null || echo "$BACKUP_DIR")"
+# Additional check: ensure not root directory
 if [ "$RESOLVED_BACKUP_DIR" = "/" ]; then
   echo "[$(date)] ERROR: BACKUP_DIR resolves to root directory" >&2
   exit 1
@@ -58,9 +75,19 @@ fi
 TEMP_FILE="${BACKUP_FILE}.tmp"
 docker exec "$CONTAINER_NAME" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "$TEMP_FILE"
 
-# Verify pipeline succeeded and temp file is non-empty
-if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-    echo "[$(date)] ERROR: pg_dump command failed"
+# Capture pipeline status for both pg_dump and gzip
+PGDUMP_STATUS="${PIPESTATUS[0]}"
+GZIP_STATUS="${PIPESTATUS[1]}"
+
+# Verify both pg_dump and gzip succeeded
+if [ "$PGDUMP_STATUS" -ne 0 ]; then
+    echo "[$(date)] ERROR: pg_dump command failed with exit code $PGDUMP_STATUS"
+    rm -f "$TEMP_FILE"
+    exit 1
+fi
+
+if [ "$GZIP_STATUS" -ne 0 ]; then
+    echo "[$(date)] ERROR: gzip command failed with exit code $GZIP_STATUS"
     rm -f "$TEMP_FILE"
     exit 1
 fi

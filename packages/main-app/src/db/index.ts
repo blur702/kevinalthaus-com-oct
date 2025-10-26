@@ -121,6 +121,16 @@ if (process.env.NODE_ENV === 'development') {
   );
 }
 
+// Query fingerprint secret for HMAC (required in production)
+const FINGERPRINT_SECRET = process.env.FINGERPRINT_SECRET;
+if (!FINGERPRINT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'FINGERPRINT_SECRET environment variable is required in production for secure query fingerprinting. ' +
+      'Please set FINGERPRINT_SECRET in your .env file to a secure random value.'
+  );
+}
+const fingerprintSecret = FINGERPRINT_SECRET || 'dev-default-secret-change-me-in-production';
+
 // Logging configuration for query execution
 // LOG_LEVEL: controls verbosity (debug logs all queries, info/warn/error use sampling)
 // QUERY_LOG_SAMPLE_RATE: log every Nth successful query (default: 10)

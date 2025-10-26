@@ -39,6 +39,10 @@ if [ "$enable_ssl" = true ]; then
   # Ensure cert directories exist
   mkdir -p "$CERT_DIR" "$KEY_DIR"
 
+  # Harden key directory permissions - only postgres user can access
+  chown postgres:postgres "$KEY_DIR"
+  chmod 700 "$KEY_DIR"
+
   if [ ! -f "$CRT_PATH" ] || [ ! -f "$KEY_PATH" ]; then
     # In production, require CA-signed certificates
     if [ "$NODE_ENV" = "production" ]; then

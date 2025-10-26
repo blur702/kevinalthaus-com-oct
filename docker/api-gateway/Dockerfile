@@ -1,3 +1,27 @@
+# Builder stage
+FROM node:22-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY lerna.json ./
+COPY tsconfig.json ./
+COPY packages/shared/package*.json ./packages/shared/
+COPY packages/api-gateway/package*.json ./packages/api-gateway/
+
+# Install all dependencies (including devDependencies for build)
+RUN npm ci && npm cache clean --force
+
+# Copy source code
+COPY packages/shared ./packages/shared
+COPY packages/api-gateway ./packages/api-gateway
+
+# Build packages
+RUN npm run build
+
+# Production stage
 FROM node:22-alpine
 
 # Install curl for healthcheck
@@ -10,22 +34,19 @@ RUN addgroup -g 1001 -S appuser && \
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files for production install
 COPY package*.json ./
 COPY lerna.json ./
 COPY tsconfig.json ./
 COPY packages/shared/package*.json ./packages/shared/
 COPY packages/api-gateway/package*.json ./packages/api-gateway/
 
-# Install dependencies (including devDependencies for build)
-RUN npm ci && npm cache clean --force
+# Install only production dependencies
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Copy source code
-COPY packages/shared ./packages/shared
-COPY packages/api-gateway ./packages/api-gateway
-
-# Build packages
-RUN npm run build
+# Copy built artifacts from builder stage
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/api-gateway/dist ./packages/api-gateway/dist
 
 # Set ownership and switch to non-root user
 RUN chown -R appuser:appuser /app

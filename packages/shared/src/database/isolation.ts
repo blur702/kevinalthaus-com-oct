@@ -1,3 +1,5 @@
+import { Parser } from 'node-sql-parser';
+
 export interface IsolationPolicy {
   allowCrossPluginQueries: boolean;
   allowSystemSchemaAccess: boolean;
@@ -147,8 +149,8 @@ export class DatabaseIsolationEnforcer {
       }
       this.fallbackComplexity = Math.floor(fc);
     } else {
-      // Conservative default: 50% of max complexity, minimum 1, maximum 100
-      this.fallbackComplexity = Math.max(1, Math.min(100, Math.floor(this.maxQueryComplexity * 0.5)));
+      // Default: 80% of max complexity, minimum 1, maximum 100
+      this.fallbackComplexity = Math.max(1, Math.min(100, Math.floor(this.maxQueryComplexity * 0.8)));
     }
     this.logger =
       options.logger ||
@@ -187,15 +189,8 @@ export class DatabaseIsolationEnforcer {
 
   // AST-based complexity analysis using node-sql-parser to avoid string/comment false-positives
   private estimateQueryComplexity(query: string): number {
-    // Lazy import to avoid burdening consumers who don't need this
-    // Provide minimal typing for the parser to avoid implicit any
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
-    const { Parser }: { Parser: new () => { astify: (sql: string, opts?: { database?: string }) => Record<string, unknown> | Record<string, unknown>[] } } = require('node-sql-parser');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const parser: { astify: (sql: string, opts?: { database?: string }) => Record<string, unknown> | Record<string, unknown>[] } = new Parser();
-
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      const parser = new Parser();
       const ast = parser.astify(query, { database: 'PostgreSQL' });
       const statements: Array<Record<string, unknown>> = Array.isArray(ast) ? ast : [ast];
 

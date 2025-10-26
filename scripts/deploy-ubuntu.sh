@@ -219,9 +219,17 @@ if [ -f "$APP_DIR/.env" ]; then
     while IFS='=' read -r key value; do
         # Skip blank lines and comments
         [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+
+        # Validate variable name: only letters, digits, underscores, not starting with digit
+        if ! [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            warn "Skipping invalid variable name in .env: $key"
+            continue
+        fi
+
         # Remove leading/trailing whitespace and quotes from value
         value=$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/")
-        # Export the variable (sanitized - no command execution)
+
+        # Export the variable using safe assignment (no eval or indirect expansion)
         export "$key=$value"
     done < "$APP_DIR/.env"
 

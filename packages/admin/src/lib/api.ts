@@ -33,7 +33,7 @@ export interface PluginListResponse {
     name: string;
     version?: string;
     description?: string;
-    status: 'installed' | 'active' | 'inactive' | 'error' | string;
+    status: 'installed' | 'active' | 'inactive' | 'error';
   }>;
 }
 

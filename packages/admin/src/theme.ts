@@ -91,6 +91,8 @@ export const adminTheme = createTheme({
       fontWeight: 500,
     },
   },
+  // Intentionally smaller spacing (4) and borderRadius (6) for denser admin UI
+  // Frontend uses spacing: 8 and borderRadius: 8 for more spacious public-facing design
   spacing: 4,
   shape: {
     borderRadius: 6,
