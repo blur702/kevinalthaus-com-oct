@@ -136,10 +136,21 @@ app.use(keepAliveMiddleware);
   app.use(
     cors((req, callback) => {
       const allowAll = corsOrigins.includes('*');
+
+      // Handle wildcard origin
       if (allowAll) {
-        callback(null, { origin: '*', credentials: false });
+        if (corsCredentials) {
+          // Reject wildcard with credentials - security violation
+          // Browsers will block this, so we must reject the configuration
+          callback(null, { origin: false, credentials: true });
+          return;
+        }
+        // Allow wildcard without credentials
+        callback(null, { origin: true, credentials: false });
         return;
       }
+
+      // Non-wildcard: check specific origin against allowlist
       const origin = req.header('Origin');
       let isAllowed = false;
 

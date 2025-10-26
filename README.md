@@ -26,7 +26,7 @@ Full docs are now consolidated under `/docs`:
 
 ## Quick Start
 
-**Prerequisites:** Node.js 20+, Docker, Docker Compose
+**Prerequisites:** Node.js 20+, Docker, Docker Compose, OpenSSL (for production SSL)
 
 ```bash
 # Clone and setup
@@ -41,10 +41,21 @@ npm install
 cp .env.example .env
 # Edit .env with your settings
 
+# For production: Generate SSL certificates for PostgreSQL
+# Create secrets directory and generate self-signed certs
+mkdir -p secrets
+./scripts/generate-ssl-certs.sh
+
 # Start services
 docker-compose up -d postgres redis
 npm run dev:all
 ```
+
+**Important for Production:**
+- SSL certificates required in `./secrets/`: `server.crt` and `server.key`
+- Run `./scripts/generate-ssl-certs.sh` to generate self-signed certs
+- For production, replace with CA-signed certificates
+- Ensure `server.key` has permissions 600: `chmod 600 ./secrets/server.key`
 
 **Access Points:**
 - Frontend: http://localhost:3002

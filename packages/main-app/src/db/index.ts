@@ -135,8 +135,8 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
   params?: unknown[]
 ): Promise<QueryResult<T>> {
   const start = Date.now();
-  // Generate query fingerprint for correlation without exposing sensitive data
-  const queryHash = crypto.createHash('sha256').update(text).digest('hex').substring(0, 12);
+  // Generate query fingerprint using HMAC for secure, non-reversible fingerprinting
+  const queryHash = crypto.createHmac('sha256', fingerprintSecret).update(text).digest('hex').substring(0, 16);
 
   try {
     const result = await pool.query<T>(text, params);
@@ -161,9 +161,22 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
     // Sanitize error: strip SQL text and sensitive data from error messages
     // Never log the full error object which may contain query text or parameters
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    // Strip potential SQL fragments from error message (common in syntax errors)
-    // Replace quoted strings which often contain SQL snippets
-    const sanitizedMessage = errorMessage.replace(/".*?"/g, '[SQL_REDACTED]');
+    // Strip potential SQL fragments from error message
+    let sanitizedMessage = errorMessage
+      // Remove double-quoted strings
+      .replace(/"[^"]*"/g, '[REDACTED]')
+      // Remove single-quoted strings
+      .replace(/'[^']*'/g, '[REDACTED]')
+      // Remove backtick-quoted strings
+      .replace(/`[^`]*`/g, '[REDACTED]')
+      // Remove numeric literals
+      .replace(/\b\d+(\.\d+)?\b/g, '[NUM]')
+      // Remove SQL comments (-- style)
+      .replace(/--[^\n]*/g, '')
+      // Remove SQL comments (/* */ style)
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    // Trim whitespace
+    sanitizedMessage = sanitizedMessage.trim();
 
     console.error('[DB] Query error', {
       queryHash,

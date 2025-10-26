@@ -1,4 +1,4 @@
-import { DatabaseIsolationEnforcer } from '../../src/database/isolation';
+import { DatabaseIsolationEnforcer } from '../database/isolation';
 
 const limits = {
   maxQueryComplexity: Number.MAX_SAFE_INTEGER,

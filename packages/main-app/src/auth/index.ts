@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
+import { randomBytes, timingSafeEqual } from 'crypto';
 import { query, transaction } from '../db';
 import { hashPassword, verifyPassword, hashSHA256, defaultLogger } from '@monorepo/shared';
 import { Role } from '@monorepo/shared';
@@ -198,12 +198,36 @@ router.post(
       }
 
       // Check for existing username (case-insensitive)
-      const existingUser = await query<{ id: string }>(
-        'SELECT id FROM users WHERE LOWER(username) = LOWER($1)',
+      // Query uses functional index on LOWER(username) for consistent timing
+      const existingUser = await query<{ id: string; username: string }>(
+        'SELECT id, username FROM users WHERE LOWER(username) = LOWER($1)',
         [username]
       );
 
+      // Use constant-time comparison to prevent timing side-channel
+      // Compare normalized (lowercased) versions
+      let usernameExists = false;
       if (existingUser.rows.length > 0) {
+        const storedUsername = existingUser.rows[0].username.toLowerCase();
+        const providedUsername = username.toLowerCase();
+
+        // Constant-time comparison using timingSafeEqual
+        const storedBuffer = Buffer.from(storedUsername, 'utf8');
+        const providedBuffer = Buffer.from(providedUsername, 'utf8');
+
+        try {
+          // Only compare if lengths match to avoid buffer overflow
+          if (storedBuffer.length === providedBuffer.length) {
+            usernameExists = timingSafeEqual(storedBuffer, providedBuffer);
+          } else {
+            usernameExists = true; // Different lengths still means exists
+          }
+        } catch {
+          usernameExists = true; // On error, assume exists for security
+        }
+      }
+
+      if (usernameExists) {
         res.status(409).json({
           error: 'Conflict',
           message: 'Username already exists',

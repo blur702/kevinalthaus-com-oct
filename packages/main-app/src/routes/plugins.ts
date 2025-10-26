@@ -11,6 +11,7 @@ import { pluginManager } from '../plugins/manager';
 import { createValidator } from '@monorepo/shared';
 import { PLUGIN_MANIFEST_SCHEMA } from '@monorepo/shared';
 import type { PluginManifest } from '@monorepo/shared';
+import { asyncHandler } from '../utils/asyncHandler';
 
 export const pluginsRouter = express.Router();
 
@@ -184,7 +185,7 @@ function verifySignature(checksumHex: string, signatureBase64: string, publicKey
 }
 
 // Upload plugin package
-pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) => {
+pluginsRouter.post('/upload', uploadPackage.single('package'), asyncHandler(async (req, res) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: 'Bad Request', message: 'No package file uploaded (field "package")' });
@@ -259,6 +260,18 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
       manifest,
     });
   } catch (error) {
+    // Clean up uploaded file on error
+    if (req.file) {
+      const filePath = (req.file as Express.Multer.File & { path?: string }).path;
+      if (filePath) {
+        try {
+          await fs.unlink(filePath);
+        } catch (unlinkErr) {
+          logger.warn('Failed to delete uploaded file after error', { filePath, error: unlinkErr });
+        }
+      }
+    }
+
     logger.error('Error uploading plugin package', undefined, { error });
     const isProduction = process.env.NODE_ENV === 'production';
     res.status(500).json({
@@ -266,10 +279,9 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), async (req, res) 
       message: isProduction ? 'An error occurred while uploading the package' : (error as Error).message,
     });
   }
-});
+}));
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
-pluginsRouter.post('/:id/install', async (req, res) => {
+pluginsRouter.post('/:id/install', asyncHandler(async (req, res) => {
   const { id } = req.params;
   if (!validatePluginId(id)) {
     res.status(400).json({ error: 'Bad Request', message: 'Invalid plugin ID format' });
@@ -287,10 +299,9 @@ pluginsRouter.post('/:id/install', async (req, res) => {
       message: isProduction ? 'Failed to install plugin' : (error as Error).message,
     });
   }
-});
+}));
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
-pluginsRouter.post('/:id/activate', async (req, res) => {
+pluginsRouter.post('/:id/activate', asyncHandler(async (req, res) => {
   const { id } = req.params;
   if (!validatePluginId(id)) {
     res.status(400).json({ error: 'Bad Request', message: 'Invalid plugin ID format' });
@@ -308,10 +319,9 @@ pluginsRouter.post('/:id/activate', async (req, res) => {
       message: isProduction ? 'Failed to activate plugin' : (error as Error).message,
     });
   }
-});
+}));
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
-pluginsRouter.post('/:id/deactivate', async (req, res) => {
+pluginsRouter.post('/:id/deactivate', asyncHandler(async (req, res) => {
   const { id } = req.params;
   if (!validatePluginId(id)) {
     res.status(400).json({ error: 'Bad Request', message: 'Invalid plugin ID format' });
@@ -329,10 +339,9 @@ pluginsRouter.post('/:id/deactivate', async (req, res) => {
       message: isProduction ? 'Failed to deactivate plugin' : (error as Error).message,
     });
   }
-});
+}));
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
-pluginsRouter.post('/:id/uninstall', async (req, res) => {
+pluginsRouter.post('/:id/uninstall', asyncHandler(async (req, res) => {
   const { id } = req.params;
   if (!validatePluginId(id)) {
     res.status(400).json({ error: 'Bad Request', message: 'Invalid plugin ID format' });
@@ -350,7 +359,7 @@ pluginsRouter.post('/:id/uninstall', async (req, res) => {
       message: isProduction ? 'Failed to uninstall plugin' : (error as Error).message,
     });
   }
-});
+}));
 
 export default pluginsRouter;
 

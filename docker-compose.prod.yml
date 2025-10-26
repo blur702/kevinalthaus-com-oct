@@ -5,7 +5,7 @@ services:
     image: postgres:16-alpine
     restart: always
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
     volumes:
@@ -17,6 +17,8 @@ services:
       - ./secrets/server.crt:/etc/ssl/certs/server.crt:ro
       - ./secrets/server.key:/etc/ssl/private/server.key:ro
     command: postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
+    secrets:
+      - postgres_password
     healthcheck:
       test: 'pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-kevinalthaus}'
       interval: 30s
