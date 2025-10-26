@@ -167,11 +167,30 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   }
 
   // Bypass cache for authenticated requests to prevent user-specific data leakage
-  // Check for common auth indicators: Authorization header or populated req.user from auth middleware
+  // Check for common auth indicators: Authorization header, populated req.user, or auth cookies
   const hasAuthHeader = Boolean(req.headers.authorization);
   const hasUserContext = Boolean((req as Request & { user?: unknown }).user);
 
-  if (hasAuthHeader || hasUserContext) {
+  // Check for cookie-based authentication
+  let hasAuthCookie = false;
+  const reqWithCookies = req as Request & { cookies?: Record<string, string> };
+  if (reqWithCookies.cookies) {
+    // Prefer parsed cookies from cookie-parser middleware
+    const cookieNames = Object.keys(reqWithCookies.cookies);
+    hasAuthCookie = cookieNames.some(name =>
+      ['session', 'sid', 'jwt', 'token', 'auth'].some(authCookie =>
+        name.toLowerCase().includes(authCookie)
+      )
+    );
+  } else if (req.headers.cookie) {
+    // Fallback: check raw cookie header for auth cookie patterns
+    const cookieHeader = req.headers.cookie.toLowerCase();
+    hasAuthCookie = ['session', 'sid', 'jwt', 'token', 'auth'].some(authCookie =>
+      cookieHeader.includes(authCookie)
+    );
+  }
+
+  if (hasAuthHeader || hasUserContext || hasAuthCookie) {
     next();
     return;
   }

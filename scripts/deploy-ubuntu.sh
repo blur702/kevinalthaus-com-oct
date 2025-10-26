@@ -80,7 +80,10 @@ if ! command -v docker &> /dev/null; then
 
     if [ "$ACTUAL_FINGERPRINT" != "$EXPECTED_FINGERPRINT" ]; then
         rm -f "$TEMP_GPG_FILE"
-        error "Docker GPG key fingerprint mismatch!\nExpected: $EXPECTED_FINGERPRINT\nActual: $ACTUAL_FINGERPRINT\nThis could indicate a security compromise. Aborting installation."
+        error "Docker GPG key fingerprint mismatch!
+Expected: $EXPECTED_FINGERPRINT
+Actual: $ACTUAL_FINGERPRINT
+This could indicate a security compromise. Aborting installation."
     fi
 
     log "✓ Docker GPG key fingerprint verified: $ACTUAL_FINGERPRINT"

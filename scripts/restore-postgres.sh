@@ -36,6 +36,14 @@ if [[ ! "$POSTGRES_DB" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     exit 1
 fi
 
+# Validate username to prevent SQL injection
+# Allow only alphanumeric, underscore, and hyphen characters
+if [[ ! "$POSTGRES_USER" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "ERROR: Invalid username. Only alphanumeric, underscore, and hyphen characters are allowed."
+    echo "Username: $POSTGRES_USER"
+    exit 1
+fi
+
 if [ ! -f "$BACKUP_FILE" ]; then
     echo "Error: Backup file not found: $BACKUP_FILE"
     exit 1

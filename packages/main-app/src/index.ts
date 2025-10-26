@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import crypto from 'crypto';
 import {
   compressionMiddleware,
   rateLimitMiddleware,
@@ -50,9 +51,23 @@ function verifyInternalToken(req: express.Request, res: express.Response, next: 
 
   const headerVal = req.headers['x-internal-token'];
   const providedToken = Array.isArray(headerVal) ? headerVal[0] : headerVal;
-  const normalized = typeof providedToken === 'string' ? providedToken.trim() : undefined;
+  const normalized = typeof providedToken === 'string' ? providedToken.trim() : '';
 
-  if (!normalized || normalized !== INTERNAL_GATEWAY_TOKEN) {
+  // Use timing-safe comparison to prevent timing attacks
+  // Hash both tokens to ensure fixed-length comparison
+  const expectedHash = crypto.createHash('sha256').update(INTERNAL_GATEWAY_TOKEN || '').digest();
+  const providedHash = crypto.createHash('sha256').update(normalized).digest();
+
+  let isValid = false;
+  try {
+    isValid = crypto.timingSafeEqual(expectedHash, providedHash);
+  } catch {
+    // timingSafeEqual throws if buffers have different lengths
+    // In this case, tokens don't match
+    isValid = false;
+  }
+
+  if (!isValid) {
     logger.warn('Unauthorized direct access attempt - missing or invalid internal token', {
       ip: req.ip,
       path: req.path,

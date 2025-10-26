@@ -8,7 +8,7 @@
 ## Quick Start (Docker)
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/blur702/kevinalthaus-com-oct.git
 cd kevinalthaus-com-oct
 cp .env.example .env
 

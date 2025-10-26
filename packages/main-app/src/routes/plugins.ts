@@ -175,7 +175,6 @@ function verifySignature(checksumHex: string, signatureBase64: string, publicKey
   try {
     const verifier = createVerify('RSA-SHA256');
     verifier.update(checksumHex, 'utf8');
-    verifier.end();
     const sig = Buffer.from(signatureBase64, 'base64');
     return verifier.verify(publicKeyPem, sig);
   } catch (err) {

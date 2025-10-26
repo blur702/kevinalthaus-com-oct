@@ -9,7 +9,7 @@
 ## Quick Start (Ubuntu)
 
 ```bash
-git clone https://github.com/kevinalthaus/kevinalthaus-com-oct.git
+git clone https://github.com/blur702/kevinalthaus-com-oct.git
 cd kevinalthaus-com-oct
 sudo ./scripts/deploy-ubuntu.sh
 
