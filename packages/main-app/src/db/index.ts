@@ -175,7 +175,7 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
       // Remove backtick-quoted strings
       .replace(/`[^`]*`/g, '[REDACTED]')
       // Remove numeric literals
-      .replace(/\b\d+(\.\d+)?\b/g, '[NUM]')
+      .replace(/\b\d+(?:\.\d+)?\b/g, '[NUM]')
       // Remove SQL comments (-- style)
       .replace(/--[^\n]*/g, '')
       // Remove SQL comments (/* */ style)

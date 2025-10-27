@@ -56,6 +56,8 @@ export function renderReactSSR(component: React.ReactElement, options: SSRRender
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(options.title)}</title>
+  <!-- TODO: Self-host fonts in production for better security and performance -->
+  <!-- Google Fonts serve different CSS per User-Agent, making SRI impractical -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
   ${styleTags}

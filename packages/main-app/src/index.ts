@@ -12,9 +12,7 @@ import {
   keepAliveMiddleware,
   cacheMiddleware,
 } from './middleware/performance';
-import { authRouter, authMiddleware } from './auth';
-import { requireRole } from './auth/rbac-middleware';
-import { Role } from '@monorepo/shared';
+import { authRouter } from './auth';
 import { usersRouter } from './users';
 import { uploadsRouter } from './uploads';
 import { healthCheck } from './db';
@@ -173,7 +171,10 @@ app.use(keepAliveMiddleware);
         // Request has Origin header - check if it's in allowlist
         isAllowed = corsOrigins.includes(origin);
       }
-      callback(null, { origin: isAllowed, credentials: corsCredentials });
+
+      // Only send credentials when origin is allowed
+      const credentialsForResponse = isAllowed ? corsCredentials : false;
+      callback(null, { origin: isAllowed, credentials: credentialsForResponse });
     })
   );
 app.use(morgan('combined'));

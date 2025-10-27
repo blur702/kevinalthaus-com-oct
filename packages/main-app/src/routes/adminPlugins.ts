@@ -234,17 +234,21 @@ function csrfProtection(
     const origin = req.get('Origin');
     const referer = req.get('Referer');
 
-    // Get allowed origins from environment (required for production)
+    // Get allowed origins from environment (required in all non-test environments)
     const adminAllowedOriginsEnv = process.env.ADMIN_ALLOWED_ORIGINS;
     let allowedOrigins: string[];
+
     if (!adminAllowedOriginsEnv) {
-      if (process.env.NODE_ENV === 'development') {
-        allowedOrigins = ['http://localhost:3003', 'https://localhost:3003'];
+      // Only allow test environment to proceed without configuration
+      if (process.env.NODE_ENV === 'test') {
+        // Use safe test-only default
+        allowedOrigins = ['http://localhost:3003'];
       } else {
+        // Fail fast for all non-test environments (including development)
         logger.error(
-          'ADMIN_ALLOWED_ORIGINS not configured for non-development environment',
+          'ADMIN_ALLOWED_ORIGINS environment variable is required',
           undefined,
-          { nodeEnv: process.env.NODE_ENV }
+          { nodeEnv: process.env.NODE_ENV || 'undefined' }
         );
         res
           .status(500)
@@ -252,7 +256,7 @@ function csrfProtection(
           .send(
             layout(
               'Configuration Error',
-              "<p>Server misconfiguration: ADMIN_ALLOWED_ORIGINS is required</p><p><a href='/admin/plugins'>Back</a></p>"
+              `<p>Server misconfiguration: ADMIN_ALLOWED_ORIGINS is required (NODE_ENV: ${escapeHtml(process.env.NODE_ENV || 'undefined')})</p><p><a href='/admin/plugins'>Back</a></p>`
             )
           );
         return;

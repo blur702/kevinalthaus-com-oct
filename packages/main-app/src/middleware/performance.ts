@@ -190,8 +190,12 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   // Check for cookie-based authentication
   let hasAuthCookie = false;
   const reqWithCookies = req as Request & { cookies?: Record<string, string> };
-  // Define exact auth cookie names to check (case-insensitive)
-  const authCookieNames = ['session', 'sid', 'jwt', 'token', 'auth', 'accesstoken', 'refreshtoken'];
+  // Get auth cookie names from env or use defaults (case-insensitive)
+  const authCookieNamesEnv = process.env.CACHE_AUTH_COOKIES || '';
+  const authCookieNames = authCookieNamesEnv
+    ? authCookieNamesEnv.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    : ['session', 'sid', 'jwt', 'token', 'auth', 'accesstoken', 'refreshtoken'];
+
   if (reqWithCookies.cookies) {
     // Prefer parsed cookies from cookie-parser middleware
     const cookieNames = Object.keys(reqWithCookies.cookies).map(k => k.toLowerCase());

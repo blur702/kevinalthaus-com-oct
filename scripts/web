@@ -281,11 +281,16 @@ display_status() {
     docker compose ps
     echo ""
 
-    # Detect which compose file is active by checking for the production overlay
+    # Detect production environment using definitive indicators
     local is_prod=false
-    if docker compose config --services 2>/dev/null | grep -q .; then
-        # Check if production compose file is being used
-        if [ -f "$PROJECT_ROOT/docker-compose.prod.yml" ] && docker compose -f docker-compose.yml -f docker-compose.prod.yml config 2>/dev/null | grep -q "api-gateway"; then
+
+    # 1. Check explicit environment variable (preferred)
+    if [ "${PRODUCTION:-}" = "true" ] || [ "${COMPOSE_ENV:-}" = "production" ]; then
+        is_prod=true
+    # 2. Fall back to checking if production containers are actually running
+    elif docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --quiet 2>/dev/null | grep -q .; then
+        # Verify these are prod containers by checking labels or specific services
+        if docker ps --filter "label=com.docker.compose.project=$PROJECT_NAME" --format "{{.Labels}}" 2>/dev/null | grep -q "docker-compose.prod.yml"; then
             is_prod=true
         fi
     fi
