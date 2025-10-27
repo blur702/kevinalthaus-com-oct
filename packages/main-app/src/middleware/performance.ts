@@ -43,6 +43,7 @@ class ResponseCache {
         }
         seen.add(val);
         const mapped = (val as unknown[]).map((v) => canonicalizeValue(v));
+        seen.delete(val);
         // Preserve array insertion order for cache key canonicalization
         return `[${mapped.join(',')}]`;
       }
@@ -55,6 +56,7 @@ class ResponseCache {
         seen.add(obj);
         const keys = Object.keys(obj).sort();
         const parts = keys.map((k) => `${k}:${canonicalizeValue(obj[k])}`);
+        seen.delete(obj);
         return `{${parts.join(',')}}`;
       }
       return JSON.stringify(String(val));
@@ -110,6 +112,16 @@ class ResponseCache {
       this.cache.delete(key);
       this.metadata.delete(baseKey);
       return null;
+    }
+
+    // Use embedded varyHeaders from CacheEntry for subsequent lookups
+    // If the entry has varyHeaders but they differ from metadata, regenerate key
+    if (entry.varyHeaders && entry.varyHeaders.length > 0) {
+      const embeddedKey = this.generateKey(req, entry.varyHeaders);
+      if (embeddedKey !== key) {
+        // Key mismatch - the metadata was stale or wrong
+        return null;
+      }
     }
 
     return entry;

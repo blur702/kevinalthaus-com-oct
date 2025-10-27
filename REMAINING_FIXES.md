@@ -100,32 +100,10 @@ export default defineConfig({
 **Issue**: Error writes to stdout (lines 10-14)
 **Fix**: Change `echo "ERROR:..."` to `echo "ERROR:..." >&2`
 
-### 9. Restore Script - Cleanup Trap
+### 9. Restore Script - Cleanup Trap ✅ RESOLVED
 **File**: `scripts/restore-postgres.sh`
-**Issue**: No cleanup if script exits early (lines 48-64)
-**Fix**:
-```bash
-#!/bin/bash
-set -euo pipefail
-
-SERVICES_STOPPED=0
-
-cleanup() {
-  if [ "$SERVICES_STOPPED" = "1" ]; then
-    echo "[$(date)] Restarting services from trap..."
-    docker compose -f docker-compose.yml -f docker-compose.prod.yml start api-gateway main-app
-  fi
-}
-
-trap cleanup EXIT
-
-# Before stopping services:
-SERVICES_STOPPED=1
-docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api-gateway main-app
-
-# After normal restart:
-SERVICES_STOPPED=0
-```
+**Status**: Already implemented (see lines 7-19)
+The script already includes a cleanup trap that restarts services if they were stopped and the script exits early.
 
 ### 10. Web Script - Production Detection ✅ RESOLVED
 **File**: `scripts/web`

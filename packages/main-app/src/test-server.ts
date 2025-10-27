@@ -5,7 +5,7 @@ const parsedPort = process.env.PORT ? Number(process.env.PORT) : NaN;
 const PORT = !isNaN(parsedPort) && Number.isFinite(parsedPort) && parsedPort >= 1 && parsedPort <= 65535 ? parsedPort : 3001;
 
 const server = http.createServer((req, res) => {
-  const url = req.url;
+  const url = req.url || '/';
   if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'healthy', service: 'main-app-simple' }));

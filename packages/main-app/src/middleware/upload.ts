@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { promises as fs, mkdirSync } from 'fs';
 import { randomBytes } from 'crypto';
-import { sanitizeFilename } from '@monorepo/shared';
+import { sanitizeFilename, defaultLogger as logger } from '@monorepo/shared';
 
 // Validate upload max size from environment variables
 const parsedMaxSize = parseInt(process.env.UPLOAD_MAX_SIZE || '10485760', 10);
@@ -269,11 +269,13 @@ export async function validateUploadedFile(
         // On promotion failure, clean up all files and return error
         await cleanupFiles(allFiles);
         // Log full error server-side for debugging
-        console.error('[Upload] File promotion error:', {
-          error: promotionErr instanceof Error ? promotionErr.message : String(promotionErr),
-          stack: promotionErr instanceof Error ? promotionErr.stack : undefined,
-          timestamp: new Date().toISOString(),
-        });
+        logger.error(
+          'File promotion error',
+          promotionErr instanceof Error ? promotionErr : new Error(String(promotionErr)),
+          {
+            timestamp: new Date().toISOString(),
+          }
+        );
         res.status(500).json({
           error: 'File validation failed',
           message: 'An internal error occurred during file validation',
@@ -297,11 +299,13 @@ export async function validateUploadedFile(
     await cleanupFiles(allFiles);
 
     // Log the full error server-side for debugging
-    console.error('[Upload] File validation error:', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      timestamp: new Date().toISOString(),
-    });
+    logger.error(
+      'File validation error',
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        timestamp: new Date().toISOString(),
+      }
+    );
     res.status(500).json({
       error: 'File validation failed',
       message: 'An internal error occurred during file validation',

@@ -57,17 +57,21 @@ export function renderReactSSR(component: React.ReactElement, options: SSRRender
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(options.title)}</title>
   <!-- Self-hosted fonts for better security and performance -->
-  <!-- To use self-hosted fonts:
-       1. Download Roboto (300/400/500/700) and Material Icons from Google Fonts
-       2. Place font files in packages/main-app/public/fonts/
-       3. Create @font-face CSS in packages/main-app/public/fonts/fonts.css
-       4. Add <link rel="stylesheet" href="/fonts/fonts.css"> below
-       5. Add <link rel="preload" as="font" href="/fonts/roboto-v30-latin-regular.woff2" type="font/woff2" crossorigin> for critical fonts
-       6. Remove the Google Fonts links below
-       7. Ensure static server serves fonts with cache headers: Cache-Control: public, max-age=31536000, immutable
+  <!--
+    Font files should be placed in packages/main-app/public/fonts/
+    with @font-face definitions in packages/main-app/public/fonts/fonts.css
+
+    Required fonts:
+    - Roboto (weights: 300, 400, 500, 700)
+    - Material Icons
+
+    Example setup:
+    <link rel="preload" as="font" href="/fonts/roboto-v30-latin-regular.woff2" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/fonts/fonts.css">
+
+    Ensure static server serves fonts with: Cache-Control: public, max-age=31536000, immutable
   -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" crossorigin="anonymous">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
+  <!-- TODO: Add self-hosted fonts here once downloaded and configured -->
   ${styleTags}
   <style>
     /* Material-UI CSS Reset and Base Styles */

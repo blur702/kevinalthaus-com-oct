@@ -119,6 +119,33 @@ class ResponseCache {
 
 const responseCache = new ResponseCache();
 
+// Helper to check if response Cache-Control allows caching
+function isCacheControlCacheable(cacheControl: string | string[] | undefined): boolean {
+  if (!cacheControl) {
+    return false;
+  }
+  const ccStr = Array.isArray(cacheControl) ? cacheControl.join(', ') : cacheControl;
+  const ccLower = ccStr.toLowerCase();
+
+  // Must not contain no-store, no-cache, or private
+  if (ccLower.includes('no-store') || ccLower.includes('no-cache') || ccLower.includes('private')) {
+    return false;
+  }
+
+  // Should contain public or max-age > 0
+  if (ccLower.includes('public')) {
+    return true;
+  }
+
+  // Check for max-age > 0
+  const maxAgeMatch = ccLower.match(/max-age=(\d+)/);
+  if (maxAgeMatch && parseInt(maxAgeMatch[1], 10) > 0) {
+    return true;
+  }
+
+  return false;
+}
+
 // Response caching middleware for GET requests
 export const cacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   // Skip caching for non-GET requests or authenticated requests
@@ -152,8 +179,8 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
         }
       }
     } catch (error) {
-      // If cookie parsing fails, treat as no auth cookie
-      hasAuthCookie = false;
+      // If cookie parsing fails, assume authenticated to avoid caching potentially authenticated requests
+      hasAuthCookie = true;
     }
   }
   if (hasAuthHeader || hasAuthCookie) {
@@ -192,17 +219,11 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
       return;
     }
     const cacheControl = res.getHeader('Cache-Control');
-    const cacheControlStr =
-      typeof cacheControl === 'string'
-        ? cacheControl.toLowerCase()
-        : Array.isArray(cacheControl)
-          ? cacheControl.join(', ').toLowerCase()
-          : '';
-    const shouldSkipCache =
-      cacheControlStr.includes('no-store') ||
-      cacheControlStr.includes('no-cache') ||
-      cacheControlStr.includes('private');
-    if (shouldSkipCache) {
+    const cacheControlValue =
+      typeof cacheControl === 'number' ? String(cacheControl) : cacheControl;
+
+    // Require explicit cacheable directive (public or max-age > 0)
+    if (!isCacheControlCacheable(cacheControlValue)) {
       return;
     }
 
