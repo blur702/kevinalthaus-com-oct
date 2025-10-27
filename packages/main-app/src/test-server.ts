@@ -1,7 +1,8 @@
 // Simple test server without any dependencies
 import * as http from 'http';
 
-const PORT = process.env.PORT || 3001;
+const parsedPort = process.env.PORT ? Number(process.env.PORT) : NaN;
+const PORT = !isNaN(parsedPort) && parsedPort > 0 ? parsedPort : 3001;
 
 const server = http.createServer((req, res) => {
   const url = req.url;

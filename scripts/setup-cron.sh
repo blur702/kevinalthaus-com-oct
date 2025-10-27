@@ -52,8 +52,21 @@ if [ ! -f "$APP_DIR/scripts/cleanup-logs.sh" ] || [ ! -x "$APP_DIR/scripts/clean
 fi
 
 # Get absolute paths for cron
-FULL_APP_DIR=$(readlink -f "$APP_DIR")
-FULL_LOG_DIR=$(readlink -f "$LOG_DIR")
+# Use readlink -m (canonicalize) which works even if path doesn't exist
+# Fall back to readlink -f if -m is not available
+if [ -d "$APP_DIR" ]; then
+    FULL_APP_DIR=$(readlink -f "$APP_DIR")
+else
+    FULL_APP_DIR=$(readlink -m "$APP_DIR" 2>/dev/null || echo "$APP_DIR")
+fi
+
+if [ -d "$LOG_DIR" ]; then
+    FULL_LOG_DIR=$(readlink -f "$LOG_DIR")
+else
+    # Create log directory if it doesn't exist
+    mkdir -p "$LOG_DIR"
+    FULL_LOG_DIR=$(readlink -f "$LOG_DIR")
+fi
 
 # Shell-escape validated variables for safe embedding in crontab
 # Variables are already validated above, now we escape them for literal inclusion

@@ -127,7 +127,14 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
     return;
   }
 
-  // Determine if request appears authenticated
+  // Check if request has authenticated user populated by auth middleware
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((req as any).user) {
+    next();
+    return;
+  }
+
+  // Determine if request appears authenticated by headers/cookies
   const hasAuthHeader = Boolean(req.headers.authorization);
   const authCookieNames = (process.env.CACHE_AUTH_COOKIES || 'accessToken,refreshToken,session,sid,auth,token')
     .split(',')

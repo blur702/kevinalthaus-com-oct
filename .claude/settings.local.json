@@ -13,14 +13,14 @@
     "deny": [
       "Bash(powershell.exe:*)",
       "Bash(docker run --privileged:*)",
-      "Bash(docker rm:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker rm:*)"
     ],
     "ask": [
       "Bash(docker exec -it kevinalthaus-postgres-1 bash:*)",
       "Bash(docker exec -it kevinalthaus-main-app-1 sh:*)",
       "Bash(docker exec -it kevinalthaus-api-gateway-1 sh:*)",
-      "Bash(docker run --rm plugin-engine:local:*)"
+      "Bash(docker run --rm plugin-engine:local:*)",
+      "Bash(docker exec:*)"
     ]
   }
 }

@@ -10,8 +10,14 @@ interface CacheEntry {
   varyHeaders?: string[]; // List of request header names that this entry varies on
 }
 
+interface CacheMetadata {
+  varyHeaders: string[];
+  timestamp: number;
+}
+
 class ResponseCache {
   private cache = new Map<string, CacheEntry>();
+  private metadata = new Map<string, CacheMetadata>(); // Maps base key to vary headers
   private maxSize = 500; // Smaller cache for main app
   private defaultTTL = 180000; // 3 minutes
 
@@ -63,9 +69,13 @@ class ResponseCache {
     return pairs.join('&');
   }
 
-  private generateKey(req: Request, varyHeaders?: string[]): string {
+  private generateBaseKey(req: Request): string {
     const canonicalQuery = this.canonicalizeQuery(req.query);
-    let key = `${req.method}:${req.originalUrl.split('?')[0]}:${canonicalQuery}`;
+    return `${req.method}:${req.originalUrl.split('?')[0]}:${canonicalQuery}`;
+  }
+
+  private generateKey(req: Request, varyHeaders?: string[]): string {
+    let key = this.generateBaseKey(req);
 
     // Add vary part if headers are specified
     if (varyHeaders && varyHeaders.length > 0) {
@@ -82,7 +92,13 @@ class ResponseCache {
     return key;
   }
 
-  get(req: Request, varyHeaders?: string[]): CacheEntry | null {
+  get(req: Request): CacheEntry | null {
+    // First, check metadata to see if this base key has vary headers
+    const baseKey = this.generateBaseKey(req);
+    const meta = this.metadata.get(baseKey);
+
+    // If metadata exists and is not expired, use the vary headers to construct full key
+    const varyHeaders = meta && Date.now() - meta.timestamp <= this.defaultTTL ? meta.varyHeaders : undefined;
     const key = this.generateKey(req, varyHeaders);
     const entry = this.cache.get(key);
 
@@ -92,6 +108,7 @@ class ResponseCache {
 
     if (Date.now() - entry.timestamp > this.defaultTTL) {
       this.cache.delete(key);
+      this.metadata.delete(baseKey);
       return null;
     }
 
@@ -106,18 +123,36 @@ class ResponseCache {
         this.cache.delete(oldestKey);
       }
     }
+    if (this.metadata.size >= this.maxSize) {
+      const oldestMetaKey = this.metadata.keys().next().value;
+      if (oldestMetaKey) {
+        this.metadata.delete(oldestMetaKey);
+      }
+    }
 
     const key = this.generateKey(req, varyHeaders);
+    const baseKey = this.generateBaseKey(req);
+    const timestamp = Date.now();
+
     this.cache.set(key, {
       data,
-      timestamp: Date.now(),
+      timestamp,
       headers,
       varyHeaders,
     });
+
+    // Store metadata if vary headers exist
+    if (varyHeaders && varyHeaders.length > 0) {
+      this.metadata.set(baseKey, {
+        varyHeaders,
+        timestamp,
+      });
+    }
   }
 
   clear(): void {
     this.cache.clear();
+    this.metadata.clear();
   }
 
   clearByPrefix(prefix: string): number {
