@@ -2,8 +2,13 @@
 import type { JSONSchemaType } from 'ajv';
 import type { PluginManifest } from './manifest';
 
-// Using a type assertion here because ajv's JSONSchemaType is too strict for complex nested objects
-// The schema is still valid for runtime validation
+// Double cast below is required due to ajv's JSONSchemaType limitations:
+// - Cannot properly type nullable fields in complex nested objects (e.g., author.email, repository)
+// - Struggles with union types and deeply nested optional structures (e.g., frontend, backend, database)
+// - additionalProperties: true/false conflicts with strict index signature requirements
+// A direct JSONSchemaType<PluginManifest> causes TS2322/TS2344 errors on nested nullable/optional properties.
+// TODO: Revisit if ajv improves typing for complex schemas or consider alternative validation approach (ticket: PLUGIN-SCHEMA-TYPES).
+// Test coverage: see packages/shared/src/plugin/__tests__/schema.test.ts for runtime validation against PluginManifest type.
 export const PLUGIN_MANIFEST_SCHEMA = {
   type: 'object',
   properties: {
@@ -197,8 +202,8 @@ export const PLUGIN_MANIFEST_SCHEMA = {
     'entrypoint',
   ],
   additionalProperties: false,
-  // Note: Some fields use nullable in schema for Ajv, which is compatible with
-  // PluginManifest optional fields.
+  // Double cast required due to ajv's JSONSchemaType limitations (see comment at top of file).
+  // Test coverage: see packages/shared/src/plugin/__tests__/schema.test.ts
 } as unknown as JSONSchemaType<PluginManifest>;
 
 export const PLUGIN_SETTINGS_FIELD_SCHEMA = {

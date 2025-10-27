@@ -307,6 +307,16 @@ router.patch(
       }
 
       if (username !== undefined) {
+        // Validate username format (alphanumeric, dots, hyphens, underscores, 3-30 chars)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        const usernameRegex = /^[a-zA-Z0-9._-]{3,30}$/;
+        if (!usernameRegex.test(username)) {
+          res.status(400).json({
+            error: 'Bad Request',
+            message: 'Username must be 3-30 characters and contain only letters, numbers, dots, hyphens, and underscores',
+          });
+          return;
+        }
         paramCount++;
         updates.push(`username = $${paramCount}`);
         params.push(username);

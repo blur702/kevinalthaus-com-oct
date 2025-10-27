@@ -11,9 +11,9 @@ POSTGRES_DB="${POSTGRES_DB:-kevinalthaus}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 
 # Validate CONTAINER_NAME to prevent command injection
-# Only allow alphanumeric, dots, underscores, and hyphens (max 255 chars)
-if [[ ! "$CONTAINER_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || [ -z "$CONTAINER_NAME" ] || [ ${#CONTAINER_NAME} -gt 255 ]; then
-    echo "ERROR: CONTAINER_NAME contains invalid characters, is empty, or exceeds 255 characters. Only alphanumeric, dots, underscores, and hyphens are allowed."
+# Docker only allows lowercase alphanumeric, dots, underscores, and hyphens (max 255 chars)
+if [[ ! "$CONTAINER_NAME" =~ ^[a-z0-9._-]+$ ]] || [ -z "$CONTAINER_NAME" ] || [ ${#CONTAINER_NAME} -gt 255 ]; then
+    echo "ERROR: CONTAINER_NAME contains invalid characters, is empty, or exceeds 255 characters. Only lowercase alphanumeric, dots, underscores, and hyphens are allowed."
     echo "Container name: $CONTAINER_NAME"
     exit 1
 fi

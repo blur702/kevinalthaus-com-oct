@@ -66,12 +66,18 @@ attempt=0
 while [ $attempt -lt $MAX_RETRIES ]; do
     attempt=$((attempt + 1))
 
-    # Copy to temporary file
-    if cp "$WAL_PATH" "$TEMP_FILE" 2>&1 | tee -a "$LOG_FILE"; then
+    # Copy to temporary file and capture exit status
+    cp "$WAL_PATH" "$TEMP_FILE" 2>&1 | tee -a "$LOG_FILE"
+    cp_status=${PIPESTATUS[0]}
+
+    if [ "$cp_status" -eq 0 ]; then
         # Verify file was copied correctly
         if [ -f "$TEMP_FILE" ]; then
-            # Atomic rename
-            if mv "$TEMP_FILE" "$DEST_FILE" 2>&1 | tee -a "$LOG_FILE"; then
+            # Atomic rename and capture exit status
+            mv "$TEMP_FILE" "$DEST_FILE" 2>&1 | tee -a "$LOG_FILE"
+            mv_status=${PIPESTATUS[0]}
+
+            if [ "$mv_status" -eq 0 ]; then
                 log "INFO" "Archived WAL file: $WAL_FILE (attempt $attempt)"
                 exit 0
             else

@@ -11,8 +11,13 @@ interface CacheEntry {
   varyHeaders?: string[]; // List of request header names that this entry varies on
 }
 
+interface CacheMetadata {
+  varyHeaders?: string[];
+}
+
 class ResponseCache {
   private cache = new Map<string, CacheEntry>();
+  private metadata = new Map<string, CacheMetadata>(); // Base key -> vary metadata
   private maxSize = 1000;
   private defaultTTL = 300000; // 5 minutes
 
@@ -79,7 +84,15 @@ class ResponseCache {
   }
 
   get(req: Request, varyHeaders?: string[]): CacheEntry | null {
-    const key = this.generateKey(req, varyHeaders);
+    // Generate base key (without vary) to look up metadata
+    const base = req.originalUrl.split('?')[0];
+    const canonicalQuery = this.canonicalizeQuery(req.query);
+    const baseKey = `${req.method}:${base}:${canonicalQuery}`;
+
+    // Look up stored vary headers from metadata if not provided
+    const effectiveVaryHeaders = varyHeaders ?? this.metadata.get(baseKey)?.varyHeaders;
+
+    const key = this.generateKey(req, effectiveVaryHeaders);
     const entry = this.cache.get(key);
 
     if (!entry) {
@@ -88,6 +101,11 @@ class ResponseCache {
 
     if (Date.now() - entry.timestamp > this.defaultTTL) {
       this.cache.delete(key);
+      // Clean up metadata if no entries for this base key remain
+      const hasOtherEntries = Array.from(this.cache.keys()).some(k => k.startsWith(baseKey));
+      if (!hasOtherEntries) {
+        this.metadata.delete(baseKey);
+      }
       return null;
     }
 
@@ -100,7 +118,23 @@ class ResponseCache {
       const oldestKey = this.cache.keys().next().value;
       if (oldestKey) {
         this.cache.delete(oldestKey);
+        // Clean up metadata if this was the last entry for its base key
+        const baseKeyPart = oldestKey.split(':vary:')[0];
+        const hasOtherEntries = Array.from(this.cache.keys()).some(k => k.startsWith(baseKeyPart));
+        if (!hasOtherEntries) {
+          this.metadata.delete(baseKeyPart);
+        }
       }
+    }
+
+    // Generate base key for metadata storage
+    const base = req.originalUrl.split('?')[0];
+    const canonicalQuery = this.canonicalizeQuery(req.query);
+    const baseKey = `${req.method}:${base}:${canonicalQuery}`;
+
+    // Store metadata for this base key
+    if (varyHeaders && varyHeaders.length > 0) {
+      this.metadata.set(baseKey, { varyHeaders });
     }
 
     const key = this.generateKey(req, varyHeaders);
@@ -114,6 +148,7 @@ class ResponseCache {
 
   clear(): void {
     this.cache.clear();
+    this.metadata.clear();
   }
 }
 

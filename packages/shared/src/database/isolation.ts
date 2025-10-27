@@ -104,11 +104,17 @@ const DEFAULT_COMPLEXITY_WEIGHTS: ComplexityWeights = {
   whereFunction: 2,
 };
 
+export interface MinimalLogger {
+  info: (message: string, context?: Record<string, unknown>) => void;
+  error: (message: string, context?: Record<string, unknown>) => void;
+  warn: (message: string, context?: Record<string, unknown>) => void;
+}
+
 export interface IsolationEnforcerOptions {
   limits: QueryExecutionLimits;
   weights?: Partial<ComplexityWeights>;
   fallbackComplexity?: number;
-  logger?: (message: string, context?: Record<string, unknown>) => void;
+  logger?: MinimalLogger;
 }
 
 export class DatabaseIsolationEnforcer {
@@ -116,7 +122,7 @@ export class DatabaseIsolationEnforcer {
   private readonly maxQueryRows: number;
   private readonly weights: ComplexityWeights;
   private readonly fallbackComplexity: number;
-  private readonly logger: (message: string, context?: Record<string, unknown>) => void;
+  private readonly logger: MinimalLogger;
 
   constructor(limits: QueryExecutionLimits, weights?: Partial<ComplexityWeights>);
   constructor(options: IsolationEnforcerOptions);
@@ -152,12 +158,20 @@ export class DatabaseIsolationEnforcer {
       // Default: 80% of max complexity, minimum 1, maximum 100
       this.fallbackComplexity = Math.max(1, Math.min(100, Math.floor(this.maxQueryComplexity * 0.8)));
     }
-    this.logger =
-      options.logger ||
-      ((message, context) => {
+    this.logger = options.logger || {
+      info: (message, context) => {
+        // eslint-disable-next-line no-console
+        console.log(message, context);
+      },
+      error: (message, context) => {
         // eslint-disable-next-line no-console
         console.error(message, context);
-      });
+      },
+      warn: (message, context) => {
+        // eslint-disable-next-line no-console
+        console.warn(message, context);
+      },
+    };
   }
 
   /**
@@ -221,7 +235,8 @@ export class DatabaseIsolationEnforcer {
         `  Provided estimate: ${estimatedRows} rows\n` +
         `  Threshold: ${suspiciousThreshold} rows\n` +
         `  Query: ${trimmedQuery.substring(0, 200)}${trimmedQuery.length > 200 ? '...' : ''}\n` +
-        `  Recommendation: Use EXPLAIN to get accurate planner estimate`
+        `  Recommendation: Use EXPLAIN to get accurate planner estimate`,
+        { estimatedRows, suspiciousThreshold, queryPreview: trimmedQuery.substring(0, 200) }
       );
     }
 
@@ -437,10 +452,9 @@ export class DatabaseIsolationEnforcer {
 
       statements.forEach(visit);
 
-      // Approximate set operations if parser returned multiple statements (e.g., UNION chains)
-      if (statements.length > 1 && unions === 0 && intersects === 0 && excepts === 0) {
-        unions += statements.length - 1;
-      }
+      // Conservative approach: only count set operations when explicitly detected by parser
+      // Do not increment unions based solely on statements.length to avoid false positives
+      // for batch or independent semicolon-separated queries
 
       let complexity = 1;
       complexity += joins * this.weights.join;
@@ -460,7 +474,7 @@ export class DatabaseIsolationEnforcer {
     } catch (err) {
       // If parsing fails, log details for debugging, then use configurable fallback complexity
       // Fallback uses a validated explicit value (if provided) or a safe low default (1) to avoid over-blocking.
-      this.logger('[Isolation] SQL parse failed; using fallback complexity', {
+      this.logger.error('[Isolation] SQL parse failed; using fallback complexity', {
         error: err instanceof Error ? err.message : String(err),
         query,
         fallbackComplexity: this.fallbackComplexity,

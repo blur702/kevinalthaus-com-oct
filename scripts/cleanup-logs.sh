@@ -31,9 +31,31 @@ PROTECTED_PATHS=(
   "$(pwd -P)"
 )
 
+# Allowed paths under /var (exceptions to protection)
+ALLOWED_VAR_PATHS=(
+  "/var/log"
+  "/var/app/logs"
+)
+
+# Check if path is allowed under /var
+is_allowed_var_path() {
+  local path="$1"
+  for allowed in "${ALLOWED_VAR_PATHS[@]}"; do
+    # Allow if path equals or is subdirectory of allowed var path
+    if [ "$path" = "$allowed" ] || [[ "$path" == "$allowed/"* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Check if RESOLVED matches or is subdirectory of protected paths
 for protected in "${PROTECTED_PATHS[@]}"; do
   if [ "$RESOLVED" = "$protected" ] || [[ "$RESOLVED" == "$protected/"* ]]; then
+    # If it's under /var, check if it's in the allowed list
+    if [ "$protected" = "/var" ] && is_allowed_var_path "$RESOLVED"; then
+      continue
+    fi
     echo "[ERROR] Refusing to operate on unsafe path: '$LOG_DIR'" >&2
     exit 1
   fi

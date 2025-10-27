@@ -79,8 +79,10 @@ docker compose up -d postgres
 
 4) Restore backup into Postgres 16:
 
-```
+```bash
 docker cp ./pre-upgrade.sql kevinalthaus-postgres:/backups/pre-upgrade.sql
+# Set POSTGRES_PASSWORD: either source from .env (export POSTGRES_PASSWORD=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2))
+# or export it manually (export POSTGRES_PASSWORD='your-password-here') before running the command:
 docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" kevinalthaus-postgres bash -lc "psql -U postgres -f /backups/pre-upgrade.sql"
 ```
 
