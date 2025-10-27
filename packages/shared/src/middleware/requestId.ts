@@ -23,7 +23,7 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
   }
 
   const requestId = generateOrExtractRequestId(existingId);
-  (req as any).id = requestId;
+  req.id = requestId;
   res.setHeader('X-Request-Id', requestId);
   next();
 }

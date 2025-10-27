@@ -57,11 +57,6 @@ function generateAllowedExtensions(mimeTypes: string[]): Set<string> {
     }
   }
 
-  // If no MIME types configured, use safe defaults
-  if (extensions.size === 0) {
-    ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'].forEach((ext) => extensions.add(ext));
-  }
-
   return extensions;
 }
 
@@ -203,13 +198,13 @@ async function promoteFromQuarantine(file: { path?: string; originalname?: strin
       } catch {
         /* ignore */
       }
-      // Log full details for debugging (server-side only)
-      console.error('Failed to move file to final destination', {
-        filename: file.originalname || filename,
+      // Log full details for debugging (server-side only, no client exposure)
+      const logger = (await import('@monorepo/shared')).defaultLogger;
+      logger.error('Failed to move file to final destination', fallbackErr as Error, {
+        filename: path.basename(file.originalname || filename),
         quarantinePath,
         finalPath,
         renameError: (renameErr as Error).message,
-        fallbackError: (fallbackErr as Error).message,
       });
       // Return sanitized error to client (no paths exposed)
       throw new Error('Failed to move uploaded file');

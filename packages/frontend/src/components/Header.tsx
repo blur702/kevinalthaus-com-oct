@@ -36,8 +36,8 @@ const Header: React.FC = () => {
               variant={location.pathname === item.path ? 'outlined' : 'text'}
               aria-current={location.pathname === item.path ? 'page' : undefined}
               sx={{
-                color: location.pathname === item.path ? 'primary.main' : 'inherit',
-                borderColor: location.pathname === item.path ? 'primary.main' : 'transparent',
+                color: location.pathname === item.path ? 'common.white' : 'inherit',
+                borderColor: location.pathname === item.path ? 'rgba(255,255,255,0.3)' : 'transparent',
               }}
             >
               {item.label}

@@ -66,6 +66,9 @@ interface DashboardStat {
   color: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
 }
 
+// Default fallback plugin count (matches mockStats array length)
+const DEFAULT_MOCK_PLUGIN_COUNT = 4;
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,7 +148,7 @@ const Dashboard: React.FC = () => {
           }
           // Log other errors and fall back to mock count
           console.error('Failed to fetch plugins:', error);
-          pluginCount = 5; // fall back to mock count
+          pluginCount = DEFAULT_MOCK_PLUGIN_COUNT;
         }
 
         // Map API response to stat cards with icons and colors

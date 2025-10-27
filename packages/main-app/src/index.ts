@@ -175,7 +175,7 @@ app.use(keepAliveMiddleware);
         if (corsCredentials) {
           // Reject wildcard with credentials - security violation
           // Browsers will block this, so we must reject the configuration
-          callback(null, { origin: false, credentials: true });
+          callback(null, { origin: false, credentials: false });
           return;
         }
         // Allow wildcard without credentials

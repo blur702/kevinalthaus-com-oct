@@ -2,7 +2,7 @@
 import * as http from 'http';
 
 const parsedPort = process.env.PORT ? Number(process.env.PORT) : NaN;
-const PORT = !isNaN(parsedPort) && parsedPort > 0 ? parsedPort : 3001;
+const PORT = !isNaN(parsedPort) && Number.isFinite(parsedPort) && parsedPort >= 1 && parsedPort <= 65535 ? parsedPort : 3001;
 
 const server = http.createServer((req, res) => {
   const url = req.url;
