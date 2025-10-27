@@ -69,12 +69,15 @@ const CSRF_SECRET: string = (() => {
     const resolvedPath = path.resolve(requestedPath);
     const relativePath = path.relative(baseDir, resolvedPath);
 
-    // Reject paths outside baseDir by checking if relative path starts with '..'
-    if (relativePath.startsWith('..')) {
+    // Reject absolute paths and paths outside baseDir
+    // Check for absolute paths (Windows: C:\, D:\, etc. or Unix: /)
+    // Also check if resolved path is outside baseDir (relative path starts with '..')
+    if (path.isAbsolute(requestedPath) || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
       logger.error('CSRF_SECRET_FILE path traversal attempt blocked', undefined, {
         requested: requestedPath,
         resolved: resolvedPath,
         baseDir,
+        isAbsolute: path.isAbsolute(requestedPath),
       });
       throw new Error('Invalid CSRF_SECRET_FILE path: must be within project directory');
     }

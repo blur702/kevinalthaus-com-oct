@@ -103,7 +103,7 @@ For more details and a staged upgrade path, see `docs/deployment.md`.
 ## Architecture
 
 **Microservices Stack:**
-- **API Gateway** (Express.js) - Central routing, auth, rate limiting
+- **API Gateway** (Express.js) - Central routing, auth, rate-limiting
 - **Main App** (Node.js) - Core business logic, user management
 - **Python Service** (FastAPI) - Specialized Python ecosystem services
 - **Frontend** (React + Material-UI) - Public interface

@@ -174,22 +174,22 @@ const Dashboard: React.FC = () => {
             title: 'Plugins',
             value: pluginCount,
             change: undefined,
-            icon: <Article />,
+            icon: <Extension />,
             color: 'secondary' as const,
           },
           {
             id: 'page-views',
             title: 'Page Views',
-            value: data.pageViews?.toLocaleString() ?? mockStats[1].value,
-            change: data.changes?.views ?? mockStats[1].change,
+            value: data.pageViews?.toLocaleString() ?? mockStats[2].value,
+            change: data.changes?.views ?? mockStats[2].change,
             icon: <Visibility />,
             color: 'success' as const,
           },
           {
             id: 'articles',
             title: 'Articles',
-            value: data.articles?.toLocaleString() ?? mockStats[2].value,
-            change: data.changes?.articles ?? mockStats[2].change,
+            value: data.articles?.toLocaleString() ?? mockStats[3].value,
+            change: data.changes?.articles ?? mockStats[3].change,
             icon: <Article />,
             color: 'warning' as const,
           },
@@ -199,8 +199,8 @@ const Dashboard: React.FC = () => {
             value:
               data.growth !== null && data.growth !== undefined
                 ? `${data.growth}%`
-                : mockStats[3].value,
-            change: data.changes?.growth ?? mockStats[3].change,
+                : mockStats[4].value,
+            change: data.changes?.growth ?? mockStats[4].change,
             icon: <TrendingUp />,
             color: 'secondary' as const,
           },

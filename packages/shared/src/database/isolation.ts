@@ -242,13 +242,13 @@ export class DatabaseIsolationEnforcer {
 
     const complexity = this.estimateQueryComplexity(trimmedQuery);
 
-    // Use >= for exclusive limits (values equal to max are rejected)
+    // Use >= for exclusive limits (values >= max are rejected, max is not allowed)
     if (complexity >= this.maxQueryComplexity) {
-      throw new Error(`Query complexity ${complexity} exceeds limit ${this.maxQueryComplexity}`);
+      throw new Error(`Query complexity ${complexity} is greater than or equal to limit ${this.maxQueryComplexity} (limit is exclusive)`);
     }
 
     if (effectiveEstimate >= this.maxQueryRows) {
-      throw new Error(`Estimated rows ${effectiveEstimate} exceeds limit ${this.maxQueryRows}`);
+      throw new Error(`Estimated rows ${effectiveEstimate} is greater than or equal to limit ${this.maxQueryRows} (limit is exclusive)`);
     }
   }
 

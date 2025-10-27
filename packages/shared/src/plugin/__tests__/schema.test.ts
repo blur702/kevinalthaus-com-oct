@@ -8,7 +8,7 @@ describe('PLUGIN_MANIFEST_SCHEMA', () => {
   let ajv: Ajv;
 
   beforeEach(() => {
-    ajv = new Ajv({ strict: false });
+    ajv = new Ajv({ strict: true });
     addFormats(ajv);
   });
 

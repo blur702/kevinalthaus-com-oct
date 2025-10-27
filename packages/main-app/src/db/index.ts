@@ -170,7 +170,7 @@ if (!FINGERPRINT_SECRET && process.env.NODE_ENV === 'production') {
       'Please set FINGERPRINT_SECRET in your .env file to a secure random value.'
   );
 }
-const fingerprintSecret = FINGERPRINT_SECRET || 'dev-default-secret-change-me-in-production';
+const fingerprintSecret = FINGERPRINT_SECRET || crypto.randomBytes(32).toString('hex');
 
 // Logging configuration for query execution
 // LOG_LEVEL: controls verbosity (debug logs all queries, info/warn/error use sampling)

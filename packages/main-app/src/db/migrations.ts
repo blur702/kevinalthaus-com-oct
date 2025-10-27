@@ -46,11 +46,40 @@ export async function runMigrations(): Promise<void> {
   const lockClient = await pool.connect();
 
   try {
-    // Acquire advisory lock to prevent concurrent migrations
-    // This lock is session-scoped and will be held until we release it or disconnect
+    // Acquire advisory lock with retry logic and timeout to prevent indefinite hangs
+    // Parse timeout from env (default 30 seconds)
+    const lockTimeoutMs = parseInt(process.env.MIGRATION_LOCK_TIMEOUT_MS || '30000', 10);
+    const baseDelayMs = 1000;
+
     // eslint-disable-next-line no-console
-    console.log('[Migrations] Acquiring migration lock...');
-    await lockClient.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
+    console.log('[Migrations] Acquiring migration lock (timeout: ${lockTimeoutMs}ms)...');
+
+    const startTime = Date.now();
+    let acquired = false;
+    let attempt = 0;
+
+    while (!acquired && Date.now() - startTime < lockTimeoutMs) {
+      attempt++;
+      const result = await lockClient.query('SELECT pg_try_advisory_lock($1) AS acquired', [MIGRATION_LOCK_ID]);
+      acquired = result.rows[0]?.acquired === true;
+
+      if (!acquired) {
+        if (Date.now() - startTime >= lockTimeoutMs) {
+          break;
+        }
+        // Exponential backoff with jitter
+        const delayMs = Math.min(baseDelayMs * Math.pow(2, attempt - 1), 5000);
+        const jitter = Math.random() * delayMs * 0.1;
+        await new Promise(resolve => setTimeout(resolve, delayMs + jitter));
+      }
+    }
+
+    if (!acquired) {
+      const elapsed = Date.now() - startTime;
+      console.error(`[Migrations] Failed to acquire migration lock after ${elapsed}ms. Another migration may be running.`);
+      throw new Error(`Migration lock acquisition timeout after ${elapsed}ms. Please ensure no other migrations are running.`);
+    }
+
     // eslint-disable-next-line no-console
     console.log('[Migrations] Migration lock acquired');
 
@@ -150,7 +179,7 @@ export async function runMigrations(): Promise<void> {
       await client.query(`
         CREATE TABLE IF NOT EXISTS audit_log (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID REFERENCES users(id),
+          user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
           action VARCHAR(255) NOT NULL,
           resource_type VARCHAR(100),
           resource_id VARCHAR(255),

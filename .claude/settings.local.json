@@ -12,8 +12,7 @@
     ],
     "deny": [
       "Bash(powershell.exe:*)",
-      "Bash(docker run --privileged:*)",
-      "Bash(docker rm:*)"
+      "Bash(docker run --privileged:*)"
     ],
     "ask": [
       "Bash(docker exec -it kevinalthaus-postgres-1 bash:*)",

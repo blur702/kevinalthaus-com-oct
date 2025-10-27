@@ -3,6 +3,36 @@
 -- ========================================
 -- This script runs after 01-init.sql during first container startup
 -- It sets up production-specific roles, permissions, indexes, and monitoring
+--
+-- REQUIRED PARAMETERS:
+-- This script reads two custom GUCs that must be set before execution:
+--   1. kevinalthaus.monitoring_password - Password for the 'monitoring' role
+--   2. kevinalthaus.app_user_password   - Password for the 'app_user' role
+--
+-- HOW TO SET THESE PARAMETERS:
+--
+-- Option 1: Via postgresql.conf
+--   Add these lines to postgresql.conf:
+--     kevinalthaus.monitoring_password = 'your-secure-monitoring-password'
+--     kevinalthaus.app_user_password = 'your-secure-app-password'
+--
+-- Option 2: Via ALTER SYSTEM (persistent)
+--   ALTER SYSTEM SET kevinalthaus.monitoring_password = 'your-secure-monitoring-password';
+--   ALTER SYSTEM SET kevinalthaus.app_user_password = 'your-secure-app-password';
+--   SELECT pg_reload_conf();
+--
+-- Option 3: Via Docker command-line flags (recommended for containers)
+--   docker run -e MONITORING_PASSWORD=... -e APP_USER_PASSWORD=... postgres:16-alpine \
+--     -c kevinalthaus.monitoring_password="$MONITORING_PASSWORD" \
+--     -c kevinalthaus.app_user_password="$APP_USER_PASSWORD"
+--
+--   Or in docker-compose.yml:
+--     command: >
+--       -c kevinalthaus.monitoring_password=${MONITORING_PASSWORD}
+--       -c kevinalthaus.app_user_password=${APP_USER_PASSWORD}
+--
+-- NOTE: Use MONITORING_PASSWORD and APP_USER_PASSWORD environment variables,
+--       not POSTGRES_PASSWORD (which is for the postgres superuser).
 -- ========================================
 
 -- ----------------------------------------
@@ -170,13 +200,13 @@ CREATE OR REPLACE VIEW v_table_sizes AS
 SELECT
     schemaname AS schema_name,
     tablename AS table_name,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
-    pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS table_size,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) AS indexes_size,
-    pg_total_relation_size(schemaname||'.'||tablename) AS total_bytes
+    pg_size_pretty(pg_total_relation_size(quote_ident(schemaname)||'.'||quote_ident(tablename))) AS total_size,
+    pg_size_pretty(pg_relation_size(quote_ident(schemaname)||'.'||quote_ident(tablename))) AS table_size,
+    pg_size_pretty(pg_total_relation_size(quote_ident(schemaname)||'.'||quote_ident(tablename)) - pg_relation_size(quote_ident(schemaname)||'.'||quote_ident(tablename))) AS indexes_size,
+    pg_total_relation_size(quote_ident(schemaname)||'.'||quote_ident(tablename)) AS total_bytes
 FROM pg_tables
 WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+ORDER BY pg_total_relation_size(quote_ident(schemaname)||'.'||quote_ident(tablename)) DESC;
 
 -- Create view for slow queries
 CREATE OR REPLACE VIEW v_slow_queries AS
