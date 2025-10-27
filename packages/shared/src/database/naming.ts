@@ -54,22 +54,29 @@ export function generatePluginTableName(pluginId: string, tableName: string): st
   if (fullName.length > MAX_IDENTIFIER_LENGTH) {
     const hash = generateShortHash(hashInput);
 
-    // Calculate actual fallback token length (1 char 't' + up to 4 chars from hash)
-    const tokenLen = 1 + Math.min(4, hash.length);
+    // First, try to fit with non-empty table (format: pluginId_table_hash)
+    // Reserve space for table, but estimate how much we can allocate
+    // We need: pluginId + '_' + table + '_' + hash
+    // If sanitizedTable is long enough, try to use some of it
+    const minTableReserve = Math.min(sanitizedTable.length, 8); // Reserve at least some table chars if available
+    const tentativeMaxPluginLen = MAX_IDENTIFIER_LENGTH - 1 - minTableReserve - 1 - hash.length;
+    const tentativeBoundedPluginId = sanitizedPluginId.substring(0, Math.max(1, tentativeMaxPluginLen));
 
-    // Reserve space for: underscore (1) + token (tokenLen) + underscore (1) + hash (hash.length)
-    const maxPluginLen = MAX_IDENTIFIER_LENGTH - tokenLen - hash.length - 2;
-    const boundedPluginId = sanitizedPluginId.substring(0, Math.max(1, maxPluginLen));
-
-    // Compute remaining table length and clamp to >= 0
-    const maxTableLength = MAX_IDENTIFIER_LENGTH - boundedPluginId.length - hash.length - 2;
+    // Now compute actual remaining space for table
+    const maxTableLength = MAX_IDENTIFIER_LENGTH - tentativeBoundedPluginId.length - 1 - hash.length - 1;
     const truncatedTable = sanitizedTable.substring(0, Math.max(0, maxTableLength));
 
-    // If table name is empty/invalid after truncation, use the helper function
+    // If table name is empty/invalid after truncation, use fallback with token
     if (truncatedTable.length === 0) {
-      return generateNameWithEmptyTable(boundedPluginId, hash);
+      // Fallback path: compute plugin budget reserving space for token
+      const tokenLen = 1 + Math.min(4, hash.length);
+      const maxPluginLenFallback = MAX_IDENTIFIER_LENGTH - tokenLen - hash.length - 2;
+      const boundedPluginIdFallback = sanitizedPluginId.substring(0, Math.max(1, maxPluginLenFallback));
+      return generateNameWithEmptyTable(boundedPluginIdFallback, hash);
     }
-    return `${boundedPluginId}_${truncatedTable}_${hash}`;
+
+    // Non-fallback path: use computed plugin and table
+    return `${tentativeBoundedPluginId}_${truncatedTable}_${hash}`;
   }
 
   // Handle empty sanitizedTable in non-truncated case

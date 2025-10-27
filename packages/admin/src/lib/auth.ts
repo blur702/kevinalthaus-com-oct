@@ -56,7 +56,6 @@ export async function clearTokens(): Promise<boolean> {
       credentials: 'include', // Send cookies
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error('Logout failed:', {
@@ -68,9 +67,10 @@ export async function clearTokens(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    clearTimeout(timeoutId);
     console.error('Logout failed:', error);
     return false;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -88,10 +88,10 @@ export async function isAuthenticated(): Promise<boolean> {
       credentials: 'include', // Send cookies
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
     return response.ok;
   } catch (error) {
-    clearTimeout(timeoutId);
     return false;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

@@ -54,20 +54,20 @@ router.get(
       // If email or username specified, they take precedence over search
       if (email) {
         paramCount++;
-        whereClause += ` AND email ILIKE $${paramCount}`;
+        whereClause += ` AND email ILIKE $${paramCount} ESCAPE '\\'`;
         params.push(`%${escapeLikePattern(String(email))}%`);
       }
 
       if (username) {
         paramCount++;
-        whereClause += ` AND username ILIKE $${paramCount}`;
+        whereClause += ` AND username ILIKE $${paramCount} ESCAPE '\\'`;
         params.push(`%${escapeLikePattern(String(username))}%`);
       }
 
       // Legacy search parameter - searches both email and username if no specific params given
       if (search && !email && !username) {
         paramCount++;
-        whereClause += ` AND (email ILIKE $${paramCount} OR username ILIKE $${paramCount})`;
+        whereClause += ` AND (email ILIKE $${paramCount} ESCAPE '\\' OR username ILIKE $${paramCount} ESCAPE '\\')`;
         params.push(`%${escapeLikePattern(String(search))}%`);
       }
 
