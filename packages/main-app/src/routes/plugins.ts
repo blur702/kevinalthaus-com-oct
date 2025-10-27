@@ -183,6 +183,20 @@ function verifySignature(checksumHex: string, signatureBase64: string, publicKey
   }
 }
 
+/**
+ * Helper to clean up uploaded file, ignoring errors
+ */
+async function cleanupFile(path?: string): Promise<void> {
+  if (!path) {
+    return;
+  }
+  try {
+    await fs.unlink(path);
+  } catch {
+    /* ignore */
+  }
+}
+
 // Upload plugin package
 pluginsRouter.post('/upload', uploadPackage.single('package'), asyncHandler(async (req, res) => {
   try {
@@ -216,11 +230,7 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), asyncHandler(asyn
     const detectedMime = await sniffMime(filePath);
 
     if (!detectedMime || !ALLOWED_ARCHIVE_MIME.has(detectedMime)) {
-      try {
-        await fs.unlink(filePath);
-      } catch {
-        /* ignore */
-      }
+      await cleanupFile(filePath);
       logger.warn('Invalid plugin package MIME type', { detectedMime, filePath });
       res.status(400).json({ error: 'Invalid file type', message: 'Uploaded file is not a supported archive format' });
       return;
@@ -233,26 +243,14 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), asyncHandler(asyn
         const parse = JSON.parse(req.body.manifest) as PluginManifest;
         const validate = createValidator<PluginManifest>(PLUGIN_MANIFEST_SCHEMA);
         if (!validate(parse)) {
-          try {
-            if (filePath) {
-              await fs.unlink(filePath);
-            }
-          } catch {
-            /* ignore */
-          }
+          await cleanupFile(filePath);
           logger.warn('Plugin manifest validation failed', { errors: validate.errors });
           res.status(400).json({ error: 'Manifest validation failed', message: 'The plugin manifest does not meet the required schema' });
           return;
         }
         manifest = parse;
       } catch (err) {
-        try {
-          if (filePath) {
-            await fs.unlink(filePath);
-          }
-        } catch {
-          /* ignore */
-        }
+        await cleanupFile(filePath);
         logger.warn('Plugin manifest JSON parse error', { error: err });
         res.status(400).json({ error: 'Invalid manifest JSON', message: 'Failed to parse manifest JSON' });
         return;

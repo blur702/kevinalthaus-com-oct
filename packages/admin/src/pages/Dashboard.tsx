@@ -9,7 +9,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import { TrendingUp, People, Article, Visibility } from '@mui/icons-material';
+import { TrendingUp, People, Article, Visibility, Extension } from '@mui/icons-material';
 import api, { fetchPlugins } from '../lib/api';
 
 interface StatCardProps {
@@ -66,8 +66,8 @@ interface DashboardStat {
   color: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
 }
 
-// Default fallback plugin count (matches mockStats array length)
-const DEFAULT_MOCK_PLUGIN_COUNT = 4;
+// Default fallback plugin count (matches mockStats plugins entry)
+const DEFAULT_MOCK_PLUGIN_COUNT = 64;
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStat[]>([]);
@@ -83,6 +83,14 @@ const Dashboard: React.FC = () => {
       change: '+12%',
       icon: <People />,
       color: 'primary' as const,
+    },
+    {
+      id: 'plugins',
+      title: 'Plugins',
+      value: '64',
+      change: '+3%',
+      icon: <Extension />,
+      color: 'secondary' as const,
     },
     {
       id: 'page-views',

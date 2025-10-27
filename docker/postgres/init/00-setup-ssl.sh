@@ -69,9 +69,9 @@ if [ "$enable_ssl" = true ]; then
     sed -ri "s|^#?\s*ssl_cert_file\s*=.*|ssl_cert_file = '${CRT_PATH}'|" "$CONF_FILE" || true
     sed -ri "s|^#?\s*ssl_key_file\s*=.*|ssl_key_file = '${KEY_PATH}'|" "$CONF_FILE" || true
     # If keys not present in file, append them
-    grep -q '^ssl\s*=' "$CONF_FILE" || echo "ssl = on" >> "$CONF_FILE"
-    grep -q '^ssl_cert_file\s*=' "$CONF_FILE" || echo "ssl_cert_file = '$CRT_PATH'" >> "$CONF_FILE"
-    grep -q '^ssl_key_file\s*=' "$CONF_FILE" || echo "ssl_key_file = '$KEY_PATH'" >> "$CONF_FILE"
+    grep -q -E '^[[:space:]]*ssl[[:space:]]*=' "$CONF_FILE" || echo "ssl = on" >> "$CONF_FILE"
+    grep -q -E '^[[:space:]]*ssl_cert_file[[:space:]]*=' "$CONF_FILE" || echo "ssl_cert_file = '$CRT_PATH'" >> "$CONF_FILE"
+    grep -q -E '^[[:space:]]*ssl_key_file[[:space:]]*=' "$CONF_FILE" || echo "ssl_key_file = '$KEY_PATH'" >> "$CONF_FILE"
   fi
 else
   # Ensure SSL is disabled for local/dev without certs

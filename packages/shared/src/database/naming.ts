@@ -7,20 +7,38 @@ const RESERVED_SCHEMAS = ['public', 'information_schema', 'pg_catalog', 'pg_toas
 const hashCache = new Map<string, string>();
 
 /**
+ * Naming strategy selection
+ * BREAKING CHANGE: The FNV-1a hash algorithm generates different identifiers than the legacy implementation.
+ * This will affect all plugin schemas and tables created with the previous hash.
+ *
+ * To maintain backward compatibility with existing deployments:
+ * - Set NAMING_STRATEGY=legacy (or leave unset) to use the original hash implementation
+ * - Set NAMING_STRATEGY=fnv1a to use the new FNV-1a algorithm (better distribution)
+ *
+ * When migrating from legacy to fnv1a, you MUST rename all existing plugin schemas and tables.
+ * See migration guide in docs/migrations/naming-strategy-v2.md
+ */
+type NamingStrategy = 'legacy' | 'fnv1a';
+const NAMING_STRATEGY: NamingStrategy = (process.env.NAMING_STRATEGY as NamingStrategy) || 'legacy';
+
+/**
  * Helper function to generate a name when sanitizedTable is empty
  * Ensures the final name never exceeds MAX_IDENTIFIER_LENGTH
  */
 function generateNameWithEmptyTable(sanitizedPluginId: string, hash: string): string {
+  // Handle empty sanitizedPluginId by using a fallback prefix
+  const effectivePluginId = sanitizedPluginId.length > 0 ? sanitizedPluginId : 'plugin';
+
   const tableToken = 't' + hash.substring(0, Math.min(4, hash.length));
   // Verify final length doesn't exceed limit
-  const finalLen = sanitizedPluginId.length + 1 + tableToken.length + 1 + hash.length;
+  const finalLen = effectivePluginId.length + 1 + tableToken.length + 1 + hash.length;
   if (finalLen > MAX_IDENTIFIER_LENGTH) {
     // Truncate plugin ID to ensure we don't overflow
     const adjustedPluginLen = MAX_IDENTIFIER_LENGTH - (1 + tableToken.length + 1 + hash.length);
-    const adjustedPluginId = sanitizedPluginId.substring(0, Math.max(1, adjustedPluginLen));
+    const adjustedPluginId = effectivePluginId.substring(0, Math.max(1, adjustedPluginLen));
     return `${adjustedPluginId}_${tableToken}_${hash}`;
   }
-  return `${sanitizedPluginId}_${tableToken}_${hash}`;
+  return `${effectivePluginId}_${tableToken}_${hash}`;
 }
 
 export function generatePluginSchemaName(pluginId: string): string {
@@ -159,27 +177,53 @@ export function generateForeignKeyName(
   return fkName;
 }
 
-function generateShortHash(input: string): string {
-  // Check cache first
-  if (hashCache.has(input)) {
-    return hashCache.get(input)!;
+/**
+ * Legacy hash implementation (original)
+ * Simple character code sum with modulo
+ */
+function generateShortHashLegacy(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash + input.charCodeAt(i)) % 2147483647;
   }
+  const hashStr = hash.toString(36);
+  return hashStr.length >= HASH_LENGTH ? hashStr.substring(0, HASH_LENGTH) : hashStr.padStart(HASH_LENGTH, '0');
+}
 
-  // Optimized hash function using FNV-1a algorithm for better distribution
+/**
+ * FNV-1a hash implementation (improved distribution)
+ * Better collision resistance than legacy
+ */
+function generateShortHashFnv1a(input: string): string {
   let hash = 2166136261;
   for (let i = 0; i < input.length; i++) {
     hash ^= input.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
-
   // Convert to base36 using unsigned right shift to avoid edge case with most-negative 32-bit int
   const hashStr = (hash >>> 0).toString(36);
-  const result = hashStr.length >= HASH_LENGTH ? hashStr.substring(0, HASH_LENGTH) : hashStr.padStart(HASH_LENGTH, '0');
+  return hashStr.length >= HASH_LENGTH ? hashStr.substring(0, HASH_LENGTH) : hashStr.padStart(HASH_LENGTH, '0');
+}
+
+/**
+ * Generate a short hash using the configured naming strategy
+ */
+function generateShortHash(input: string): string {
+  // Check cache first
+  const cacheKey = `${NAMING_STRATEGY}:${input}`;
+  if (hashCache.has(cacheKey)) {
+    return hashCache.get(cacheKey)!;
+  }
+
+  // Select hash implementation based on strategy
+  const result = NAMING_STRATEGY === 'fnv1a'
+    ? generateShortHashFnv1a(input)
+    : generateShortHashLegacy(input);
 
   // Cache the result
   if (hashCache.size < 1000) {
     // Prevent memory leaks
-    hashCache.set(input, result);
+    hashCache.set(cacheKey, result);
   }
 
   return result;
