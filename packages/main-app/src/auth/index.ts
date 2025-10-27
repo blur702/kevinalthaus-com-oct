@@ -204,27 +204,19 @@ router.post(
         [username]
       );
 
-      // Use constant-time comparison to prevent timing side-channel
-      // Compare normalized (lowercased) versions
+      // Check if username exists
+      // Note: timingSafeEqual is not useful here because the DB query with LOWER(username)
+      // already leaks existence via timing, so we use simple deterministic comparison
       let usernameExists = false;
-      if (existingUser.rows.length > 0) {
-        const storedUsername = existingUser.rows[0].username.toLowerCase();
-        const providedUsername = username.toLowerCase();
-
-        // Constant-time comparison using timingSafeEqual
-        const storedBuffer = Buffer.from(storedUsername, 'utf8');
-        const providedBuffer = Buffer.from(providedUsername, 'utf8');
-
-        try {
-          // Only compare if lengths match to avoid buffer overflow
-          if (storedBuffer.length === providedBuffer.length) {
-            usernameExists = timingSafeEqual(storedBuffer, providedBuffer);
-          } else {
-            usernameExists = true; // Different lengths still means exists
-          }
-        } catch {
-          usernameExists = true; // On error, assume exists for security
+      try {
+        if (existingUser.rows.length > 0) {
+          const storedUsername = existingUser.rows[0].username.toLowerCase().trim();
+          const providedUsername = username.toLowerCase().trim();
+          usernameExists = storedUsername === providedUsername;
         }
+      } catch {
+        // On error, conservatively assume exists for security
+        usernameExists = true;
       }
 
       if (usernameExists) {

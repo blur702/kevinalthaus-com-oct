@@ -96,6 +96,33 @@ kill_port_process() {
 
     if [ -n "$pid" ]; then
         local process_name=$(ps -p $pid -o comm= 2>/dev/null || echo "unknown")
+        local process_cmd=$(ps -p $pid -o args= 2>/dev/null || echo "unknown")
+
+        # Display process information
+        warn "Found process using port $port:"
+        echo "  PID: $pid"
+        echo "  Command: $process_name"
+        echo "  Full command: $process_cmd"
+        echo ""
+
+        # Check if AUTO_KILL environment variable is set for non-interactive mode
+        if [ "${AUTO_KILL:-false}" != "true" ]; then
+            # Interactive confirmation prompt
+            echo -n "Kill this process? [y/N] "
+            read -r response
+            case "$response" in
+                [yY][eE][sS]|[yY])
+                    log "User confirmed killing process"
+                    ;;
+                *)
+                    log "Skipping process (user declined)"
+                    return 0
+                    ;;
+            esac
+        else
+            log "AUTO_KILL=true, proceeding without confirmation"
+        fi
+
         log "Sending SIGTERM to $process_name (PID: $pid) on port $port"
         kill -15 $pid 2>/dev/null || true
         # Wait up to 5 seconds for graceful shutdown

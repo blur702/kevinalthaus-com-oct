@@ -222,7 +222,9 @@ export async function transaction<T>(callback: (client: PoolClient) => Promise<T
 }
 
 export async function healthCheck(): Promise<boolean> {
-  if (process.env.NODE_ENV === 'test') {
+  // Skip DB healthcheck in test mode only if explicitly opted out
+  // Set SKIP_DB_HEALTHCHECK=true when using mocked DB in tests
+  if (process.env.NODE_ENV === 'test' && process.env.SKIP_DB_HEALTHCHECK === 'true') {
     return true;
   }
   try {

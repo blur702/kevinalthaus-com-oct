@@ -6,6 +6,23 @@ const RESERVED_SCHEMAS = ['public', 'information_schema', 'pg_catalog', 'pg_toas
 // Cache for hash results to improve performance
 const hashCache = new Map<string, string>();
 
+/**
+ * Helper function to generate a name when sanitizedTable is empty
+ * Ensures the final name never exceeds MAX_IDENTIFIER_LENGTH
+ */
+function generateNameWithEmptyTable(sanitizedPluginId: string, hash: string): string {
+  const tableToken = 't' + hash.substring(0, Math.min(4, hash.length));
+  // Verify final length doesn't exceed limit
+  const finalLen = sanitizedPluginId.length + 1 + tableToken.length + 1 + hash.length;
+  if (finalLen > MAX_IDENTIFIER_LENGTH) {
+    // Truncate plugin ID to ensure we don't overflow
+    const adjustedPluginLen = MAX_IDENTIFIER_LENGTH - (1 + tableToken.length + 1 + hash.length);
+    const adjustedPluginId = sanitizedPluginId.substring(0, Math.max(1, adjustedPluginLen));
+    return `${adjustedPluginId}_${tableToken}_${hash}`;
+  }
+  return `${sanitizedPluginId}_${tableToken}_${hash}`;
+}
+
 export function generatePluginSchemaName(pluginId: string): string {
   const sanitized = sanitizeIdentifier(pluginId);
   const schemaName = `${PLUGIN_SCHEMA_PREFIX}${sanitized}`;
@@ -48,18 +65,9 @@ export function generatePluginTableName(pluginId: string, tableName: string): st
     const maxTableLength = MAX_IDENTIFIER_LENGTH - boundedPluginId.length - hash.length - 2;
     const truncatedTable = sanitizedTable.substring(0, Math.max(0, maxTableLength));
 
-    // If table name is empty/invalid, use a deterministic placeholder from the hash
+    // If table name is empty/invalid, use the helper function
     if (truncatedTable.length === 0) {
-      const tableToken = 't' + hash.substring(0, Math.min(4, hash.length));
-      // Verify final length doesn't exceed limit
-      const finalLen = boundedPluginId.length + 1 + tableToken.length + 1 + hash.length;
-      if (finalLen > MAX_IDENTIFIER_LENGTH) {
-        // Truncate plugin ID further to ensure we don't overflow
-        const adjustedPluginLen = MAX_IDENTIFIER_LENGTH - (1 + tableToken.length + 1 + hash.length);
-        const adjustedPluginId = sanitizedPluginId.substring(0, Math.max(1, adjustedPluginLen));
-        return `${adjustedPluginId}_${tableToken}_${hash}`;
-      }
-      return `${boundedPluginId}_${tableToken}_${hash}`;
+      return generateNameWithEmptyTable(boundedPluginId, hash);
     }
     return `${boundedPluginId}_${truncatedTable}_${hash}`;
   }
@@ -67,16 +75,7 @@ export function generatePluginTableName(pluginId: string, tableName: string): st
   // Handle empty sanitizedTable in non-truncated case
   if (sanitizedTable.length === 0) {
     const hash = generateShortHash(hashInput);
-    const tableToken = 't' + hash.substring(0, Math.min(4, hash.length));
-    // Verify final length doesn't exceed limit
-    const finalLen = sanitizedPluginId.length + 1 + tableToken.length + 1 + hash.length;
-    if (finalLen > MAX_IDENTIFIER_LENGTH) {
-      // Truncate plugin ID to ensure we don't overflow
-      const adjustedPluginLen = MAX_IDENTIFIER_LENGTH - (1 + tableToken.length + 1 + hash.length);
-      const adjustedPluginId = sanitizedPluginId.substring(0, Math.max(1, adjustedPluginLen));
-      return `${adjustedPluginId}_${tableToken}_${hash}`;
-    }
-    return `${sanitizedPluginId}_${tableToken}_${hash}`;
+    return generateNameWithEmptyTable(sanitizedPluginId, hash);
   }
 
   return fullName;

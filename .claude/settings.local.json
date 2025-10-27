@@ -14,7 +14,7 @@
       "Bash(powershell.exe:*)",
       "Bash(docker run --privileged:*)",
       "Bash(docker rm:*)",
-      "Bash(docker exec shutdown:*)"
+      "Bash(docker exec:*)"
     ],
     "ask": [
       "Bash(docker exec -it kevinalthaus-postgres-1 bash:*)",

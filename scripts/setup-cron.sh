@@ -55,23 +55,33 @@ fi
 FULL_APP_DIR=$(readlink -f "$APP_DIR")
 FULL_LOG_DIR=$(readlink -f "$LOG_DIR")
 
-# Create crontab entries
+# Shell-escape validated variables for safe embedding in crontab
+# Variables are already validated above, now we escape them for literal inclusion
+# Use printf %q for proper shell escaping (safe for both single and double quotes)
+ESCAPED_CONTAINER_NAME=$(printf %q "$CONTAINER_NAME")
+ESCAPED_POSTGRES_USER=$(printf %q "$POSTGRES_USER")
+ESCAPED_POSTGRES_DB=$(printf %q "$POSTGRES_DB")
+ESCAPED_FULL_APP_DIR=$(printf %q "$FULL_APP_DIR")
+ESCAPED_FULL_LOG_DIR=$(printf %q "$FULL_LOG_DIR")
+
+# Create crontab entries with pre-expanded, escaped literals
+# This prevents cron from expanding variables at runtime (eliminating command injection risk)
 CRON_FILE="/tmp/kevinalthaus-cron"
 
 cat > "$CRON_FILE" <<EOF
 # Kevin Althaus Platform - Automated Maintenance Tasks
 
 # Daily PostgreSQL backup at 2 AM
-0 2 * * * cd $FULL_APP_DIR && $FULL_APP_DIR/scripts/backup-postgres.sh >> $FULL_LOG_DIR/backup.log 2>&1
+0 2 * * * cd $ESCAPED_FULL_APP_DIR && $ESCAPED_FULL_APP_DIR/scripts/backup-postgres.sh >> $ESCAPED_FULL_LOG_DIR/backup.log 2>&1
 
-# PostgreSQL monitoring every 5 minutes  
-*/5 * * * * cd $FULL_APP_DIR && $FULL_APP_DIR/scripts/monitor-postgres.sh >> $FULL_LOG_DIR/monitor.log 2>&1
+# PostgreSQL monitoring every 5 minutes
+*/5 * * * * cd $ESCAPED_FULL_APP_DIR && $ESCAPED_FULL_APP_DIR/scripts/monitor-postgres.sh >> $ESCAPED_FULL_LOG_DIR/monitor.log 2>&1
 
 # Weekly database optimization (VACUUM ANALYZE) on Sundays at 3 AM
-0 3 * * 0 docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "VACUUM ANALYZE;" >> "$FULL_LOG_DIR"/vacuum.log 2>&1
+0 3 * * 0 docker exec $ESCAPED_CONTAINER_NAME psql -U $ESCAPED_POSTGRES_USER -d $ESCAPED_POSTGRES_DB -c 'VACUUM ANALYZE;' >> $ESCAPED_FULL_LOG_DIR/vacuum.log 2>&1
 
 # Clean up old logs weekly (keep last 30 days)
-0 4 * * 0 mkdir -p "$FULL_LOG_DIR/cron_cleanup" && $FULL_APP_DIR/scripts/cleanup-logs.sh "$FULL_LOG_DIR" 2>> "$FULL_LOG_DIR/cron_cleanup/cleanup.error.log"
+0 4 * * 0 mkdir -p $ESCAPED_FULL_LOG_DIR/cron_cleanup && $ESCAPED_FULL_APP_DIR/scripts/cleanup-logs.sh $ESCAPED_FULL_LOG_DIR 2>> $ESCAPED_FULL_LOG_DIR/cron_cleanup/cleanup.error.log
 EOF
 
 # Install crontab - check for existing marker to prevent duplicates

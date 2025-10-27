@@ -321,13 +321,15 @@ function csrfProtection(
     }
 
     // Restrict content-type to form submissions and JSON
+    // Use strict prefix matching to prevent malicious extended types
     const contentType = req.get('Content-Type') || '';
+    const contentTypeLower = contentType.toLowerCase();
     const allowedContentTypes = [
       'application/x-www-form-urlencoded',
       'application/json',
       'multipart/form-data',
     ];
-    const isAllowedContentType = allowedContentTypes.some(allowed => contentType.includes(allowed));
+    const isAllowedContentType = allowedContentTypes.some(allowed => contentTypeLower.startsWith(allowed));
 
     if (!isAllowedContentType) {
       logger.warn('CSRF: Invalid Content-Type', { contentType });
