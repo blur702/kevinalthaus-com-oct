@@ -33,6 +33,13 @@ fi
 # Create log directory
 mkdir -p "$LOG_DIR"
 
+# Pre-create cron_cleanup directory with proper permissions
+mkdir -p "$LOG_DIR/cron_cleanup"
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to create $LOG_DIR/cron_cleanup directory"
+    exit 1
+fi
+
 echo "Setting up cron jobs..."
 
 # Validate required scripts exist and are executable
@@ -91,10 +98,11 @@ cat > "$CRON_FILE" <<EOF
 */5 * * * * cd $ESCAPED_FULL_APP_DIR && $ESCAPED_FULL_APP_DIR/scripts/monitor-postgres.sh >> $ESCAPED_FULL_LOG_DIR/monitor.log 2>&1
 
 # Weekly database optimization (VACUUM ANALYZE) on Sundays at 3 AM
-0 3 * * 0 docker exec $ESCAPED_CONTAINER_NAME psql -U $ESCAPED_POSTGRES_USER -d $ESCAPED_POSTGRES_DB -c 'VACUUM ANALYZE;' >> $ESCAPED_FULL_LOG_DIR/vacuum.log 2>&1
+# Check container health before running
+0 3 * * 0 if docker ps --filter name=$ESCAPED_CONTAINER_NAME --filter status=running --format '{{.Names}}' | grep -q $ESCAPED_CONTAINER_NAME; then docker exec $ESCAPED_CONTAINER_NAME psql -U $ESCAPED_POSTGRES_USER -d $ESCAPED_POSTGRES_DB -c 'VACUUM ANALYZE;' >> $ESCAPED_FULL_LOG_DIR/vacuum.log 2>&1; else echo "\$(date '+\%Y-\%m-\%d \%H:\%M:\%S') - Container $ESCAPED_CONTAINER_NAME not running, skipping VACUUM ANALYZE" >> $ESCAPED_FULL_LOG_DIR/vacuum.log; fi
 
 # Clean up old logs weekly (keep last 30 days)
-0 4 * * 0 mkdir -p $ESCAPED_FULL_LOG_DIR/cron_cleanup && $ESCAPED_FULL_APP_DIR/scripts/cleanup-logs.sh $ESCAPED_FULL_LOG_DIR 2>> $ESCAPED_FULL_LOG_DIR/cron_cleanup/cleanup.error.log
+0 4 * * 0 $ESCAPED_FULL_APP_DIR/scripts/cleanup-logs.sh $ESCAPED_FULL_LOG_DIR 2>> $ESCAPED_FULL_LOG_DIR/cron_cleanup/cleanup.error.log
 EOF
 
 # Install crontab - check for existing marker to prevent duplicates

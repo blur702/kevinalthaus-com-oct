@@ -160,12 +160,35 @@ export class DatabaseIsolationEnforcer {
       });
   }
 
-  // Note: This method does NOT enforce maxExecutionTime from QueryExecutionLimits.
-  // Execution time limits must be applied at query execution time using database
-  // timeout mechanisms (e.g., PostgreSQL's statement_timeout or query cancellation).
-  // IMPORTANT: estimatedRows is required and must be a realistic estimate for the query.
-  // Callers must compute or derive this value; there is no default to prevent bypassing enforcement.
-  enforceQuotas(query: string, estimatedRows: number): void {
+  /**
+   * Enforce query quotas based on complexity and estimated row count.
+   *
+   * Note: This method does NOT enforce maxExecutionTime from QueryExecutionLimits.
+   * Execution time limits must be applied at query execution time using database
+   * timeout mechanisms (e.g., PostgreSQL's statement_timeout or query cancellation).
+   *
+   * TRUST ASSUMPTION: The estimatedRows parameter cannot be fully trusted as it comes
+   * from callers who may provide inaccurate estimates. Callers MUST prefer database
+   * planner estimates (e.g., from EXPLAIN) or provide planner-derived estimates via
+   * the explainEstimate parameter.
+   *
+   * @param query - SQL query to validate
+   * @param estimatedRows - Caller-provided row estimate (untrusted)
+   * @param options - Optional validation options
+   * @param options.explainEstimate - Planner-derived estimate from EXPLAIN (trusted)
+   * @param options.requireExplain - If true, throw error when explainEstimate not provided
+   * @param options.suspiciousRowThreshold - Log warning if estimatedRows below this (default: 1000)
+   * @throws Error if quotas are exceeded or requireExplain is true without explainEstimate
+   */
+  enforceQuotas(
+    query: string,
+    estimatedRows: number,
+    options?: {
+      explainEstimate?: number;
+      requireExplain?: boolean;
+      suspiciousRowThreshold?: number;
+    }
+  ): void {
     // Input validation
     const trimmedQuery = query.trim();
     if (!trimmedQuery) {
@@ -176,6 +199,33 @@ export class DatabaseIsolationEnforcer {
       throw new Error('Estimated rows must be a finite positive number greater than zero');
     }
 
+    // Require EXPLAIN-derived estimate if configured
+    if (options?.requireExplain && !options.explainEstimate) {
+      throw new Error(
+        'requireExplain is true but no explainEstimate provided. ' +
+        'Use EXPLAIN to get planner estimate before calling enforceQuotas.'
+      );
+    }
+
+    // Use EXPLAIN estimate if provided (trusted), otherwise use caller estimate (untrusted)
+    const effectiveEstimate = options?.explainEstimate ?? estimatedRows;
+
+    // Detect suspiciously low estimates for complex queries
+    const suspiciousThreshold = options?.suspiciousRowThreshold ?? 1000;
+    const isComplexQuery = /\b(JOIN|UNION|GROUP BY|DISTINCT)\b/i.test(trimmedQuery) ||
+      (trimmedQuery.includes('*') && !/\bWHERE\b/i.test(trimmedQuery));
+
+    if (estimatedRows < suspiciousThreshold && isComplexQuery) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[QueryValidator] Suspiciously low estimate for complex query:\n` +
+        `  Provided estimate: ${estimatedRows} rows\n` +
+        `  Threshold: ${suspiciousThreshold} rows\n` +
+        `  Query: ${trimmedQuery.substring(0, 200)}${trimmedQuery.length > 200 ? '...' : ''}\n` +
+        `  Recommendation: Use EXPLAIN to get accurate planner estimate`
+      );
+    }
+
     const complexity = this.estimateQueryComplexity(trimmedQuery);
 
     // Use >= for exclusive limits (values equal to max are rejected)
@@ -183,8 +233,8 @@ export class DatabaseIsolationEnforcer {
       throw new Error(`Query complexity ${complexity} exceeds limit ${this.maxQueryComplexity}`);
     }
 
-    if (estimatedRows >= this.maxQueryRows) {
-      throw new Error(`Estimated rows ${estimatedRows} exceeds limit ${this.maxQueryRows}`);
+    if (effectiveEstimate >= this.maxQueryRows) {
+      throw new Error(`Estimated rows ${effectiveEstimate} exceeds limit ${this.maxQueryRows}`);
     }
   }
 
@@ -193,7 +243,18 @@ export class DatabaseIsolationEnforcer {
     try {
       const parser = new Parser();
       const ast = parser.astify(query, { database: 'PostgreSQL' });
-      const statements: Array<Record<string, unknown>> = (Array.isArray(ast) ? ast : [ast]) as unknown as Array<Record<string, unknown>>;
+
+      // Runtime type guard for AST - parser can return array or single node
+      let statements: unknown[];
+      if (Array.isArray(ast)) {
+        statements = ast;
+      } else if (ast && typeof ast === 'object' && ast !== null) {
+        // Single statement wrapped in array
+        statements = [ast];
+      } else {
+        // Invalid AST shape - fallback to empty array (no complexity detected)
+        statements = [];
+      }
 
       let joins = 0;
       let cartesianJoins = 0;
