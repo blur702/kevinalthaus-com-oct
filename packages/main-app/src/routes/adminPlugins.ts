@@ -449,7 +449,7 @@ adminPluginsRouter.get('/', csrfProtection, (req, res): void => {
 
     const component = React.createElement(PluginManagement, {
       plugins,
-      csrfToken,
+      csrfToken: csrfToken || '',
     });
 
     const html = renderReactSSR(component, {

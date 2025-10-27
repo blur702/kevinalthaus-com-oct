@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { generateOrExtractRequestId } from '../utils/requestId';
+import { generateOrExtractRequestId } from '../utils/logger';
 
-// Note: Express Request.id property is defined in @monorepo/shared/types/express.d.ts
+// Note: Express Request.id property is augmented via global type imports in @monorepo/shared/src/index.ts
 
 /**
  * Express middleware for request ID management
@@ -23,7 +23,7 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
   }
 
   const requestId = generateOrExtractRequestId(existingId);
-  req.id = requestId;
+  (req as any).id = requestId;
   res.setHeader('X-Request-Id', requestId);
   next();
 }

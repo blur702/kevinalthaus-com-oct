@@ -40,7 +40,7 @@ export function renderReactSSR(component: React.ReactElement, options: SSRRender
 
   // Render to string and extract critical Emotion CSS chunks
   const html = renderToString(app);
-  const chunks = extractCriticalToChunks(html, { cache });
+  const chunks = extractCriticalToChunks(html);
   const styleTags = chunks.styles
     .map((style) => {
       const dataAttr = `${style.key} ${style.ids.join(' ')}`.trim();

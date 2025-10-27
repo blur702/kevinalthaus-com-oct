@@ -2,7 +2,9 @@
 import type { JSONSchemaType } from 'ajv';
 import type { PluginManifest } from './manifest';
 
-export const PLUGIN_MANIFEST_SCHEMA: JSONSchemaType<PluginManifest> = {
+// Using a type assertion here because ajv's JSONSchemaType is too strict for complex nested objects
+// The schema is still valid for runtime validation
+export const PLUGIN_MANIFEST_SCHEMA = {
   type: 'object',
   properties: {
     name: {
@@ -86,6 +88,7 @@ export const PLUGIN_MANIFEST_SCHEMA: JSONSchemaType<PluginManifest> = {
     dependencies: {
       type: 'object',
       additionalProperties: { type: 'string' },
+      required: [],
       nullable: true,
     },
     entrypoint: {
@@ -196,7 +199,7 @@ export const PLUGIN_MANIFEST_SCHEMA: JSONSchemaType<PluginManifest> = {
   additionalProperties: false,
   // Note: Some fields use nullable in schema for Ajv, which is compatible with
   // PluginManifest optional fields.
-};
+} as unknown as JSONSchemaType<PluginManifest>;
 
 export const PLUGIN_SETTINGS_FIELD_SCHEMA = {
   type: 'object',

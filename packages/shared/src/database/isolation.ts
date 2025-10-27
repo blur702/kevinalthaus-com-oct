@@ -193,7 +193,7 @@ export class DatabaseIsolationEnforcer {
     try {
       const parser = new Parser();
       const ast = parser.astify(query, { database: 'PostgreSQL' });
-      const statements: Array<Record<string, unknown>> = Array.isArray(ast) ? ast : [ast];
+      const statements: Array<Record<string, unknown>> = (Array.isArray(ast) ? ast : [ast]) as unknown as Array<Record<string, unknown>>;
 
       let joins = 0;
       let cartesianJoins = 0;
