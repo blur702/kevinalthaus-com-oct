@@ -197,6 +197,17 @@ router.post(
         return;
       }
 
+      // Validate username format (alphanumeric, dots, hyphens, underscores, 3-30 chars)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const usernameRegex = /^[a-zA-Z0-9._-]{3,30}$/;
+      if (!usernameRegex.test(username)) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Username must be 3-30 characters and contain only letters, numbers, dots, hyphens, and underscores',
+        });
+        return;
+      }
+
       // Validate email format
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       if (!validateEmail(email)) {
@@ -232,6 +243,14 @@ router.post(
        RETURNING id, email, username, role, created_at`,
         [email, username, password_hash, role]
       );
+
+      // Audit log
+      logger.info('User created', {
+        actorId: req.user?.userId,
+        targetUserId: result.rows[0].id,
+        email: result.rows[0].email,
+        role: result.rows[0].role,
+      });
 
       res.status(201).json({
         message: 'User created successfully',

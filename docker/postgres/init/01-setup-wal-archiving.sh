@@ -3,19 +3,24 @@
 # WAL Archiving Setup Script
 # ========================================
 # Initializes WAL archiving infrastructure:
-# - Makes archive script executable
+# - Verifies and makes archive script executable
 # - Creates log directory
 # - Creates WAL backup directory
-# - Sets up WAL cleanup cron job
+# - Creates WAL cleanup script (scheduling done separately)
 # ========================================
 
 set -e
 
 echo "Setting up WAL archiving..."
 
-# Make WAL archive script executable
-chmod +x /usr/local/bin/wal-archive.sh
-echo "WAL archive script is executable"
+# Make WAL archive script executable (with existence check)
+if [ -f /usr/local/bin/wal-archive.sh ]; then
+    chmod +x /usr/local/bin/wal-archive.sh
+    echo "WAL archive script is executable"
+else
+    echo "ERROR: /usr/local/bin/wal-archive.sh not found" >&2
+    exit 1
+fi
 
 # Create log directory for WAL archive script
 mkdir -p /var/log/postgresql

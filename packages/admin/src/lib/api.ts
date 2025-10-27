@@ -20,6 +20,7 @@ export interface ApiSuccessResponse<T = unknown> {
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  timeout: 10000, // 10 second timeout to prevent hanging requests
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',

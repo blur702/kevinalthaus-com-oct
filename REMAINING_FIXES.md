@@ -24,12 +24,7 @@ logger.error('Failed to move file to final destination', fallbackErr, {
 throw new Error('Failed to move uploaded file');
 ```
 
-### 2. FastAPI Security Downgrade
-**File**: `python/requirements.txt`
-**Issue**: FastAPI 0.119.1 has known security vulnerability
-**Fix**: Change line 1 from `fastapi==0.119.1` to `fastapi==0.119.0`
-
-### 3. Validation.ts - Use semver Package
+### 2. Validation.ts - Use semver Package
 **File**: `packages/shared/src/security/validation.ts`
 **Issue**: Custom regex for semver is complex and error-prone
 **Fix**:
@@ -50,12 +45,12 @@ export function isValidSemver(version: string): boolean {
 
 ## Medium Priority (Functionality)
 
-### 4. API Gateway - jwtMiddleware Reference Order
+### 3. API Gateway - jwtMiddleware Reference Order
 **File**: `packages/api-gateway/src/index.ts`
 **Issue**: jwtMiddleware referenced before definition (lines 313-317)
 **Fix**: Move getCookie (lines 320-342) and jwtMiddleware (lines 345-406) to BEFORE line 313
 
-### 5. Plugin Management - Activation Button
+### 4. Plugin Management - Activation Button
 **File**: `packages/main-app/src/components/PluginManagement.tsx`
 **Issue**: 'installed' plugins can't be activated (lines 188-207)
 **Fix**: Change condition from:
@@ -67,7 +62,7 @@ to:
 {(plugin.status === 'inactive' || plugin.status === 'installed') && (
 ```
 
-### 6. Admin Vite Config - Conditional SSL
+### 5. Admin Vite Config - Conditional SSL
 **File**: `packages/admin/vite.config.ts`
 **Issue**: secure: false hardcoded (lines 17-26)
 **Fix**:
@@ -88,24 +83,24 @@ export default defineConfig({
 });
 ```
 
-### 7. Frontend Vite Config - Conditional SSL
+### 6. Frontend Vite Config - Conditional SSL
 **File**: `packages/frontend/vite.config.ts`
 **Issue**: Same as admin (lines 19-25)
-**Fix**: Same pattern as #6
+**Fix**: Same pattern as #5
 
 ## Low Priority (Operational)
 
-### 8. Monitor Script - stderr Output
+### 7. Monitor Script - stderr Output
 **File**: `scripts/monitor-postgres.sh`
 **Issue**: Error writes to stdout (lines 10-14)
 **Fix**: Change `echo "ERROR:..."` to `echo "ERROR:..." >&2`
 
-### 9. Restore Script - Cleanup Trap ✅ RESOLVED
+### 8. Restore Script - Cleanup Trap ✅ RESOLVED
 **File**: `scripts/restore-postgres.sh`
 **Status**: Already implemented (see lines 7-19)
 The script already includes a cleanup trap that restarts services if they were stopped and the script exits early.
 
-### 10. Web Script - Production Detection ✅ RESOLVED
+### 9. Web Script - Production Detection ✅ RESOLVED
 **File**: `scripts/web`
 **Status**: Fixed in lines 284-296
 **Implementation**: Comprehensive production detection using:

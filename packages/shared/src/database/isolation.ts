@@ -216,8 +216,7 @@ export class DatabaseIsolationEnforcer {
       (trimmedQuery.includes('*') && !/\bWHERE\b/i.test(trimmedQuery));
 
     if (estimatedRows < suspiciousThreshold && isComplexQuery) {
-      // eslint-disable-next-line no-console
-      console.warn(
+      this.logger.warn(
         `[QueryValidator] Suspiciously low estimate for complex query:\n` +
         `  Provided estimate: ${estimatedRows} rows\n` +
         `  Threshold: ${suspiciousThreshold} rows\n` +

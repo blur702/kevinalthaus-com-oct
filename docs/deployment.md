@@ -32,7 +32,7 @@ sudo ./scripts/setup-cron.sh
 
 Quick migration from Postgres 15 (single-node):
 
-```
+```bash
 # 1) Backup all DBs from the Postgres 15 container
 docker exec kevinalthaus-postgres pg_dumpall -U postgres -f /backups/pre-upgrade.sql
 docker cp kevinalthaus-postgres:/backups/pre-upgrade.sql ./pre-upgrade.sql
