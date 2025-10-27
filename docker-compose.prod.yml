@@ -97,7 +97,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for main-app}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
-      # DATABASE_URL is constructed at runtime using secret
+      # DATABASE_URL uses POSTGRES_PASSWORD_FILE secret - application must read /run/secrets/postgres_password and construct the connection string
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets:
       - postgres_password
     healthcheck:

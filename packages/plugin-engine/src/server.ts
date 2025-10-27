@@ -1,7 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { timingSafeEqual } from 'crypto';
+import { timingSafeEqual, createHash } from 'crypto';
 
 const app = express();
 const PORT = Number(process.env.PLUGIN_ENGINE_PORT || process.env.PORT || 3004);
@@ -26,10 +26,34 @@ function verifyInternalToken(req: express.Request, res: express.Response, next: 
   const provided = Array.isArray(headerVal) ? headerVal[0] : headerVal;
   const providedStr = typeof provided === 'string' ? provided : '';
   const expectedStr = INTERNAL_GATEWAY_TOKEN || '';
-  const a = Buffer.from(providedStr);
-  const b = Buffer.from(expectedStr);
-  // Require non-empty tokens and use timing-safe comparison
-  const valid = a.length > 0 && b.length > 0 && a.length === b.length && timingSafeEqual(a, b);
+
+  // Require non-empty tokens before hashing
+  if (!providedStr || !expectedStr) {
+    // eslint-disable-next-line no-console
+    console.warn('[plugin-engine] Unauthorized direct access attempt - empty token', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+    });
+    res.status(403).json({
+      error: 'Forbidden',
+      message: 'Direct access to this service is not allowed',
+    });
+    return;
+  }
+
+  // Hash both tokens to standardize with main-app and ensure fixed-length comparison
+  const providedHash = createHash('sha256').update(providedStr).digest();
+  const expectedHash = createHash('sha256').update(expectedStr).digest();
+
+  // Use timing-safe comparison on hashed values
+  let valid = false;
+  try {
+    valid = timingSafeEqual(providedHash, expectedHash);
+  } catch {
+    // timingSafeEqual throws if buffers have different lengths (should never happen with hashes)
+    valid = false;
+  }
 
   if (!valid) {
     // eslint-disable-next-line no-console

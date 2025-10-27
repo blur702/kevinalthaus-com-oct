@@ -10,6 +10,14 @@ CONTAINER_NAME="${CONTAINER_NAME:-kevinalthaus-postgres-1}"
 POSTGRES_DB="${POSTGRES_DB:-kevinalthaus}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 
+# Validate CONTAINER_NAME to prevent command injection
+# Only allow alphanumeric, dots, underscores, and hyphens (max 255 chars)
+if [[ ! "$CONTAINER_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || [ -z "$CONTAINER_NAME" ] || [ ${#CONTAINER_NAME} -gt 255 ]; then
+    echo "ERROR: CONTAINER_NAME contains invalid characters, is empty, or exceeds 255 characters. Only alphanumeric, dots, underscores, and hyphens are allowed."
+    echo "Container name: $CONTAINER_NAME"
+    exit 1
+fi
+
 # Validate POSTGRES variables to prevent injection
 # Only allow alphanumeric, underscores, and hyphens
 if [[ ! "$POSTGRES_USER" =~ ^[a-zA-Z0-9_-]+$ ]] || [ -z "$POSTGRES_USER" ]; then

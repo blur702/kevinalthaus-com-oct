@@ -100,24 +100,39 @@ export class ConfigKeyCollisionError extends Error {
   }
 }
 
+// Maximum recursion depth to prevent stack overflow
+const MAX_RECURSION_DEPTH = 50;
+
 /**
  * Helper to recursively sanitize array elements.
  * Handles nested arrays and objects without introducing temp keys.
+ * @param arr - Array to sanitize
+ * @param depth - Current recursion depth (default 0)
+ * @returns Sanitized array or original array if max depth exceeded
  */
-function sanitizeArray(arr: unknown[]): unknown[] {
+function sanitizeArray(arr: unknown[], depth: number = 0): unknown[] {
+  // Stop recursion if max depth exceeded
+  if (depth >= MAX_RECURSION_DEPTH) {
+    return arr;
+  }
+
   return arr.map((item: unknown) => {
     if (typeof item === 'string') {
       return stripAllHTML(item);
     } else if (Array.isArray(item)) {
-      return sanitizeArray(item);
+      return sanitizeArray(item, depth + 1);
     } else if (typeof item === 'object' && item !== null) {
-      return sanitizePluginConfig(item as Record<string, unknown>);
+      return sanitizePluginConfig(item as Record<string, unknown>, depth + 1);
     }
     return item;
   });
 }
 
-export function sanitizePluginConfig(config: Record<string, unknown>): Record<string, unknown> {
+export function sanitizePluginConfig(config: Record<string, unknown>, depth: number = 0): Record<string, unknown> {
+  // Stop recursion if max depth exceeded
+  if (depth >= MAX_RECURSION_DEPTH) {
+    return config;
+  }
   const sanitized: Record<string, unknown> = {};
   const keyMapping = new Map<string, string>();
 
@@ -140,9 +155,9 @@ export function sanitizePluginConfig(config: Record<string, unknown>): Record<st
     if (typeof value === 'string') {
       sanitized[sanitizedKey] = stripAllHTML(value);
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      sanitized[sanitizedKey] = sanitizePluginConfig(value as Record<string, unknown>);
+      sanitized[sanitizedKey] = sanitizePluginConfig(value as Record<string, unknown>, depth + 1);
     } else if (Array.isArray(value)) {
-      sanitized[sanitizedKey] = sanitizeArray(value);
+      sanitized[sanitizedKey] = sanitizeArray(value, depth + 1);
     } else {
       sanitized[sanitizedKey] = value;
     }

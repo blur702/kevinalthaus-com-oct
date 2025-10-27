@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { CircularProgress, Backdrop } from '@mui/material';
 import { isAuthenticated } from '../lib/auth';
 
 interface ProtectedRouteProps {
@@ -42,8 +43,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }, []);
 
   if (authenticated === null) {
-    // Still checking authentication
-    return null;
+    // Still checking authentication - show loading state
+    return (
+      <Backdrop
+        open={true}
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      >
+        <CircularProgress color="inherit" role="status" aria-busy="true" aria-label="Loading authentication status" />
+      </Backdrop>
+    );
   }
 
   if (!authenticated) {

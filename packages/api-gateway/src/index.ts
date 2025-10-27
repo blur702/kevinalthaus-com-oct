@@ -349,10 +349,11 @@ function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {
     token = req.headers.authorization.substring(7);
   }
 
-  if (!token) {
+  // Validate token is non-empty after extraction
+  if (!token || token.trim().length === 0) {
     res.status(401).json({
       error: 'Unauthorized',
-      message: 'No token provided',
+      message: token === '' ? 'Authorization header contains empty Bearer token' : 'No token provided',
     });
     return;
   }

@@ -18,8 +18,6 @@ import { uploadsRouter } from './uploads';
 import { healthCheck } from './db';
 import { discoverPlugins } from './plugins';
 import { pluginManager } from './plugins/manager';
-// Temporarily disable adminPluginsRouter due to compile issues
-// import { adminPluginsRouter } from './routes/adminPlugins';
 import { pluginsRouter } from './routes/plugins';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { asyncHandler } from './utils/asyncHandler';
@@ -250,7 +248,7 @@ app.use('/api/plugins', pluginsRouter);
 
 // Admin UI for plugin management
 pluginManager.init(app);
-// app.use('/admin/plugins', authMiddleware, requireRole(Role.ADMIN), adminPluginsRouter);
+// TODO: Re-enable adminPluginsRouter when packages/main-app/src/routes/adminPlugins.ts is fixed (compile errors)
 
 // Discover plugins (manifests only for now)
 void (async () => {

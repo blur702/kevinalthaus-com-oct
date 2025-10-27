@@ -191,14 +191,33 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), asyncHandler(asyn
       return;
     }
 
-    const filePath = (req.file as Express.Multer.File & { path?: string }).path || '';
+    // Validate file path exists
+    const multerFile = req.file as Express.Multer.File & { path?: string };
+    if (!multerFile.path) {
+      // If path is missing but buffer exists, write to temp file
+      if (multerFile.buffer) {
+        const tempPath = path.join(PLUGIN_UPLOAD_DIR, `temp_${randomBytes(12).toString('hex')}_${sanitizeFilename(multerFile.originalname)}`);
+        try {
+          await fs.writeFile(tempPath, multerFile.buffer);
+          multerFile.path = tempPath;
+        } catch (writeErr) {
+          logger.error('Failed to write buffer to temp file', undefined, { error: writeErr });
+          res.status(500).json({ error: 'Internal Server Error', message: 'Failed to process uploaded file' });
+          return;
+        }
+      } else {
+        logger.error('Uploaded file missing both path and buffer', undefined, { filename: multerFile.originalname });
+        res.status(400).json({ error: 'Bad Request', message: 'Uploaded file has no path or buffer' });
+        return;
+      }
+    }
+
+    const filePath = multerFile.path;
     const detectedMime = await sniffMime(filePath);
 
     if (!detectedMime || !ALLOWED_ARCHIVE_MIME.has(detectedMime)) {
       try {
-        if (filePath) {
-          await fs.unlink(filePath);
-        }
+        await fs.unlink(filePath);
       } catch {
         /* ignore */
       }

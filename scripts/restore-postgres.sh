@@ -28,6 +28,14 @@ if [ -z "$BACKUP_FILE" ]; then
     exit 1
 fi
 
+# Validate container name to prevent command injection
+# Allow only alphanumeric, dot, underscore, and hyphen characters (max 255 chars)
+if [[ ! "$CONTAINER_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || [ ${#CONTAINER_NAME} -gt 255 ]; then
+    echo "ERROR: Invalid container name. Only alphanumeric, dot, underscore, and hyphen characters are allowed (max 255 chars)."
+    echo "Container name: $CONTAINER_NAME"
+    exit 1
+fi
+
 # Validate database name to prevent SQL injection
 # Allow only alphanumeric, underscore, and hyphen characters
 if [[ ! "$POSTGRES_DB" =~ ^[a-zA-Z0-9_-]+$ ]]; then
