@@ -10,7 +10,7 @@
     "declaration": true,
     "lib": ["ES2020", "DOM"]
   },
-  "include": ["src/**/*", "../shared/src/types/**/*"],
+  "include": ["src/**/*"],
   "references": [
     {
       "path": "../shared"
