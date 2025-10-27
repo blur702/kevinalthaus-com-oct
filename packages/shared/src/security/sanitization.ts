@@ -108,12 +108,13 @@ const MAX_RECURSION_DEPTH = 50;
  * Handles nested arrays and objects without introducing temp keys.
  * @param arr - Array to sanitize
  * @param depth - Current recursion depth (default 0)
- * @returns Sanitized array or original array if max depth exceeded
+ * @returns Sanitized array
+ * @throws Error if max recursion depth is exceeded (fail-closed security behavior)
  */
 function sanitizeArray(arr: unknown[], depth: number = 0): unknown[] {
-  // Stop recursion if max depth exceeded
+  // Fail-closed: throw error instead of returning unsanitized data
   if (depth >= MAX_RECURSION_DEPTH) {
-    return arr;
+    throw new Error('Max recursion depth exceeded in sanitizeArray');
   }
 
   return arr.map((item: unknown) => {
@@ -129,9 +130,9 @@ function sanitizeArray(arr: unknown[], depth: number = 0): unknown[] {
 }
 
 export function sanitizePluginConfig(config: Record<string, unknown>, depth: number = 0): Record<string, unknown> {
-  // Stop recursion if max depth exceeded
+  // Fail-closed: throw error instead of returning unsanitized data
   if (depth >= MAX_RECURSION_DEPTH) {
-    return config;
+    throw new Error('Max recursion depth exceeded while sanitizing plugin config');
   }
   const sanitized: Record<string, unknown> = {};
   const keyMapping = new Map<string, string>();

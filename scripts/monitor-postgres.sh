@@ -67,7 +67,7 @@ else
 fi
 
 # Determine status based on thresholds (before output)
-# Exit codes: 0 = healthy, 1 = warning, 2 = critical
+# Exit codes: 0 = healthy, 1 = warning, 2 = container not running
 STATUS="healthy"
 EXIT_CODE=0
 

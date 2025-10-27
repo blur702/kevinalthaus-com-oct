@@ -5,3 +5,4 @@ export * from './plugin';
 export * from './theme';
 export * from './database';
 export * from './utils';
+export * from './middleware/requestId';

@@ -128,11 +128,33 @@ const helmetConfig: {
   hsts?: typeof hstsSettings;
 } = {};
 
-if (process.env.HELMET_CSP_ENABLED === 'true') {
+const isProduction = process.env.NODE_ENV === 'production';
+
+// In production, CSP and HSTS default to enabled unless explicitly disabled
+// In development, they must be explicitly enabled
+const cspEnabled = isProduction
+  ? process.env.HELMET_CSP_ENABLED !== 'false'
+  : process.env.HELMET_CSP_ENABLED === 'true';
+
+const hstsEnabled = isProduction
+  ? process.env.HELMET_HSTS_ENABLED !== 'false'
+  : process.env.HELMET_HSTS_ENABLED === 'true';
+
+// Warn if security features are disabled in production
+if (isProduction) {
+  if (!cspEnabled) {
+    logger.warn('Content Security Policy (CSP) is explicitly disabled in production. This is not recommended.');
+  }
+  if (!hstsEnabled) {
+    logger.warn('HTTP Strict Transport Security (HSTS) is explicitly disabled in production. This is not recommended.');
+  }
+}
+
+if (cspEnabled) {
   helmetConfig.contentSecurityPolicy = { directives: cspDirectives };
 }
 
-if (process.env.HELMET_HSTS_ENABLED === 'true') {
+if (hstsEnabled) {
   helmetConfig.hsts = hstsSettings;
 }
 
