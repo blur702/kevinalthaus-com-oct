@@ -142,6 +142,82 @@ export async function ensureUploadDirectory(): Promise<void> {
 }
 
 /**
+ * Validates a single file and returns validation result without cleanup
+ */
+async function validateSingleFile(
+  filePath: string,
+  originalName: string
+): Promise<{ valid: boolean; details?: string; detectedMime?: string }> {
+  const validation = await sniffAndValidateFile(filePath, originalName);
+  return {
+    valid: validation.valid,
+    details: validation.reason,
+    detectedMime: validation.detectedMime,
+  };
+}
+
+/**
+ * Cleanup helper that removes uploaded files, ignoring errors
+ */
+async function cleanupFiles(files: Array<{ path?: string }>): Promise<void> {
+  for (const file of files) {
+    const filePath = file.path;
+    if (filePath) {
+      try {
+        await fs.unlink(filePath);
+      } catch {
+        /* ignore unlink errors */
+      }
+    }
+  }
+}
+
+/**
+ * Atomically moves a quarantined file to UPLOAD_DIRECTORY
+ * Updates file.path on success
+ * Uses rename→copy+unlink fallback for cross-device moves
+ */
+async function promoteFromQuarantine(file: { path?: string; originalname?: string }): Promise<void> {
+  const quarantinePath = file.path;
+  if (!quarantinePath) {
+    return;
+  }
+
+  const filename = path.basename(quarantinePath);
+  const finalPath = path.join(UPLOAD_DIRECTORY, filename);
+
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    await fs.rename(quarantinePath, finalPath);
+    (file as unknown as { path: string }).path = finalPath;
+  } catch (renameErr) {
+    // Fallback: copy then unlink to handle cross-device moves
+    try {
+      await fs.copyFile(quarantinePath, finalPath);
+      await fs.unlink(quarantinePath);
+      (file as unknown as { path: string }).path = finalPath;
+    } catch (fallbackErr) {
+      // Attempt to cleanup quarantine file to avoid leftovers
+      try {
+        await fs.unlink(quarantinePath);
+      } catch {
+        /* ignore */
+      }
+      // Log full details for debugging (server-side only)
+      console.error('Failed to move file to final destination', {
+        filename: file.originalname || filename,
+        quarantinePath,
+        finalPath,
+        renameError: (renameErr as Error).message,
+        fallbackError: (fallbackErr as Error).message,
+      });
+      // Return sanitized error to client (no paths exposed)
+      throw new Error('Failed to move uploaded file');
+    }
+  }
+}
+
+/**
  * Express middleware to validate uploaded files using magic-byte sniffing
  * Use this after multer middleware to enforce file type validation
  *
@@ -159,139 +235,55 @@ export async function validateUploadedFile(
   next: NextFunction
 ): Promise<void> {
   try {
-    // Check for single file upload (req.file)
-    if (req.file) {
-      const filePath = req.file?.path || '';
-      const originalName = req.file.originalname;
+    // Collect all files for unified processing
+    const allFiles: Array<{ path?: string; originalname: string }> = [];
 
-      const validation = await sniffAndValidateFile(filePath, originalName);
+    if (req.file) {
+      allFiles.push(req.file);
+    }
+
+    if (req.files) {
+      const files = Array.isArray(req.files) ? req.files : Object.values(req.files).flat();
+      allFiles.push(...files);
+    }
+
+    // Validate each file (does not delete files)
+    for (const file of allFiles) {
+      const filePath = file.path || '';
+      const originalName = file.originalname;
+
+      const validation = await validateSingleFile(filePath, originalName);
       if (!validation.valid) {
-        // Remove the stored file if invalid
-        if (filePath) {
-          try {
-            await fs.unlink(filePath);
-          } catch {
-            /* ignore unlink errors */
-          }
-        }
+        // Clean up ALL uploaded files on first invalid file
+        await cleanupFiles(allFiles);
         res.status(400).json({
           error: 'Invalid file content',
-          details: validation.reason,
+          details: validation.details,
           detectedMime: validation.detectedMime,
+          filename: originalName,
         });
         return;
       }
     }
 
-    // Check for multiple file uploads (req.files)
-    if (req.files) {
-      const files = Array.isArray(req.files)
-        ? req.files
-        : Object.values(req.files).flat();
-
-      for (const file of files) {
-        const filePath = ('path' in (file as object) ? (file as { path?: string }).path : undefined) || '';
-        const originalName = file.originalname;
-
-        const validation = await sniffAndValidateFile(filePath, originalName);
-        if (!validation.valid) {
-          // Remove ALL uploaded files if any one fails validation
-          for (const f of files) {
-            const fp = 'path' in (f as object) ? (f as { path?: string }).path : undefined;
-            if (fp) {
-              try {
-                await fs.unlink(fp);
-              } catch {
-                /* ignore */
-              }
-            }
-          }
-          res.status(400).json({
-            error: 'Invalid file content',
-            details: validation.reason,
-            detectedMime: validation.detectedMime,
-            filename: originalName,
-          });
-          return;
-        }
-      }
-    }
-
-    // All files valid: move from quarantine to final directory atomically
-    // Single file
-    if (req.file) {
-      const quarantinePath = req.file?.path || '';
-      if (quarantinePath) {
-        const filename = path.basename(quarantinePath);
-        const finalPath = path.join(UPLOAD_DIRECTORY, filename);
-        try {
-          // eslint-disable-next-line security/detect-non-literal-fs-filename
-          await fs.rename(quarantinePath, finalPath);
-          // Update request file path to final location
-          if (req.file && 'path' in req.file) {
-            (req.file as unknown as { path: string }).path = finalPath;
-          }
-        } catch (renameErr) {
-          // Fallback: copy then unlink to handle cross-device moves
-          try {
-            await fs.copyFile(quarantinePath, finalPath);
-            await fs.unlink(quarantinePath);
-            if (req.file && 'path' in req.file) {
-              (req.file as unknown as { path: string }).path = finalPath;
-            }
-          } catch (fallbackErr) {
-            // Attempt to cleanup quarantine file to avoid leftovers
-            try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
-            // Log full details for debugging (server-side only)
-            console.error('Failed to move file to final destination', {
-              filename: path.basename(req.file?.originalname || 'unknown'),
-              quarantinePath,
-              finalPath,
-              renameError: (renameErr as Error).message,
-              fallbackError: (fallbackErr as Error).message,
-            });
-            // Return sanitized error to client (no paths exposed)
-            throw new Error('Failed to move uploaded file');
-          }
-        }
-      }
-    }
-    // Multiple files
-    if (req.files) {
-      const files = Array.isArray(req.files) ? req.files : Object.values(req.files).flat();
-      for (const f of files) {
-        const quarantinePath = ('path' in (f as object) ? (f as { path?: string }).path : undefined) || '';
-        if (quarantinePath) {
-          const filename = path.basename(quarantinePath);
-          const finalPath = path.join(UPLOAD_DIRECTORY, filename);
-          try {
-            // eslint-disable-next-line security/detect-non-literal-fs-filename
-            await fs.rename(quarantinePath, finalPath);
-            if ('path' in (f as object)) {
-              (f as unknown as { path: string }).path = finalPath;
-            }
-          } catch (renameErr) {
-            try {
-              await fs.copyFile(quarantinePath, finalPath);
-              await fs.unlink(quarantinePath);
-              if ('path' in (f as object)) {
-                (f as unknown as { path: string }).path = finalPath;
-              }
-            } catch (fallbackErr) {
-              try { await fs.unlink(quarantinePath); } catch { /* ignore */ }
-              // Log full details for debugging (server-side only)
-              console.error('Failed to move file to final destination', {
-                filename,
-                quarantinePath,
-                finalPath,
-                renameError: (renameErr as Error).message,
-                fallbackError: (fallbackErr as Error).message,
-              });
-              // Return sanitized error to client (no paths exposed)
-              throw new Error('Failed to move uploaded file');
-            }
-          }
-        }
+    // All files valid: promote from quarantine to final directory
+    for (const file of allFiles) {
+      try {
+        await promoteFromQuarantine(file);
+      } catch (promotionErr) {
+        // On promotion failure, clean up all files and return error
+        await cleanupFiles(allFiles);
+        // Log full error server-side for debugging
+        console.error('[Upload] File promotion error:', {
+          error: promotionErr instanceof Error ? promotionErr.message : String(promotionErr),
+          stack: promotionErr instanceof Error ? promotionErr.stack : undefined,
+          timestamp: new Date().toISOString(),
+        });
+        res.status(500).json({
+          error: 'File validation failed',
+          message: 'An internal error occurred during file validation',
+        });
+        return;
       }
     }
 
@@ -299,31 +291,16 @@ export async function validateUploadedFile(
     next();
   } catch (error) {
     // On unexpected error, try to clean up any uploaded files
+    const allFiles: Array<{ path?: string }> = [];
     if (req.file) {
-      const filePath = req.file?.path;
-      if (filePath) {
-        try {
-          await fs.unlink(filePath);
-        } catch {
-          /* ignore */
-        }
-      }
+      allFiles.push(req.file);
     }
     if (req.files) {
-      const files = Array.isArray(req.files)
-        ? req.files
-        : Object.values(req.files).flat();
-      for (const f of files) {
-        const fp = 'path' in (f as object) ? (f as { path?: string }).path : undefined;
-        if (fp) {
-          try {
-            await fs.unlink(fp);
-          } catch {
-            /* ignore */
-          }
-        }
-      }
+      const files = Array.isArray(req.files) ? req.files : Object.values(req.files).flat();
+      allFiles.push(...files);
     }
+    await cleanupFiles(allFiles);
+
     // Log the full error server-side for debugging
     console.error('[Upload] File validation error:', {
       error: error instanceof Error ? error.message : String(error),

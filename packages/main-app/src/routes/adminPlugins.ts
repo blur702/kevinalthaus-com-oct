@@ -322,6 +322,7 @@ function csrfProtection(
 
     // Restrict content-type to form submissions and JSON
     // Use strict prefix matching to prevent malicious extended types
+    // (e.g., allow 'multipart/form-data; boundary=...' but reject 'application/x-www-form-urlencoded-malicious')
     const contentType = req.get('Content-Type') || '';
     const contentTypeLower = contentType.toLowerCase();
     const allowedContentTypes = [

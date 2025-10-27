@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { randomBytes, timingSafeEqual } from 'crypto';
+import { randomBytes } from 'crypto';
 import { query, transaction } from '../db';
 import { hashPassword, verifyPassword, hashSHA256, defaultLogger } from '@monorepo/shared';
 import { Role } from '@monorepo/shared';
@@ -205,8 +205,8 @@ router.post(
       );
 
       // Check if username exists
-      // Note: timingSafeEqual is not useful here because the DB query with LOWER(username)
-      // already leaks existence via timing, so we use simple deterministic comparison
+      // Note: The earlier DB query with LOWER(username) already leaks existence via timing,
+      // so we use simple deterministic comparison: normalize both usernames and check equality
       let usernameExists = false;
       try {
         if (existingUser.rows.length > 0) {

@@ -105,9 +105,9 @@ kill_port_process() {
         echo "  Full command: $process_cmd"
         echo ""
 
-        # Check if AUTO_KILL environment variable is set for non-interactive mode
-        if [ "${AUTO_KILL:-false}" != "true" ]; then
-            # Interactive confirmation prompt
+        # Check if shell is interactive (stdin is a terminal)
+        if [ -t 0 ]; then
+            # Interactive mode: prompt user for confirmation
             echo -n "Kill this process? [y/N] "
             read -r response
             case "$response" in
@@ -120,7 +120,14 @@ kill_port_process() {
                     ;;
             esac
         else
-            log "AUTO_KILL=true, proceeding without confirmation"
+            # Non-interactive mode: check AUTO_KILL environment flag
+            if [ "${AUTO_KILL:-false}" = "true" ]; then
+                log "AUTO_KILL=true in non-interactive mode, proceeding without confirmation"
+            else
+                warn "Non-interactive mode detected and AUTO_KILL is not set to true"
+                log "Skipping process kill (set AUTO_KILL=true to allow automated killing)"
+                return 0
+            fi
         fi
 
         log "Sending SIGTERM to $process_name (PID: $pid) on port $port"

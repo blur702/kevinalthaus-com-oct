@@ -65,7 +65,7 @@ export function generatePluginTableName(pluginId: string, tableName: string): st
     const maxTableLength = MAX_IDENTIFIER_LENGTH - boundedPluginId.length - hash.length - 2;
     const truncatedTable = sanitizedTable.substring(0, Math.max(0, maxTableLength));
 
-    // If table name is empty/invalid, use the helper function
+    // If table name is empty/invalid after truncation, use the helper function
     if (truncatedTable.length === 0) {
       return generateNameWithEmptyTable(boundedPluginId, hash);
     }
