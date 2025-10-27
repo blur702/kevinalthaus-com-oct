@@ -2,9 +2,11 @@ import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { timingSafeEqual, createHash } from 'crypto';
+import { Server } from 'http';
 
 const app = express();
 const PORT = Number(process.env.PLUGIN_ENGINE_PORT || process.env.PORT || 3004);
+const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
 // Internal gateway token for service-to-service authentication
 const INTERNAL_GATEWAY_TOKEN = process.env.INTERNAL_GATEWAY_TOKEN;
@@ -107,7 +109,68 @@ app.get('/', (_req, res) => {
   res.json({ message: 'Plugin Engine', version: '1.0.0' });
 });
 
-app.listen(PORT, () => {
+// Validate PORT is a valid number in range
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   // eslint-disable-next-line no-console
-  console.log(`[plugin-engine] listening on ${PORT}`);
+  console.error(`[plugin-engine] Invalid PORT value. PORT must be an integer between 1 and 65535, got: ${PORT}`);
+  process.exit(1);
+}
+
+// Start server with proper error handling
+const server: Server = app
+  .listen(PORT, () => {
+    // eslint-disable-next-line no-console
+    console.log(`[plugin-engine] listening on ${PORT}`);
+  })
+  .on('error', (err: Error) => {
+    // eslint-disable-next-line no-console
+    console.error('[plugin-engine] Failed to start server', err);
+    process.exit(1);
+  });
+
+// Graceful shutdown handler
+function gracefulShutdown(signal: string): void {
+  // eslint-disable-next-line no-console
+  console.log(`[plugin-engine] Received ${signal}. Shutting down...`);
+  const timer = setTimeout(() => {
+    // eslint-disable-next-line no-console
+    console.warn('[plugin-engine] Forcing shutdown due to timeout');
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT);
+
+  server.close((err?: Error) => {
+    if (err) {
+      // eslint-disable-next-line no-console
+      console.error('[plugin-engine] Error closing server', err);
+      clearTimeout(timer);
+      process.exit(1);
+    }
+    clearTimeout(timer);
+    // eslint-disable-next-line no-console
+    console.log('[plugin-engine] Shutdown complete');
+    process.exit(0);
+  });
+}
+
+// Signal handlers
+process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+
+// Global error handlers
+process.on('uncaughtException', (err) => {
+  // eslint-disable-next-line no-console
+  console.error('[plugin-engine] Uncaught Exception - exiting immediately', err);
+  // Node.js recommends immediate exit after uncaught exception
+  // Use setImmediate to ensure log is flushed before exit
+  setImmediate(() => process.exit(1));
+});
+
+process.on('unhandledRejection', (reason) => {
+  // Normalize rejection reason to Error for consistent logging
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  // eslint-disable-next-line no-console
+  console.error('[plugin-engine] Unhandled Rejection - exiting immediately', err);
+  // Mirror uncaughtException behavior: exit immediately after logging
+  // Use setImmediate to ensure log is flushed before exit
+  setImmediate(() => process.exit(1));
 });

@@ -36,9 +36,13 @@ export function generatePluginTableName(pluginId: string, tableName: string): st
 
   if (fullName.length > MAX_IDENTIFIER_LENGTH) {
     const hash = generateShortHash(hashInput);
-    // Bound plugin ID to reserve space for underscore, hash, and at least one table char
-    const maxPluginLen = MAX_IDENTIFIER_LENGTH - hash.length - 2 - 1;
-    const boundedPluginId = sanitizedPluginId.substring(0, Math.max(0, maxPluginLen));
+
+    // Calculate actual fallback token length (1 char 't' + up to 4 chars from hash)
+    const tokenLen = 1 + Math.min(4, hash.length);
+
+    // Reserve space for: underscore (1) + token (tokenLen) + underscore (1) + hash (hash.length)
+    const maxPluginLen = MAX_IDENTIFIER_LENGTH - tokenLen - hash.length - 2;
+    const boundedPluginId = sanitizedPluginId.substring(0, Math.max(1, maxPluginLen));
 
     // Compute remaining table length and clamp to >= 0
     const maxTableLength = MAX_IDENTIFIER_LENGTH - boundedPluginId.length - hash.length - 2;
@@ -47,6 +51,14 @@ export function generatePluginTableName(pluginId: string, tableName: string): st
     // If table name is empty/invalid, use a deterministic placeholder from the hash
     if (truncatedTable.length === 0) {
       const tableToken = 't' + hash.substring(0, Math.min(4, hash.length));
+      // Verify final length doesn't exceed limit
+      const finalLen = boundedPluginId.length + 1 + tableToken.length + 1 + hash.length;
+      if (finalLen > MAX_IDENTIFIER_LENGTH) {
+        // Truncate plugin ID further to ensure we don't overflow
+        const adjustedPluginLen = MAX_IDENTIFIER_LENGTH - (1 + tableToken.length + 1 + hash.length);
+        const adjustedPluginId = sanitizedPluginId.substring(0, Math.max(1, adjustedPluginLen));
+        return `${adjustedPluginId}_${tableToken}_${hash}`;
+      }
       return `${boundedPluginId}_${tableToken}_${hash}`;
     }
     return `${boundedPluginId}_${truncatedTable}_${hash}`;
@@ -56,6 +68,14 @@ export function generatePluginTableName(pluginId: string, tableName: string): st
   if (sanitizedTable.length === 0) {
     const hash = generateShortHash(hashInput);
     const tableToken = 't' + hash.substring(0, Math.min(4, hash.length));
+    // Verify final length doesn't exceed limit
+    const finalLen = sanitizedPluginId.length + 1 + tableToken.length + 1 + hash.length;
+    if (finalLen > MAX_IDENTIFIER_LENGTH) {
+      // Truncate plugin ID to ensure we don't overflow
+      const adjustedPluginLen = MAX_IDENTIFIER_LENGTH - (1 + tableToken.length + 1 + hash.length);
+      const adjustedPluginId = sanitizedPluginId.substring(0, Math.max(1, adjustedPluginLen));
+      return `${adjustedPluginId}_${tableToken}_${hash}`;
+    }
     return `${sanitizedPluginId}_${tableToken}_${hash}`;
   }
 

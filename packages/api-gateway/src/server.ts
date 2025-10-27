@@ -76,6 +76,10 @@ process.on('uncaughtException', (err) => {
   setImmediate(() => process.exit(1));
 });
 process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled Rejection in API Gateway', new Error(String(reason)));
-  void gracefulShutdown('unhandledRejection');
+  // Normalize rejection reason to Error for consistent logging
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  logger.error('Unhandled Rejection in API Gateway - exiting immediately', err);
+  // Mirror uncaughtException behavior: exit immediately after logging
+  // Use setImmediate to ensure log is flushed before exit
+  setImmediate(() => process.exit(1));
 });

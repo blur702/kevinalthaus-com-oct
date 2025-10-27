@@ -37,17 +37,17 @@ if [[ ! "$CONTAINER_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || [ ${#CONTAINER_NAME} -gt 25
 fi
 
 # Validate database name to prevent SQL injection
-# Allow only alphanumeric, underscore, and hyphen characters
-if [[ ! "$POSTGRES_DB" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-    echo "ERROR: Invalid database name. Only alphanumeric, underscore, and hyphen characters are allowed."
+# Allow only standard unquoted PostgreSQL identifiers: alphanumeric and underscore
+if [[ ! "$POSTGRES_DB" =~ ^[a-zA-Z0-9_]+$ ]]; then
+    echo "ERROR: Invalid database name. Only alphanumeric and underscore characters are allowed."
     echo "Database name: $POSTGRES_DB"
     exit 1
 fi
 
 # Validate username to prevent SQL injection
-# Allow only alphanumeric, underscore, and hyphen characters
-if [[ ! "$POSTGRES_USER" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-    echo "ERROR: Invalid username. Only alphanumeric, underscore, and hyphen characters are allowed."
+# Allow only standard unquoted PostgreSQL identifiers: alphanumeric and underscore
+if [[ ! "$POSTGRES_USER" =~ ^[a-zA-Z0-9_]+$ ]]; then
+    echo "ERROR: Invalid username. Only alphanumeric and underscore characters are allowed."
     echo "Username: $POSTGRES_USER"
     exit 1
 fi

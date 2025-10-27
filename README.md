@@ -58,10 +58,10 @@ npm run dev:all
 - Ensure `server.key` has permissions 600: `chmod 600 ./secrets/server.key`
 
 **Access Points:**
-- Frontend: http://localhost:3002
-- Admin Panel: http://localhost:3003  
-- API Gateway: http://localhost:3000
-- Main App: http://localhost:3001
+- Frontend: <http://localhost:3002>
+- Admin Panel: <http://localhost:3003>
+- API Gateway: <http://localhost:3000>
+- Main App: <http://localhost:3001>
 
 ## Architecture
 
