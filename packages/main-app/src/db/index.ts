@@ -13,6 +13,11 @@ if (!useConnString && !process.env.POSTGRES_PASSWORD && process.env.NODE_ENV !==
   );
 }
 
+// Sanitize filesystem path for safe logging (shows only filename)
+function sanitizePath(filePath: string): string {
+  return path.basename(filePath);
+}
+
 // Parse PostgreSQL SSL mode from environment
 function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } {
   const sslMode = process.env.PGSSLMODE || 'prefer';
@@ -53,18 +58,19 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
         const caContent = fs.readFileSync(resolvedPath, 'utf8');
         return { rejectUnauthorized: true, ca: caContent };
       } catch (error) {
+        const sanitizedPath = sanitizePath(ca);
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           throw new Error(
-            `SSL certificate file not found at PGSSLROOTCERT=${ca}`
+            `SSL certificate file not found: ${sanitizedPath}`
           );
         }
         if ((error as NodeJS.ErrnoException).code === 'EACCES') {
           throw new Error(
-            `Permission denied reading SSL certificate at PGSSLROOTCERT=${ca}`
+            `Permission denied reading SSL certificate: ${sanitizedPath}`
           );
         }
         throw new Error(
-          `Failed to read SSL certificate from PGSSLROOTCERT=${ca}: ${(error as Error).message}`
+          `Failed to read SSL certificate ${sanitizedPath}: ${(error as Error).message}`
         );
       }
     }

@@ -19,6 +19,7 @@ import { healthCheck } from './db';
 import { discoverPlugins } from './plugins';
 import { pluginManager } from './plugins/manager';
 import { pluginsRouter } from './routes/plugins';
+import { adminPluginsRouter } from './routes/adminPlugins';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { asyncHandler } from './utils/asyncHandler';
 import { requestIdMiddleware } from './middleware/requestId';
@@ -270,7 +271,7 @@ app.use('/api/plugins', pluginsRouter);
 
 // Admin UI for plugin management
 pluginManager.init(app);
-// TODO: Re-enable adminPluginsRouter when packages/main-app/src/routes/adminPlugins.ts is fixed (compile errors)
+app.use('/admin/plugins', adminPluginsRouter);
 
 // Discover plugins (manifests only for now)
 void (async () => {

@@ -1,7 +1,8 @@
+/// <reference path="../types/express.d.ts" />
 import { Request, Response, NextFunction } from 'express';
 import { generateOrExtractRequestId } from '../utils/logger';
 
-// Note: Express Request.id property is augmented via global type imports in @monorepo/shared/src/index.ts
+// Note: Express Request.id property is augmented via global type imports in @monorepo/shared/src/types/express.d.ts
 
 /**
  * Express middleware for request ID management
