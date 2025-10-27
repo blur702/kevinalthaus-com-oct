@@ -7,6 +7,7 @@ interface CacheEntry {
   data: unknown;
   timestamp: number;
   headers: Record<string, string>;
+  varyHeaders?: string[]; // List of request header names that this entry varies on
 }
 
 class ResponseCache {
@@ -62,13 +63,27 @@ class ResponseCache {
     return pairs.join('&');
   }
 
-  private generateKey(req: Request): string {
+  private generateKey(req: Request, varyHeaders?: string[]): string {
     const canonicalQuery = this.canonicalizeQuery(req.query);
-    return `${req.method}:${req.originalUrl.split('?')[0]}:${canonicalQuery}`;
+    let key = `${req.method}:${req.originalUrl.split('?')[0]}:${canonicalQuery}`;
+
+    // Add vary part if headers are specified
+    if (varyHeaders && varyHeaders.length > 0) {
+      const varyValues = varyHeaders.map(headerName => {
+        const value = req.headers[headerName.toLowerCase()];
+        if (Array.isArray(value)) {
+          return value.join(',');
+        }
+        return value || '';
+      });
+      key += `:vary:${varyValues.join('|')}`;
+    }
+
+    return key;
   }
 
-  get(req: Request): CacheEntry | null {
-    const key = this.generateKey(req);
+  get(req: Request, varyHeaders?: string[]): CacheEntry | null {
+    const key = this.generateKey(req, varyHeaders);
     const entry = this.cache.get(key);
 
     if (!entry) {
@@ -83,7 +98,7 @@ class ResponseCache {
     return entry;
   }
 
-  set(req: Request, data: unknown, headers: Record<string, string>): void {
+  set(req: Request, data: unknown, headers: Record<string, string>, varyHeaders?: string[]): void {
     if (this.cache.size >= this.maxSize) {
       // Remove oldest entries (simple FIFO)
       const oldestKey = this.cache.keys().next().value;
@@ -92,11 +107,12 @@ class ResponseCache {
       }
     }
 
-    const key = this.generateKey(req);
+    const key = this.generateKey(req, varyHeaders);
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
       headers,
+      varyHeaders,
     });
   }
 
@@ -174,20 +190,27 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   // Check for cookie-based authentication
   let hasAuthCookie = false;
   const reqWithCookies = req as Request & { cookies?: Record<string, string> };
+  // Define exact auth cookie names to check (case-insensitive)
+  const authCookieNames = ['session', 'sid', 'jwt', 'token', 'auth', 'accesstoken', 'refreshtoken'];
   if (reqWithCookies.cookies) {
     // Prefer parsed cookies from cookie-parser middleware
-    const cookieNames = Object.keys(reqWithCookies.cookies);
-    hasAuthCookie = cookieNames.some(name =>
-      ['session', 'sid', 'jwt', 'token', 'auth'].some(authCookie =>
-        name.toLowerCase().includes(authCookie)
-      )
-    );
+    const cookieNames = Object.keys(reqWithCookies.cookies).map(k => k.toLowerCase());
+    // Use exact match only to avoid false positives (e.g., "discount" matching "count")
+    hasAuthCookie = authCookieNames.some(authCookie => cookieNames.includes(authCookie));
   } else if (req.headers.cookie) {
-    // Fallback: check raw cookie header for auth cookie patterns
-    const cookieHeader = req.headers.cookie.toLowerCase();
-    hasAuthCookie = ['session', 'sid', 'jwt', 'token', 'auth'].some(authCookie =>
-      cookieHeader.includes(authCookie)
-    );
+    // Fallback: parse and check for exact cookie names
+    const cookieHeader = req.headers.cookie;
+    try {
+      // Simple cookie parsing to extract names
+      const cookieNames = cookieHeader
+        .split(';')
+        .map(c => c.trim().split('=')[0].toLowerCase())
+        .filter(Boolean);
+      hasAuthCookie = authCookieNames.some(authCookie => cookieNames.includes(authCookie));
+    } catch {
+      // If parsing fails, skip caching to be safe
+      hasAuthCookie = true;
+    }
   }
 
   if (hasAuthHeader || hasUserContext || hasAuthCookie) {
@@ -230,6 +253,23 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
     const shouldCache = isCacheControlCacheable(responseCacheControl);
 
     if (shouldCache) {
+      // Handle Vary header for content negotiation
+      const varyHeader = res.getHeader('Vary');
+      let varyHeaders: string[] | undefined;
+      if (varyHeader) {
+        // Refuse to cache if Vary: *
+        if (varyHeader === '*') {
+          res.set('X-Cache', 'SKIP');
+          return;
+        }
+        // Parse Vary header into individual header names
+        const varyStr = typeof varyHeader === 'string' ? varyHeader : Array.isArray(varyHeader) ? varyHeader.join(',') : '';
+        varyHeaders = varyStr
+          .split(',')
+          .map(h => h.trim().toLowerCase())
+          .filter((h, i, arr) => h && arr.indexOf(h) === i); // Remove duplicates
+      }
+
       const headers: Record<string, string> = {};
       Object.entries(res.getHeaders()).forEach(([key, value]) => {
         if (typeof value === 'string') {
@@ -242,7 +282,7 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
           headers[key] = String(value);
         }
       });
-      responseCache.set(req, data, headers);
+      responseCache.set(req, data, headers, varyHeaders);
       res.set('X-Cache', 'MISS');
       alreadyCached = true;
     } else {

@@ -284,7 +284,7 @@ BEGIN
     RAISE NOTICE 'Roles created: monitoring, app_user';
     RAISE NOTICE 'Performance indexes created';
     RAISE NOTICE 'Monitoring views created: v_database_health, v_connection_stats, v_table_sizes, v_slow_queries';
-    RAISE NOTICE 'IMPORTANT: Change default passwords for monitoring and app_user roles!';
+    RAISE NOTICE 'IMPORTANT: Ensure provided passwords are secure and rotate them if they are temporary or defaults';
 END $$;
 
 -- ========================================

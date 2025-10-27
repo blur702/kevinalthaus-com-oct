@@ -8,6 +8,7 @@ interface CacheEntry {
   data: unknown;
   timestamp: number;
   headers: Record<string, string>;
+  varyHeaders?: string[]; // List of request header names that this entry varies on
 }
 
 class ResponseCache {
@@ -33,7 +34,8 @@ class ResponseCache {
           return '[Circular]';
         }
         seen.add(val);
-        const items = (val as unknown[]).map((v) => normalize(v)).sort();
+        // Note: Array order is preserved - do not sort as order may be semantically meaningful
+        const items = (val as unknown[]).map((v) => normalize(v));
         seen.delete(val);
         return `[${items.join(',')}]`;
       }
@@ -56,14 +58,28 @@ class ResponseCache {
     return pairs.join('&');
   }
 
-  private generateKey(req: Request): string {
+  private generateKey(req: Request, varyHeaders?: string[]): string {
     const base = req.originalUrl.split('?')[0];
     const canonicalQuery = this.canonicalizeQuery(req.query);
-    return `${req.method}:${base}:${canonicalQuery}`;
+    let key = `${req.method}:${base}:${canonicalQuery}`;
+
+    // Add vary part if headers are specified
+    if (varyHeaders && varyHeaders.length > 0) {
+      const varyValues = varyHeaders.map(headerName => {
+        const value = req.headers[headerName.toLowerCase()];
+        if (Array.isArray(value)) {
+          return value.join(',');
+        }
+        return value || '';
+      });
+      key += `:vary:${varyValues.join('|')}`;
+    }
+
+    return key;
   }
 
-  get(req: Request): CacheEntry | null {
-    const key = this.generateKey(req);
+  get(req: Request, varyHeaders?: string[]): CacheEntry | null {
+    const key = this.generateKey(req, varyHeaders);
     const entry = this.cache.get(key);
 
     if (!entry) {
@@ -78,7 +94,7 @@ class ResponseCache {
     return entry;
   }
 
-  set(req: Request, data: unknown, headers: Record<string, string>): void {
+  set(req: Request, data: unknown, headers: Record<string, string>, varyHeaders?: string[]): void {
     if (this.cache.size >= this.maxSize) {
       // FIFO eviction (remove oldest inserted entry)
       const oldestKey = this.cache.keys().next().value;
@@ -87,11 +103,12 @@ class ResponseCache {
       }
     }
 
-    const key = this.generateKey(req);
+    const key = this.generateKey(req, varyHeaders);
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
       headers,
+      varyHeaders,
     });
   }
 
@@ -154,9 +171,10 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
     return;
   }
 
-  // Default to MISS for cacheable requests; may be overridden to HIT above
+  // Default to MISS for cacheable GET requests
   res.set('X-Cache', 'MISS');
 
+  // Only wrap response methods for cacheable GET requests to avoid overhead
   // Capture body across json/send/end
   const originalJson = res.json.bind(res);
   const originalSend = res.send.bind(res);
@@ -181,10 +199,20 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
       return;
     }
 
-    // Skip caching if response has Vary header (too complex to handle correctly)
+    // Handle Vary header for content negotiation
     const varyHeader = res.getHeader('Vary');
+    let varyHeaders: string[] | undefined;
     if (varyHeader) {
-      return;
+      // Refuse to cache if Vary: *
+      if (varyHeader === '*') {
+        return;
+      }
+      // Parse Vary header into individual header names
+      const varyStr = typeof varyHeader === 'string' ? varyHeader : Array.isArray(varyHeader) ? varyHeader.join(',') : '';
+      varyHeaders = varyStr
+        .split(',')
+        .map(h => h.trim().toLowerCase())
+        .filter((h, i, arr) => h && arr.indexOf(h) === i); // Remove duplicates
     }
 
     const headers: Record<string, string> = {};
@@ -199,7 +227,7 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
         headers[key] = String(value);
       }
     });
-    responseCache.set(req, data, headers);
+    responseCache.set(req, data, headers, varyHeaders);
   };
 
   res.json = function (data: unknown) {

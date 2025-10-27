@@ -69,8 +69,9 @@ const CSRF_SECRET: string = (() => {
     const resolvedPath = path.resolve(requestedPath);
     const relativePath = path.relative(baseDir, resolvedPath);
 
-    // Reject paths outside baseDir (check for '..' or path separator at start)
-    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    // Reject paths outside baseDir (check for '..' at start or empty path)
+    // Note: path.relative() always returns a relative path, so checking isAbsolute is unnecessary
+    if (relativePath.startsWith('..') || relativePath === '' || path.isAbsolute(resolvedPath) && !resolvedPath.startsWith(baseDir)) {
       logger.error('CSRF_SECRET_FILE path traversal attempt blocked', undefined, {
         requested: requestedPath,
         resolved: resolvedPath,

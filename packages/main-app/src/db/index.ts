@@ -38,13 +38,8 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
       }
 
       try {
-        // Validate and sanitize the certificate path
+        // Validate and sanitize the certificate path (path.resolve always returns absolute path)
         const resolvedPath = path.resolve(path.normalize(ca));
-
-        // Ensure the path is absolute
-        if (!path.isAbsolute(resolvedPath)) {
-          throw new Error('PGSSLROOTCERT must be an absolute path');
-        }
 
         // Check if file exists and is a regular file
         // eslint-disable-next-line security/detect-non-literal-fs-filename

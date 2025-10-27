@@ -47,6 +47,12 @@ if [ ! -f /etc/lsb-release ]; then
 fi
 
 source /etc/lsb-release
+
+# Validate DISTRIB_RELEASE is set
+if [ -z "$DISTRIB_RELEASE" ]; then
+    error "DISTRIB_RELEASE not found in /etc/lsb-release"
+fi
+
 if [[ ! "$DISTRIB_RELEASE" =~ ^(20.04|22.04|24.04)$ ]]; then
     warn "This script is tested on Ubuntu 20.04/22.04/24.04 LTS. Your version: $DISTRIB_RELEASE"
 fi
@@ -261,7 +267,28 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # Wait for health checks
 log "Waiting for services to be healthy..."
-sleep 30
+MAX_WAIT=120  # 2 minutes max wait time
+WAIT_INTERVAL=5
+ELAPSED=0
+
+while [ $ELAPSED -lt $MAX_WAIT ]; do
+    # Check if all services are healthy
+    UNHEALTHY=$(docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --format json 2>/dev/null | \
+        grep -c '"Health":"starting\|unhealthy"' || true)
+
+    if [ "$UNHEALTHY" -eq 0 ]; then
+        log "All services are healthy!"
+        break
+    fi
+
+    log "Waiting for services... ($ELAPSED/$MAX_WAIT seconds)"
+    sleep $WAIT_INTERVAL
+    ELAPSED=$((ELAPSED + WAIT_INTERVAL))
+done
+
+if [ $ELAPSED -ge $MAX_WAIT ]; then
+    log "WARNING: Timeout waiting for services to become healthy"
+fi
 
 # Verify services
 log "Verifying services..."

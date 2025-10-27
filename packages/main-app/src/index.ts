@@ -244,7 +244,8 @@ app.get('/', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/uploads', uploadsRouter);
-app.use('/api/plugins', authMiddleware, requireRole(Role.ADMIN), pluginsRouter);
+// pluginsRouter already has authMiddleware and requireRole(Role.ADMIN) applied at line 37 of routes/plugins.ts
+app.use('/api/plugins', pluginsRouter);
 
 // Admin UI for plugin management
 pluginManager.init(app);

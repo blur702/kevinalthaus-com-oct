@@ -18,6 +18,7 @@
 # ========================================
 
 set -e
+set -o pipefail  # Exit on pipeline failures
 
 # ========================================
 # Color Constants
@@ -360,9 +361,24 @@ handle_off() {
 handle_off_clean() {
     warn "DESTRUCTIVE: This will remove all volumes and delete stateful data!"
 
-    # Abort in production environments
-    if [ "${ENV:-}" = "production" ]; then
-        error "Refusing to run --off-clean in production. Set ENV!=production to proceed."
+    # Abort in production environments - check multiple indicators
+    local is_production=false
+
+    # Check environment variables (NODE_ENV, ENV, or ENVIRONMENT)
+    if [ "${NODE_ENV:-}" = "production" ] || [ "${ENV:-}" = "production" ] || [ "${ENVIRONMENT:-}" = "production" ]; then
+        is_production=true
+    fi
+
+    # Check if production compose file is active
+    if [ -f "$PROJECT_ROOT/docker-compose.prod.yml" ]; then
+        # Check if currently running with production overlay
+        if docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --quiet 2>/dev/null | grep -q .; then
+            is_production=true
+        fi
+    fi
+
+    if [ "$is_production" = true ]; then
+        error "Refusing to run --off-clean in production environment. Override with NODE_ENV=development if intentional."
     fi
 
     # Ensure backup acknowledgement

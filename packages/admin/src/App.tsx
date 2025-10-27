@@ -41,6 +41,24 @@ import Register from './pages/auth/Register.tsx';
 import ResetPassword from './pages/auth/ResetPassword.tsx';
 import { clearTokens } from './lib/auth.ts';
 
+// 404 NotFound component
+const NotFound: React.FC = () => (
+  <Box sx={{ textAlign: 'center', mt: 8 }}>
+    <Typography variant="h1" component="h1" gutterBottom>
+      404
+    </Typography>
+    <Typography variant="h5" component="h2" gutterBottom>
+      Page Not Found
+    </Typography>
+    <Typography variant="body1" sx={{ mb: 3 }}>
+      The page you're looking for doesn't exist.
+    </Typography>
+    <Button component={RouterLink} to="/" variant="contained" color="primary">
+      Go to Dashboard
+    </Button>
+  </Box>
+);
+
 const drawerWidth = 240;
 
 interface NavItem {
@@ -221,6 +239,9 @@ const App: React.FC = () => {
             }
           />
         ))}
+
+        {/* 404 catch-all route */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
