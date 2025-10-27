@@ -13,7 +13,7 @@
     "deny": [
       "Bash(powershell.exe:*)",
       "Bash(docker run --privileged:*)",
-      "Bash(docker exec rm:*)",
+      "Bash(docker rm:*)",
       "Bash(docker exec shutdown:*)"
     ],
     "ask": [
