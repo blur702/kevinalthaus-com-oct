@@ -221,9 +221,26 @@ log "Validating .env file for security issues..."
 if [ -f "$APP_DIR/.env" ]; then
     # Optional: allow skipping env validation
     if [ "${SKIP_ENV_VALIDATION:-0}" != "1" ]; then
-        # Refined placeholder detection to reduce false positives
-        # Only match placeholders in assignment context (after =) to ignore comments
-        if grep -qE '=(.*)(CHANGE_ME\b)|(<[A-Z0-9_]+>)|(\bplaceholder\b)|(\bexample\b)|(your_[A-Z0-9_]+)' "$APP_DIR/.env"; then
+        # Parse .env line-by-line to detect placeholder values in assignments only
+        # Ignore comments and blank lines to prevent false positives
+        FOUND_PLACEHOLDER=0
+        while IFS= read -r line; do
+            # Skip blank lines and comments
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+            # Split on first = to get key and value
+            if [[ "$line" =~ ^[^=]+= ]]; then
+                # Extract value (everything after first =)
+                value="${line#*=}"
+                # Check if value contains placeholder patterns
+                if [[ "$value" =~ (CHANGE_ME\b)|(<[A-Z0-9_]+>)|(\bplaceholder\b)|(\bexample\b)|(your_[A-Z0-9_]+) ]]; then
+                    FOUND_PLACEHOLDER=1
+                    break
+                fi
+            fi
+        done < "$APP_DIR/.env"
+
+        if [ "$FOUND_PLACEHOLDER" -eq 1 ]; then
             error "Found placeholder values in .env file. Please replace all placeholders with actual values before deployment. If this detection is incorrect, set SKIP_ENV_VALIDATION=1 to bypass the check."
         fi
     else
@@ -245,8 +262,11 @@ if [ -f "$APP_DIR/.env" ]; then
         # Remove leading/trailing whitespace and quotes from value
         value=$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/")
 
-        # Export the variable using safe assignment (no eval or indirect expansion)
-        export "$key=$value"
+        # Export the variable using safe two-step assignment
+        # Step 1: Safely assign value to variable using printf (prevents injection)
+        printf -v "$key" '%s' "$value"
+        # Step 2: Export the variable by name
+        export "$key"
     done < "$APP_DIR/.env"
 
     # Validate JWT_SECRET

@@ -7,6 +7,14 @@ POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-kevinalthaus}"
 FORMAT="${1}"
 
+# Helper function to run psql commands with timeout
+# Usage: run_docker_psql <query> [timeout_seconds]
+run_docker_psql() {
+    local query="$1"
+    local timeout_seconds="${2:-5}"
+    timeout "$timeout_seconds" docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "$query" 2>/dev/null
+}
+
 # Check if container is running using exact name match
 RUNNING_CONTAINERS=$(docker ps --filter "name=^${CONTAINER_NAME}$" --format "{{.Names}}" 2>/dev/null)
 if [ -z "$RUNNING_CONTAINERS" ]; then
@@ -14,29 +22,50 @@ if [ -z "$RUNNING_CONTAINERS" ]; then
     exit 2
 fi
 
-# Get metrics with error handling
-CONNECTIONS=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT count(*) FROM pg_stat_activity;" 2>/dev/null)
+# Wait for PostgreSQL to be ready (retry loop with timeout)
+MAX_RETRIES=10
+RETRY_DELAY=1
+RETRY_COUNT=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    # Check if PostgreSQL is ready to accept connections
+    if docker exec "$CONTAINER_NAME" pg_isready -U "$POSTGRES_USER" >/dev/null 2>&1; then
+        break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        sleep $RETRY_DELAY
+    fi
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo "ERROR: PostgreSQL is not ready after $MAX_RETRIES attempts" >&2
+    exit 2
+fi
+
+# Get metrics with error handling and timeout
+CONNECTIONS=$(run_docker_psql "SELECT count(*) FROM pg_stat_activity;")
 CONNECTIONS_EXIT=$?
 if [ $CONNECTIONS_EXIT -ne 0 ] || [ -z "$CONNECTIONS" ]; then
     echo "ERROR: Failed to get connection count" >&2
     CONNECTIONS=0
 fi
 
-MAX_CONNECTIONS=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SHOW max_connections;" 2>/dev/null)
+MAX_CONNECTIONS=$(run_docker_psql "SHOW max_connections;")
 MAX_CONNECTIONS_EXIT=$?
 if [ $MAX_CONNECTIONS_EXIT -ne 0 ] || [ -z "$MAX_CONNECTIONS" ]; then
     echo "ERROR: Failed to get max connections" >&2
     MAX_CONNECTIONS=100
 fi
 
-DB_SIZE=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v dbname="$POSTGRES_DB" -t -c "SELECT pg_size_pretty(pg_database_size(:'dbname'));" 2>/dev/null)
+DB_SIZE=$(timeout 5 docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v dbname="$POSTGRES_DB" -t -c "SELECT pg_size_pretty(pg_database_size(:'dbname'));" 2>/dev/null)
 DB_SIZE_EXIT=$?
 if [ $DB_SIZE_EXIT -ne 0 ] || [ -z "$DB_SIZE" ]; then
     echo "ERROR: Failed to get database size" >&2
     DB_SIZE="unknown"
 fi
 
-CACHE_HIT_RATIO=$(docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v dbname="$POSTGRES_DB" -t -c "SELECT ROUND(100.0 * blks_hit / (blks_hit + blks_read), 2) FROM pg_stat_database WHERE datname = :'dbname';" 2>/dev/null)
+CACHE_HIT_RATIO=$(timeout 5 docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v dbname="$POSTGRES_DB" -t -c "SELECT ROUND(100.0 * blks_hit / (blks_hit + blks_read), 2) FROM pg_stat_database WHERE datname = :'dbname';" 2>/dev/null)
 CACHE_HIT_RATIO_EXIT=$?
 if [ $CACHE_HIT_RATIO_EXIT -ne 0 ] || [ -z "$CACHE_HIT_RATIO" ]; then
     echo "ERROR: Failed to get cache hit ratio" >&2
