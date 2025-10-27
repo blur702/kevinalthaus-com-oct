@@ -30,6 +30,25 @@ sudo ./scripts/setup-cron.sh
 
 **⚠️ Important**: This project uses PostgreSQL 16, which is a major version upgrade from PostgreSQL 15. Before deploying or upgrading an existing installation, follow the upgrade checklist below.
 
+Quick migration from Postgres 15 (single-node):
+
+```
+# 1) Backup all DBs from the Postgres 15 container
+docker exec kevinalthaus-postgres pg_dumpall -U postgres -f /backups/pre-upgrade.sql
+docker cp kevinalthaus-postgres:/backups/pre-upgrade.sql ./pre-upgrade.sql
+
+# 2) Stop services and remove old data volume (destructive)
+docker compose down
+docker volume rm kevinalthaus-com-oct_postgres_data
+
+# 3) Bring up Postgres 16
+docker compose up -d postgres
+
+# 4) Restore backup into Postgres 16
+docker cp ./pre-upgrade.sql kevinalthaus-postgres:/backups/pre-upgrade.sql
+docker exec kevinalthaus-postgres psql -U postgres -f /backups/pre-upgrade.sql
+```
+
 ### PostgreSQL 16 Upgrade Checklist
 
 If upgrading from PostgreSQL 15 or earlier:

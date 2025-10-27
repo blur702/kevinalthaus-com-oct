@@ -1,5 +1,9 @@
 services:
   postgres:
+    # NOTE: PostgreSQL 16 is a major version upgrade from 15.
+    # If you have an existing Postgres 15 data volume, you MUST manually migrate
+    # (backup -> replace volume -> restore) before switching to this image.
+    # See README "Breaking Change: PostgreSQL 16 Upgrade" for explicit steps.
     image: postgres:16-alpine
     container_name: kevinalthaus-postgres
     restart: unless-stopped

@@ -5,8 +5,25 @@ import path from 'path';
 
 const useConnString = !!process.env.DATABASE_URL;
 
+// Validate DATABASE_URL when using connection string mode
+if (useConnString) {
+  const url = process.env.DATABASE_URL || '';
+  const validPrefix = url.startsWith('postgres://') || url.startsWith('postgresql://');
+  if (!url || !validPrefix) {
+    throw new Error(
+      'DATABASE_URL must be set and valid when using connection-string mode. ' +
+        "Expected to start with 'postgres://' or 'postgresql://'."
+    );
+  }
+}
+
 // Validate database password when not using connection string (skip in tests)
-if (!useConnString && !process.env.POSTGRES_PASSWORD && process.env.NODE_ENV !== 'test') {
+if (
+  !useConnString &&
+  !process.env.POSTGRES_PASSWORD &&
+  !process.env.POSTGRES_PASSWORD_FILE &&
+  process.env.NODE_ENV !== 'test'
+) {
   throw new Error(
     'POSTGRES_PASSWORD environment variable is required when not using DATABASE_URL. ' +
       'Please set POSTGRES_PASSWORD in your .env file or provide a DATABASE_URL connection string.'
@@ -84,6 +101,29 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
 
 const sslConfig = getSSLConfig();
 
+// Resolve database password (supports POSTGRES_PASSWORD_FILE)
+function resolveDbPassword(): string | undefined {
+  const passwordFile = process.env.POSTGRES_PASSWORD_FILE;
+  if (passwordFile) {
+    try {
+      const resolved = path.resolve(path.normalize(passwordFile));
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      const contents = fs.readFileSync(resolved, 'utf8');
+      const trimmed = contents.trim();
+      if (!trimmed) {
+        throw new Error('POSTGRES_PASSWORD_FILE is empty');
+      }
+      return trimmed;
+    } catch (err) {
+      const sanitized = sanitizePath(passwordFile);
+      throw new Error(
+        `Failed to read POSTGRES_PASSWORD_FILE (${sanitized}): ${(err as Error).message}`
+      );
+    }
+  }
+  return process.env.POSTGRES_PASSWORD;
+}
+
 const pool = new Pool(
   useConnString
     ? {
@@ -99,7 +139,7 @@ const pool = new Pool(
         port: parseInt(process.env.POSTGRES_PORT || '5432'),
         database: process.env.POSTGRES_DB || 'kevinalthaus',
         user: process.env.POSTGRES_USER || 'postgres',
-        password: process.env.POSTGRES_PASSWORD,
+        password: resolveDbPassword(),
         ssl: sslConfig,
         min: 2,
         max: 10,

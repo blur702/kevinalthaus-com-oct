@@ -289,9 +289,17 @@ export const compressionMiddleware = compression({
   level: 6, // Balance between compression ratio and speed
   threshold: 1024, // Only compress responses larger than 1KB
   filter: (req: Request, res: Response) => {
-    // Don't compress if cache-control is set to no-transform
+    // Don't compress if Cache-Control contains no-transform
     const cacheControl = res.getHeader('Cache-Control');
-    if (typeof cacheControl === 'string' && cacheControl.includes('no-transform')) {
+    let cacheControlStr: string | undefined;
+    if (Array.isArray(cacheControl)) {
+      cacheControlStr = cacheControl.join(', ');
+    } else if (typeof cacheControl === 'number') {
+      cacheControlStr = String(cacheControl);
+    } else if (typeof cacheControl === 'string') {
+      cacheControlStr = cacheControl;
+    }
+    if (cacheControlStr && cacheControlStr.toLowerCase().includes('no-transform')) {
       return false;
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access

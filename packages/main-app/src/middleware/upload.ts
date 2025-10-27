@@ -24,6 +24,9 @@ const ALLOWED_FILE_TYPES = process.env.ALLOWED_FILE_TYPES
   : ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
 // MIME type to file extension mapping
+// Note: This map includes a few MIME types (e.g., text/plain, application/json, text/csv)
+// that are NOT enabled by default in ALLOWED_FILE_TYPES. They are provided here for
+// optional user configuration via the ALLOWED_FILE_TYPES env var.
 const MIME_TO_EXTENSIONS: Record<string, string[]> = {
   'image/jpeg': ['.jpg', '.jpeg'],
   'image/png': ['.png'],
@@ -199,7 +202,6 @@ async function promoteFromQuarantine(file: { path?: string; originalname?: strin
         /* ignore */
       }
       // Log full details for debugging (server-side only, no client exposure)
-      const logger = (await import('@monorepo/shared')).defaultLogger;
       logger.error('Failed to move file to final destination', fallbackErr as Error, {
         filename: path.basename(file.originalname || filename),
         quarantinePath,

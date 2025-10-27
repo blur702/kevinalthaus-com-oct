@@ -16,7 +16,7 @@
     "gateway",
     "express"
   ],
-  "author": "",
+  "author": "Kevin Althaus",
   "license": "MIT",
   "dependencies": {
     "compression": "^1.7.4",

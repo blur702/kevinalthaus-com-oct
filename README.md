@@ -51,6 +51,41 @@ docker-compose up -d postgres redis
 npm run dev:all
 ```
 
+### Breaking Change: PostgreSQL 16 Upgrade
+
+This repo now uses `postgres:16-alpine`. If you previously ran with Postgres 15, existing volumes are NOT compatible. Migrate data before switching images.
+
+Quick migration steps from Postgres 15:
+
+1) Backup all databases from the running Postgres 15 container:
+
+```
+docker exec kevinalthaus-postgres pg_dumpall -U postgres -f /backups/pre-upgrade.sql
+docker cp kevinalthaus-postgres:/backups/pre-upgrade.sql ./pre-upgrade.sql
+```
+
+2) Stop stack and remove old Postgres volume:
+
+```
+docker compose down
+docker volume rm kevinalthaus-com-oct_postgres_data
+```
+
+3) Start fresh Postgres 16 and services:
+
+```
+docker compose up -d postgres
+```
+
+4) Restore backup into Postgres 16:
+
+```
+docker cp ./pre-upgrade.sql kevinalthaus-postgres:/backups/pre-upgrade.sql
+docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" kevinalthaus-postgres bash -lc "psql -U postgres -f /backups/pre-upgrade.sql"
+```
+
+For more details and a staged upgrade path, see `docs/deployment.md`.
+
 **Important for Production:**
 - SSL certificates required in `./secrets/`: `server.crt` and `server.key`
 - Run `./scripts/generate-ssl-certs.sh` to generate self-signed certs
