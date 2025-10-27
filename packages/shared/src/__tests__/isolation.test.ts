@@ -104,8 +104,10 @@ describe('DatabaseIsolationEnforcer.enforceQuotas', () => {
     };
     const enforcer = new DatabaseIsolationEnforcer(rowTight);
     const q = `SELECT * FROM users`;
-    // Boundary case: exactly at the limit should not throw
-    expect(() => enforcer.enforceQuotas(q, 500)).not.toThrow();
+    // Boundary case: exactly at the limit should throw (exclusive limit)
+    expect(() => enforcer.enforceQuotas(q, 500)).toThrow();
+    // Just below the limit should not throw
+    expect(() => enforcer.enforceQuotas(q, 499)).not.toThrow();
   });
 
   it('handles malformed SQL gracefully', () => {

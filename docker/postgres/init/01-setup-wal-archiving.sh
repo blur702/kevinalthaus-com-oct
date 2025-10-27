@@ -38,22 +38,30 @@ LOG_FILE="/var/log/postgresql/wal-cleanup.log"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Starting WAL cleanup (retention: ${RETENTION_DAYS} days)" >> "$LOG_FILE"
 
 if [ -d "$WAL_DIR" ]; then
-    # Clean up temporary files
-    tmp_files=$(find "$WAL_DIR" -type f -name "*.tmp*" -print 2>>"$LOG_FILE")
-    if [ -n "$tmp_files" ]; then
-        echo "$tmp_files" >> "$LOG_FILE"
-        tmp_count=$(echo "$tmp_files" | wc -l)
-        find "$WAL_DIR" -type f -name "*.tmp*" -delete 2>>"$LOG_FILE"
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Deleted $tmp_count temporary files" >> "$LOG_FILE"
+    # Clean up temporary files - collect once to avoid TOCTOU race
+    tmp_files=()
+    while IFS= read -r -d '' file; do
+        tmp_files+=("$file")
+    done < <(find "$WAL_DIR" -type f -name "*.tmp*" -print0 2>>"$LOG_FILE")
+
+    if [ ${#tmp_files[@]} -gt 0 ]; then
+        printf '%s\n' "${tmp_files[@]}" >> "$LOG_FILE"
+        # Delete the exact files we collected
+        printf '%s\0' "${tmp_files[@]}" | xargs -0 rm -f 2>>"$LOG_FILE"
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Deleted ${#tmp_files[@]} temporary files" >> "$LOG_FILE"
     fi
 
-    # Clean up old WAL files
-    old_files=$(find "$WAL_DIR" -type f -mtime +${RETENTION_DAYS} -print 2>>"$LOG_FILE")
-    if [ -n "$old_files" ]; then
-        echo "$old_files" >> "$LOG_FILE"
-        deleted=$(echo "$old_files" | wc -l)
-        find "$WAL_DIR" -type f -mtime +${RETENTION_DAYS} -delete 2>>"$LOG_FILE"
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Deleted $deleted WAL files older than ${RETENTION_DAYS} days" >> "$LOG_FILE"
+    # Clean up old WAL files - collect once to avoid TOCTOU race
+    old_files=()
+    while IFS= read -r -d '' file; do
+        old_files+=("$file")
+    done < <(find "$WAL_DIR" -type f -mtime +${RETENTION_DAYS} -print0 2>>"$LOG_FILE")
+
+    if [ ${#old_files[@]} -gt 0 ]; then
+        printf '%s\n' "${old_files[@]}" >> "$LOG_FILE"
+        # Delete the exact files we collected
+        printf '%s\0' "${old_files[@]}" | xargs -0 rm -f 2>>"$LOG_FILE"
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Deleted ${#old_files[@]} WAL files older than ${RETENTION_DAYS} days" >> "$LOG_FILE"
     else
         echo "[$(date +'%Y-%m-%d %H:%M:%S')] No WAL files older than ${RETENTION_DAYS} days to delete" >> "$LOG_FILE"
     fi

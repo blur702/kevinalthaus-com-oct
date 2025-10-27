@@ -127,19 +127,15 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml stop api-gateway
 SERVICES_STOPPED=0
 ```
 
-### 10. Web Script - Production Detection
+### 10. Web Script - Production Detection ✅ RESOLVED
 **File**: `scripts/web`
-**Issue**: Unreliable production detection (lines 275-281)
-**Fix**:
-```bash
-# Replace heuristic with env var check:
-local is_prod=false
-if [ -f "$PROJECT_ROOT/docker-compose.prod.yml" ]; then
-  if docker compose ps 2>/dev/null | grep -q "kevinalthaus.*production"; then
-    is_prod=true
-  fi
-fi
-```
+**Status**: Fixed in lines 284-296
+**Implementation**: Comprehensive production detection using:
+1. Explicit environment variables (`PRODUCTION=true` or `COMPOSE_ENV=production`)
+2. Fallback to checking actually running production containers via Docker labels
+3. Verifies `com.docker.compose.project` labels and `docker-compose.prod.yml` presence
+
+The current implementation is more robust than the original suggestion, using definitive indicators instead of heuristics.
 
 ## Build & Test
 

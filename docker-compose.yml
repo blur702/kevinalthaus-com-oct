@@ -72,7 +72,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env file}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
     # Port mapping removed - main-app is only accessible via api-gateway
-    # For local development debugging, use: docker exec -it kevinalthaus-main-app curl http://localhost:3001/health
+    # BREAKING CHANGE: Local workflows must route through api-gateway (port 3000) for access
+    # For local development debugging, use: docker exec -it kevinalthaus-main-app-1 curl http://localhost:3001/health
     volumes:
       - ./packages:/app/packages
       - ./node_modules:/app/node_modules
@@ -104,7 +105,8 @@ services:
       PORT: ${PYTHON_SERVICE_PORT:-8000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
     # Port mapping removed - python-service is only accessible via api-gateway
-    # For local development debugging, use: docker exec -it kevinalthaus-python-service curl http://localhost:8000/health
+    # BREAKING CHANGE: Local workflows must route through api-gateway (port 3000) for access
+    # For local development debugging, use: docker exec -it kevinalthaus-python-service-1 curl http://localhost:8000/health
     volumes:
       - ./python:/app/python
       - python_logs:/app/logs

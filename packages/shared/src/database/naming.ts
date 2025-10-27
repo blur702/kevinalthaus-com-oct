@@ -25,10 +25,17 @@ export function generatePluginSchemaName(pluginId: string): string {
 export function generatePluginTableName(pluginId: string, tableName: string): string {
   const sanitizedPluginId = sanitizeIdentifier(pluginId);
   const sanitizedTable = sanitizeIdentifier(tableName);
+
+  // Handle empty sanitizedTable to avoid collisions
+  // Include the original tableName in hash input so different invalid names produce different hashes
+  const hashInput = sanitizedTable.length === 0
+    ? `${sanitizedPluginId}_${tableName}`
+    : `${sanitizedPluginId}_${sanitizedTable}`;
+
   const fullName = `${sanitizedPluginId}_${sanitizedTable}`;
 
   if (fullName.length > MAX_IDENTIFIER_LENGTH) {
-    const hash = generateShortHash(fullName);
+    const hash = generateShortHash(hashInput);
     // Bound plugin ID to reserve space for underscore, hash, and at least one table char
     const maxPluginLen = MAX_IDENTIFIER_LENGTH - hash.length - 2 - 1;
     const boundedPluginId = sanitizedPluginId.substring(0, Math.max(0, maxPluginLen));
@@ -37,10 +44,19 @@ export function generatePluginTableName(pluginId: string, tableName: string): st
     const maxTableLength = MAX_IDENTIFIER_LENGTH - boundedPluginId.length - hash.length - 2;
     const truncatedTable = sanitizedTable.substring(0, Math.max(0, maxTableLength));
 
+    // If table name is empty/invalid, use a deterministic placeholder from the hash
     if (truncatedTable.length === 0) {
-      return `${boundedPluginId}_${hash}`;
+      const tableToken = 't' + hash.substring(0, Math.min(4, hash.length));
+      return `${boundedPluginId}_${tableToken}_${hash}`;
     }
     return `${boundedPluginId}_${truncatedTable}_${hash}`;
+  }
+
+  // Handle empty sanitizedTable in non-truncated case
+  if (sanitizedTable.length === 0) {
+    const hash = generateShortHash(hashInput);
+    const tableToken = 't' + hash.substring(0, Math.min(4, hash.length));
+    return `${sanitizedPluginId}_${tableToken}_${hash}`;
   }
 
   return fullName;
