@@ -8,4 +8,4 @@ export * from './utils';
 export * from './middleware/requestId';
 
 // Import type augmentations to ensure they're available to consumers
-import './types/express';
+import type {} from './types/express';

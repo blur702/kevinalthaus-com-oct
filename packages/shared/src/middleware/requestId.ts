@@ -1,4 +1,4 @@
-import '../types/express';
+import type {} from '../types/express';
 import { Request, Response, NextFunction } from 'express';
 import { generateOrExtractRequestId } from '../utils/logger';
 
