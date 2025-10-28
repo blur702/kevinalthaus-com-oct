@@ -28,8 +28,8 @@ if ! test -w "$LOG_DIR"; then
     exit 1
 fi
 
-# Check if container is running using exact name match with fixed-string matching
-if docker ps --format '{{.Names}}' | grep -F -q "$CONTAINER_NAME"; then
+# Check if container is running using exact name match with fixed-string exact-line matching
+if docker ps --format '{{.Names}}' | grep -Fx -q "$CONTAINER_NAME"; then
     echo "[$(timestamp)] Running VACUUM ANALYZE on database: $POSTGRES_DB" >> "$LOG_FILE" 2>&1
 
     # Temporarily disable errexit to capture exit code and handle errors

@@ -3,7 +3,7 @@
 # Ensures .env file contains a JWT_SECRET variable
 # Usage: ./scripts/ensure-jwt-secret.sh
 
-set -e
+set -eo pipefail
 
 ENV_FILE=".env"
 
@@ -27,11 +27,14 @@ echo "JWT_SECRET not found in $ENV_FILE"
 echo "Generating a new secure JWT secret..."
 echo ""
 
+# With set -o pipefail, any failure in the pipeline will cause script to exit
+# Still validate JWT_SECRET is non-empty after generation
 JWT_SECRET=$(openssl rand -base64 64 | tr -d '\n')
 
-# Validate that openssl command succeeded and JWT_SECRET is non-empty
-if [ $? -ne 0 ] || [ -z "$JWT_SECRET" ]; then
-  echo "Error: Failed to generate JWT_SECRET using openssl"
+# Validate that JWT_SECRET is non-empty
+# (pipefail ensures script exits if openssl or tr fails)
+if [ -z "$JWT_SECRET" ]; then
+  echo "Error: Failed to generate JWT_SECRET (empty result)"
   exit 1
 fi
 

@@ -33,10 +33,17 @@ if [ ! -d "$LOG_DIR" ]; then
         echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] Failed to create log directory: $LOG_DIR" >&2
         exit 1
     fi
-    # Set directory permissions; fail if critical for security
-    if ! chmod 755 "$LOG_DIR" 2>/dev/null; then
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] [WARN] Failed to set permissions on log directory: $LOG_DIR" >&2
-        # Continue execution as logging permissions are non-critical
+    # Set directory permissions; fail in production if chmod fails
+    chmod 755 "$LOG_DIR" 2>/dev/null
+    chmod_status=$?
+    if [ "$chmod_status" -ne 0 ]; then
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] Failed to set permissions on log directory: $LOG_DIR (exit code: $chmod_status)" >&2
+        # In production, treat chmod failure as fatal
+        if [ "${ENV:-}" = "production" ] || [ "${FAIL_ON_CHMOD:-0}" = "1" ]; then
+            echo "[$(date +'%Y-%m-%d %H:%M:%S')] [FATAL] chmod failure is fatal in production mode" >&2
+            exit 1
+        fi
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] [WARN] Continuing despite chmod failure (non-production)" >&2
     fi
 fi
 

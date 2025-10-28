@@ -39,7 +39,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${API_GATEWAY_PORT:-3000}
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET environment variable is required}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
       REDIS_URL: redis://redis:6379
     ports:
@@ -73,7 +73,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${MAIN_APP_PORT:-3001}
       API_GATEWAY_URL: http://api-gateway:3000
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET environment variable is required}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-kevinalthaus}
     # Port mapping removed - main-app is only accessible via api-gateway
     # BREAKING CHANGE: Local workflows must route through api-gateway (port 3000) for access

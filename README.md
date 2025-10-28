@@ -79,21 +79,21 @@ Quick migration steps from Postgres 15:
 
 1) Backup all databases from the running Postgres 15 container:
 
-```
+```bash
 docker exec kevinalthaus-postgres pg_dumpall -U postgres -f /backups/pre-upgrade.sql
 docker cp kevinalthaus-postgres:/backups/pre-upgrade.sql ./pre-upgrade.sql
 ```
 
 2) Stop stack and remove old Postgres volume:
 
-```
+```bash
 docker compose down
 docker volume rm kevinalthaus-com-oct_postgres_data
 ```
 
 3) Start fresh Postgres 16 and services:
 
-```
+```bash
 docker compose up -d postgres
 ```
 

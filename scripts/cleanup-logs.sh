@@ -19,6 +19,8 @@ if [ -z "$RESOLVED" ]; then
 fi
 
 # Protected system directories
+# Note: Current working directory is not treated as protected
+# (the root "/" entry still prevents accidental deletion of the filesystem root)
 PROTECTED_PATHS=(
   "/"
   "/etc"
@@ -28,7 +30,6 @@ PROTECTED_PATHS=(
   "/var"
   "/home"
   "/root"
-  "$(pwd -P)"
 )
 
 # Allowed paths under /var (exceptions to protection)

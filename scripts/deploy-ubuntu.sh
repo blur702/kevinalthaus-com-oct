@@ -57,10 +57,15 @@ if [[ ! "$DISTRIB_RELEASE" =~ ^(20.04|22.04|24.04)$ ]]; then
     warn "This script is tested on Ubuntu 20.04/22.04/24.04 LTS. Your version: $DISTRIB_RELEASE"
 fi
 
-# Check disk space (minimum 20GB)
-AVAILABLE_SPACE=$(df / | awk 'NR==2 {print $4}')
+# Check disk space (minimum 20GB) in the filesystem containing APP_DIR
+# Use df on APP_DIR to check the correct mount point, not just /
+AVAILABLE_SPACE=$(df --output=avail "$APP_DIR" 2>/dev/null | awk 'NR==2 {print $1}')
+if [ -z "$AVAILABLE_SPACE" ]; then
+    # Fallback: if APP_DIR doesn't exist yet, check its parent
+    AVAILABLE_SPACE=$(df --output=avail "$(dirname "$APP_DIR")" 2>/dev/null | awk 'NR==2 {print $1}')
+fi
 if [ "$AVAILABLE_SPACE" -lt 20971520 ]; then
-    error "Insufficient disk space. At least 20GB required."
+    error "Insufficient disk space in $APP_DIR filesystem. At least 20GB required, but only $((AVAILABLE_SPACE / 1024))MB available."
 fi
 
 # Install Docker
