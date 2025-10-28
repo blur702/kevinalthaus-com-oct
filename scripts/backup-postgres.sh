@@ -56,10 +56,10 @@ POSTGRES_DB="${POSTGRES_DB:-kevinalthaus}"
 RETENTION_DAYS=30
 
 # Create backup directory
-mkdir -p "$BACKUP_DIR"
+mkdir -p "$RESOLVED_BACKUP_DIR"
 
 # Backup filename
-BACKUP_FILE="$BACKUP_DIR/backup_${POSTGRES_DB}_${TIMESTAMP}.sql.gz"
+BACKUP_FILE="$RESOLVED_BACKUP_DIR/backup_${POSTGRES_DB}_${TIMESTAMP}.sql.gz"
 
 echo "[$(date)] Starting PostgreSQL backup..."
 
@@ -108,11 +108,28 @@ echo "[$(date)] Backup completed: $BACKUP_FILE ($BACKUP_SIZE)"
 # Verify backup integrity
 if [ -s "$BACKUP_FILE" ] && gzip -t "$BACKUP_FILE"; then
     echo "[$(date)] Backup verification: SUCCESS"
-    
-    # Remove old backups only after successful verification
-    find "$BACKUP_DIR" -name "backup_*.sql.gz" -type f -mtime +$RETENTION_DAYS -delete
+
+    # Validate RESOLVED_BACKUP_DIR before dangerous find -delete operation
+    if [ -z "$RESOLVED_BACKUP_DIR" ]; then
+        echo "[$(date)] ERROR: RESOLVED_BACKUP_DIR is empty, skipping cleanup" >&2
+        exit 1
+    fi
+
+    if [ ! -d "$RESOLVED_BACKUP_DIR" ]; then
+        echo "[$(date)] ERROR: RESOLVED_BACKUP_DIR is not a directory, skipping cleanup" >&2
+        exit 1
+    fi
+
+    # Additional safety check: ensure it's not a root or top-level path
+    if [ "$RESOLVED_BACKUP_DIR" = "/" ]; then
+        echo "[$(date)] ERROR: RESOLVED_BACKUP_DIR is root directory, skipping cleanup" >&2
+        exit 1
+    fi
+
+    # Remove old backups only after successful verification and validation
+    find "$RESOLVED_BACKUP_DIR" -name "backup_*.sql.gz" -type f -mtime +$RETENTION_DAYS -delete
     echo "[$(date)] Cleaned up backups older than $RETENTION_DAYS days"
-    
+
     exit 0
 else
     echo "[$(date)] Backup verification: FAILED (file is empty or corrupted)"

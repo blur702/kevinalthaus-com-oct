@@ -41,6 +41,9 @@ npm install
 cp .env.example .env
 # Edit .env with your settings
 
+# Generate JWT secret (required for authentication)
+./scripts/ensure-jwt-secret.sh
+
 # For production: Generate SSL certificates for PostgreSQL
 # Create secrets directory and generate self-signed certs
 mkdir -p secrets
@@ -50,6 +53,22 @@ mkdir -p secrets
 docker-compose up -d postgres redis
 npm run dev:all
 ```
+
+### Breaking Change: JWT_SECRET Required
+
+**Action Required:** All deployments now require a `JWT_SECRET` environment variable for authentication.
+
+Run the migration script to generate and persist a secure JWT secret:
+
+```bash
+./scripts/ensure-jwt-secret.sh
+```
+
+**Important:**
+- This secret must remain identical across restarts
+- Do NOT regenerate unless you want to invalidate all existing tokens
+- Keep secure and do NOT commit to version control
+- To generate manually: `openssl rand -base64 64`
 
 ### Breaking Change: PostgreSQL 16 Upgrade
 

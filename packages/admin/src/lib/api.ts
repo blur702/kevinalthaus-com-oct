@@ -5,6 +5,10 @@ import axios from 'axios';
 // Base URL configuration - use environment variable or default to /api
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+// Timeout configuration - longer timeout for file uploads
+const DEFAULT_TIMEOUT = 60000; // 60 seconds default timeout
+const UPLOAD_TIMEOUT = 300000; // 5 minutes for large file uploads
+
 // TypeScript interfaces for API responses
 export interface ApiErrorResponse {
   error: string;
@@ -20,7 +24,7 @@ export interface ApiSuccessResponse<T = unknown> {
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  timeout: 10000, // 10 second timeout to prevent hanging requests
+  timeout: DEFAULT_TIMEOUT, // Configurable timeout to prevent hanging requests
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -75,6 +79,7 @@ export async function uploadPluginPackage(file: File, options: UploadPluginOptio
   }
   const { data } = await api.post('/plugins/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: UPLOAD_TIMEOUT, // Extended timeout for large file uploads
   });
   return data;
 }
