@@ -8,6 +8,7 @@ interface CacheEntry {
   timestamp: number;
   headers: Record<string, string>;
   varyHeaders?: string[]; // List of request header names that this entry varies on
+  baseKey: string; // Store baseKey for coordinated eviction
 }
 
 interface CacheMetadata {
@@ -128,29 +129,43 @@ class ResponseCache {
   }
 
   set(req: Request, data: unknown, headers: Record<string, string>, varyHeaders?: string[]): void {
+    const key = this.generateKey(req, varyHeaders);
+    const baseKey = this.generateBaseKey(req);
+    const timestamp = Date.now();
+
+    // Coordinated eviction: when cache is full, remove oldest entry AND its metadata
     if (this.cache.size >= this.maxSize) {
-      // Remove oldest entries (simple FIFO)
       const oldestKey = this.cache.keys().next().value;
       if (oldestKey) {
+        const oldestEntry = this.cache.get(oldestKey);
         this.cache.delete(oldestKey);
+        // Remove corresponding metadata entry
+        if (oldestEntry && oldestEntry.baseKey) {
+          this.metadata.delete(oldestEntry.baseKey);
+        }
       }
     }
+
+    // Coordinated eviction: when metadata is full, remove oldest metadata AND related cache entries
     if (this.metadata.size >= this.maxSize) {
       const oldestMetaKey = this.metadata.keys().next().value;
       if (oldestMetaKey) {
         this.metadata.delete(oldestMetaKey);
+        // Remove all cache entries that have this baseKey
+        for (const [cacheKey, entry] of this.cache.entries()) {
+          if (entry.baseKey === oldestMetaKey) {
+            this.cache.delete(cacheKey);
+          }
+        }
       }
     }
-
-    const key = this.generateKey(req, varyHeaders);
-    const baseKey = this.generateBaseKey(req);
-    const timestamp = Date.now();
 
     this.cache.set(key, {
       data,
       timestamp,
       headers,
       varyHeaders,
+      baseKey, // Store baseKey for coordinated eviction
     });
 
     // Store metadata if vary headers exist

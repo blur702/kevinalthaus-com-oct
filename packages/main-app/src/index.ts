@@ -99,6 +99,17 @@ const corsOrigins = process.env.CORS_ORIGIN
 
 const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
 
+// Startup validation: reject wildcard CORS with credentials
+if (corsOrigins.includes('*') && corsCredentials) {
+  logger.error(
+    'FATAL: Invalid CORS configuration detected. CORS_ORIGIN includes wildcard (*) while CORS_CREDENTIALS is true. ' +
+    'This is a security violation - browsers will reject this configuration. ' +
+    'Either remove the wildcard from CORS_ORIGIN or set CORS_CREDENTIALS=false.'
+  );
+  // eslint-disable-next-line no-process-exit
+  process.exit(1);
+}
+
 // Performance and security middleware (order matters)
 app.use(requestIdMiddleware);
 app.use(compressionMiddleware);

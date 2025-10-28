@@ -19,18 +19,27 @@ timestamp() {
 
 # Ensure log directory exists
 LOG_DIR="$(dirname "$LOG_FILE")"
-mkdir -p "$LOG_DIR" 2>/dev/null || true
+if ! mkdir -p "$LOG_DIR" 2>/dev/null; then
+    echo "ERROR: Failed to create log directory: $LOG_DIR" >&2
+    exit 1
+fi
+if ! test -w "$LOG_DIR"; then
+    echo "ERROR: Log directory is not writable: $LOG_DIR" >&2
+    exit 1
+fi
 
-# Check if container is running using exact name match
-# Use docker ps with --format to get Names column, then grep for exact match
-if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+# Check if container is running using exact name match with fixed-string matching
+if docker ps --format '{{.Names}}' | grep -F -q "$CONTAINER_NAME"; then
     echo "[$(timestamp)] Running VACUUM ANALYZE on database: $POSTGRES_DB" >> "$LOG_FILE" 2>&1
 
-    # Run VACUUM ANALYZE and append output to log
-    if docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 'VACUUM ANALYZE;' >> "$LOG_FILE" 2>&1; then
+    # Run VACUUM ANALYZE and capture exit code immediately
+    docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 'VACUUM ANALYZE;' >> "$LOG_FILE" 2>&1
+    rc=$?
+
+    if [ "$rc" -eq 0 ]; then
         echo "[$(timestamp)] VACUUM ANALYZE completed successfully" >> "$LOG_FILE" 2>&1
     else
-        echo "[$(timestamp)] ERROR: VACUUM ANALYZE failed with exit code $?" >> "$LOG_FILE" 2>&1
+        echo "[$(timestamp)] ERROR: VACUUM ANALYZE failed with exit code $rc" >> "$LOG_FILE" 2>&1
         exit 1
     fi
 else

@@ -58,6 +58,7 @@ services:
     environment:
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for api-gateway}
+      INTERNAL_GATEWAY_TOKEN: ${INTERNAL_GATEWAY_TOKEN:?INTERNAL_GATEWAY_TOKEN is required for api-gateway}
     healthcheck:
       test: ['CMD-SHELL', 'curl -f http://localhost:4000/health || exit 1']
       interval: 30s
@@ -99,6 +100,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
       # DATABASE_URL uses POSTGRES_PASSWORD_FILE secret - application must read /run/secrets/postgres_password and construct the connection string
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      INTERNAL_GATEWAY_TOKEN: ${INTERNAL_GATEWAY_TOKEN:?INTERNAL_GATEWAY_TOKEN is required for main-app}
     secrets:
       - postgres_password
     healthcheck:

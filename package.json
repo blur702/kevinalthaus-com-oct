@@ -23,7 +23,8 @@
     "eslint-plugin-security": "^1.7.1",
     "lerna": "^7.0.0",
     "prettier": "^3.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "yaml": "^2.8.1"
   },
   "engines": {
     "node": ">=20.0.0",

@@ -7,7 +7,7 @@ import api from '../../lib/api';
 import { AuthResponse } from '../../lib/auth';
 
 interface LoginFormData {
-  email: string;
+  identifier: string;
   password: string;
 }
 
@@ -23,7 +23,7 @@ const Login: React.FC = () => {
   const from = (location.state as LocationState)?.from?.pathname || '/';
 
   const [formData, setFormData] = useState<LoginFormData>({
-    email: '',
+    identifier: '',
     password: '',
   });
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
@@ -33,10 +33,16 @@ const Login: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: Partial<LoginFormData> = {};
 
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+    // Validate identifier (email or username)
+    if (!formData.identifier) {
+      newErrors.identifier = 'Email or Username is required';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+
+      if (!emailRegex.test(formData.identifier) && !usernameRegex.test(formData.identifier)) {
+        newErrors.identifier = 'Invalid email or username format';
+      }
     }
 
     if (!formData.password) {
@@ -78,7 +84,7 @@ const Login: React.FC = () => {
 
     try {
       await api.post<AuthResponse>('/auth/login', {
-        email: formData.email,
+        identifier: formData.identifier,
         password: formData.password,
       });
 
@@ -92,7 +98,7 @@ const Login: React.FC = () => {
         const axiosError = error as {
           response?: { data?: { message?: string } };
         };
-        setApiError(axiosError.response?.data?.message || 'Invalid email or password');
+        setApiError(axiosError.response?.data?.message || 'Invalid credentials');
       } else {
         setApiError('An error occurred. Please try again.');
       }
@@ -127,15 +133,15 @@ const Login: React.FC = () => {
               margin="normal"
               required
               fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
+              id="identifier"
+              label="Email or Username"
+              name="identifier"
+              autoComplete="username"
               autoFocus
-              value={formData.email}
+              value={formData.identifier}
               onChange={handleChange}
-              error={!!errors.email}
-              helperText={errors.email}
+              error={!!errors.identifier}
+              helperText={errors.identifier}
               disabled={loading}
             />
 
