@@ -21,6 +21,7 @@ test.describe('CORS Startup Validation', () => {
 
     let stderr = '';
     let exitCode: number | null = null;
+    let timedOut = false;
 
     // Collect stderr
     proc.stderr.on('data', (data) => {
@@ -29,22 +30,34 @@ test.describe('CORS Startup Validation', () => {
 
     // Wait for process to exit
     await new Promise<void>((resolve) => {
+      let resolved = false;
+
       proc.on('exit', (code) => {
-        exitCode = code;
-        resolve();
+        if (!resolved) {
+          exitCode = code;
+          resolved = true;
+          resolve();
+        }
       });
 
       // Timeout after 10 seconds
       setTimeout(() => {
-        if (exitCode === null || exitCode === undefined) {
+        if (!resolved) {
+          timedOut = true;
           proc.kill();
+          resolved = true;
+          resolve();
         }
-        resolve();
       }, 10000);
     });
 
-    // Verify the process exited with error code 1
-    expect(exitCode).toBe(1);
+    // Verify the test didn't timeout
+    expect(timedOut).toBe(false);
+
+    // Verify the process exited with error code 1 (only when not timed out)
+    if (!timedOut) {
+      expect(exitCode).toBe(1);
+    }
 
     // Verify the error message was logged
     expect(stderr).toContain('FATAL: Invalid CORS configuration detected');

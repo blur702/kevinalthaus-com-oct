@@ -63,21 +63,58 @@ if [ "$enable_ssl" = true ]; then
     chown postgres:postgres "$CRT_PATH" "$KEY_PATH"
   fi
 
-  # Toggle SSL on and set cert paths in postgresql.conf (append/replace)
+  # Toggle SSL on and set cert paths in postgresql.conf (idempotent)
   if [ -f "$CONF_FILE" ]; then
-    sed -ri "s/^#?\s*ssl\s*=.*/ssl = on/" "$CONF_FILE" || true
-    sed -ri "s|^#?\s*ssl_cert_file\s*=.*|ssl_cert_file = '${CRT_PATH}'|" "$CONF_FILE" || true
-    sed -ri "s|^#?\s*ssl_key_file\s*=.*|ssl_key_file = '${KEY_PATH}'|" "$CONF_FILE" || true
-    # If keys not present in file, append them
-    grep -q -E '^[[:space:]]*ssl[[:space:]]*=' "$CONF_FILE" || echo "ssl = on" >> "$CONF_FILE"
-    grep -q -E '^[[:space:]]*ssl_cert_file[[:space:]]*=' "$CONF_FILE" || echo "ssl_cert_file = '$CRT_PATH'" >> "$CONF_FILE"
-    grep -q -E '^[[:space:]]*ssl_key_file[[:space:]]*=' "$CONF_FILE" || echo "ssl_key_file = '$KEY_PATH'" >> "$CONF_FILE"
+    # For each setting, check if it exists (commented or not) and update, or append if missing
+
+    # Handle ssl setting
+    if grep -qE '^[[:space:]]*#?[[:space:]]*ssl[[:space:]]*=' "$CONF_FILE"; then
+      # Update existing line (commented or not)
+      if ! sed -ri "s/^[[:space:]]*#?[[:space:]]*ssl[[:space:]]*=.*/ssl = on/" "$CONF_FILE"; then
+        echo "[init] ERROR: Failed to update ssl setting in $CONF_FILE" >&2
+        exit 1
+      fi
+    else
+      # Append if missing
+      echo "ssl = on" >> "$CONF_FILE"
+    fi
+
+    # Handle ssl_cert_file setting
+    if grep -qE '^[[:space:]]*#?[[:space:]]*ssl_cert_file[[:space:]]*=' "$CONF_FILE"; then
+      # Update existing line
+      if ! sed -ri "s|^[[:space:]]*#?[[:space:]]*ssl_cert_file[[:space:]]*=.*|ssl_cert_file = '${CRT_PATH}'|" "$CONF_FILE"; then
+        echo "[init] ERROR: Failed to update ssl_cert_file setting in $CONF_FILE" >&2
+        exit 1
+      fi
+    else
+      # Append if missing
+      echo "ssl_cert_file = '$CRT_PATH'" >> "$CONF_FILE"
+    fi
+
+    # Handle ssl_key_file setting
+    if grep -qE '^[[:space:]]*#?[[:space:]]*ssl_key_file[[:space:]]*=' "$CONF_FILE"; then
+      # Update existing line
+      if ! sed -ri "s|^[[:space:]]*#?[[:space:]]*ssl_key_file[[:space:]]*=.*|ssl_key_file = '${KEY_PATH}'|" "$CONF_FILE"; then
+        echo "[init] ERROR: Failed to update ssl_key_file setting in $CONF_FILE" >&2
+        exit 1
+      fi
+    else
+      # Append if missing
+      echo "ssl_key_file = '$KEY_PATH'" >> "$CONF_FILE"
+    fi
   fi
 else
   # Ensure SSL is disabled for local/dev without certs
   if [ -f "$CONF_FILE" ]; then
-    sed -ri "s/^#?\s*ssl\s*=.*/ssl = off/" "$CONF_FILE" || true
-    # no need to keep cert paths when disabled
+    # Update or append ssl = off
+    if grep -qE '^[[:space:]]*#?[[:space:]]*ssl[[:space:]]*=' "$CONF_FILE"; then
+      if ! sed -ri "s/^#?\s*ssl\s*=.*/ssl = off/" "$CONF_FILE"; then
+        echo "[init] ERROR: Failed to disable ssl in $CONF_FILE" >&2
+        exit 1
+      fi
+    else
+      echo "ssl = off" >> "$CONF_FILE"
+    fi
   fi
 fi
 

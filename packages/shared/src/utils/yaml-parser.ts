@@ -7,9 +7,6 @@ import { PLUGIN_MANIFEST_SCHEMA } from '../plugin/schema';
 const ajv = new Ajv({ allErrors: true, strict: true });
 addFormats(ajv);
 
-// Cache the compiled validator at module load to avoid recompilation overhead
-const pluginManifestValidator = ajv.compile<PluginManifest>(PLUGIN_MANIFEST_SCHEMA);
-
 export class YAMLParseError extends Error {
   constructor(
     message: string,
@@ -76,12 +73,22 @@ export function parsePluginManifest(content: string): PluginManifest {
   return validatePluginManifest(parsed);
 }
 
+/**
+ * Validates a plugin manifest using a fresh validator instance per call
+ * This ensures independent state and avoids concurrency issues with shared errors
+ * @param data - The data to validate against PluginManifest schema
+ * @returns The validated PluginManifest
+ * @throws ManifestValidationError if validation fails
+ */
 export function validatePluginManifest(data: unknown): PluginManifest {
-  // Use the cached compiled validator for performance
-  if (!pluginManifestValidator(data)) {
-    // Deep clone errors to avoid mutation from concurrent validations
-    // Using structuredClone (available in Node.js 20+) for immutable snapshot
-    const clonedErrors = structuredClone(pluginManifestValidator.errors || []);
+  // Create a fresh validator for each validation to avoid concurrency issues
+  const validator = createManifestValidator();
+
+  if (!validator(data)) {
+    // Read validator.errors immediately after validation
+    const errors = validator.errors || [];
+    // Clone errors for safe return (errors array is owned by validator)
+    const clonedErrors = structuredClone(errors);
     throw new ManifestValidationError('Plugin manifest validation failed', clonedErrors);
   }
 

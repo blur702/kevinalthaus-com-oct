@@ -65,7 +65,9 @@ if [ -z "$AVAILABLE_SPACE" ]; then
     AVAILABLE_SPACE=$(df --output=avail "$(dirname "$APP_DIR")" 2>/dev/null | awk 'NR==2 {print $1}')
 fi
 if [ "$AVAILABLE_SPACE" -lt 20971520 ]; then
-    error "Insufficient disk space in $APP_DIR filesystem. At least 20GB required, but only $((AVAILABLE_SPACE / 1024))MB available."
+    # Convert KB to GB for error message (1024*1024 = 1048576)
+    AVAILABLE_GB=$(awk "BEGIN {printf \"%.1f\", $AVAILABLE_SPACE / 1048576}")
+    error "Insufficient disk space in $APP_DIR filesystem. At least 20GB required, but only ${AVAILABLE_GB}GB available."
 fi
 
 # Install Docker

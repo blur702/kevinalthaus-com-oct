@@ -8,15 +8,21 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      # NODE_ENV used by init script (00-setup-ssl.sh) to enforce SSL in production
+      NODE_ENV: production
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - postgres_backups:/backups
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
       - ./docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - ./docker/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      # IMPORTANT: SSL certificates must exist before container startup
+      # See docs/security.md for certificate generation and placement instructions
+      # Required files: ./secrets/server.crt and ./secrets/server.key
       - ./secrets/server.crt:/etc/ssl/certs/server.crt:ro
       - ./secrets/server.key:/etc/ssl/private/server.key:ro
-    command: postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
+    # Custom command removed to ensure init scripts run before postgres starts
+    # Init scripts in /docker-entrypoint-initdb.d will validate certificates before startup
     secrets:
       - postgres_password
     healthcheck:
@@ -111,6 +117,8 @@ services:
       start_period: 40s
     volumes:
       - /app/node_modules
+      # Use bind mount for uploads to avoid data loss on existing deployments
+      # Named volumes would be future enhancement requiring migration guide
       - ./uploads:/app/uploads
     logging:
       driver: 'json-file'

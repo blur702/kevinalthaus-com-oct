@@ -36,17 +36,62 @@ export function verifyPluginSignature(
   return timingSafeEqual(signature, expectedSignature);
 }
 
+/**
+ * Timing-safe string comparison for hex-encoded values
+ * Prevents timing attacks by validating inputs and using fixed-length buffers
+ */
 function timingSafeEqual(a: string, b: string): boolean {
-  // Always perform the same preparatory work regardless of input to avoid timing leaks
-  let bufA: Buffer;
-  let bufB: Buffer;
+  // Expected length for SHA256 hex strings (64 hex chars = 32 bytes)
+  const EXPECTED_HEX_LENGTH = 64;
+  const FIXED_LENGTH = 32; // 32 bytes
+
+  /**
+   * Validates hex string format and length without throwing
+   * @returns true if valid, false otherwise
+   */
+  function isValidHex(hexString: string): boolean {
+    // Check exact length
+    if (hexString.length !== EXPECTED_HEX_LENGTH) {
+      return false;
+    }
+    // Check only valid hex characters
+    return /^[0-9a-fA-F]{64}$/.test(hexString);
+  }
+
+  /**
+   * Converts validated hex string to fixed-length buffer
+   * Must only be called after validation passes
+   */
+  function hexToFixedBuffer(hexString: string): Buffer {
+    return Buffer.from(hexString, 'hex');
+  }
+
+  // Validate both inputs (same operation on both to preserve timing)
+  const aValid = isValidHex(a);
+  const bValid = isValidHex(b);
+
+  // If either input is invalid, return false (but still process both)
+  if (!aValid || !bValid) {
+    // Still create buffers to maintain timing consistency
+    const dummyA = Buffer.alloc(FIXED_LENGTH);
+    const dummyB = Buffer.alloc(FIXED_LENGTH);
+    try {
+      cryptoTimingSafeEqual(dummyA, dummyB);
+    } catch {
+      // Suppress errors
+    }
+    return false;
+  }
+
+  // Both inputs validated - convert to buffers
+  const bufA = hexToFixedBuffer(a);
+  const bufB = hexToFixedBuffer(b);
+
+  // Perform constant-time comparison on equal-length buffers
   try {
-    bufA = Buffer.from(a, 'hex');
-    bufB = Buffer.from(b, 'hex');
-    // crypto.timingSafeEqual enforces equal length and will throw if mismatched
     return cryptoTimingSafeEqual(bufA, bufB);
   } catch {
-    // Any error (invalid hex, length mismatch) results in false without leaking timing
+    // This should never happen since buffers are same length
     return false;
   }
 }

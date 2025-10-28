@@ -393,7 +393,24 @@ export const compressionMiddleware = compression({
   filter: (req: Request, res: Response) => {
     // Don't compress if cache-control is set to no-transform
     const cacheControl = res.getHeader('Cache-Control');
-    if (typeof cacheControl === 'string' && cacheControl.includes('no-transform')) {
+    // Normalize header value: handle string, array, or other types
+    let normalizedCacheControl: string;
+    if (Array.isArray(cacheControl)) {
+      // Multiple Cache-Control headers set - join with comma
+      normalizedCacheControl = cacheControl.join(',');
+    } else if (typeof cacheControl === 'string') {
+      normalizedCacheControl = cacheControl;
+    } else if (cacheControl !== undefined && cacheControl !== null) {
+      // Coerce other types (number, etc.) to string
+      normalizedCacheControl = String(cacheControl);
+    } else {
+      // No Cache-Control header - proceed with compression
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      return compression.filter(req, res);
+    }
+
+    // Case-insensitive check for no-transform directive
+    if (normalizedCacheControl.toLowerCase().includes('no-transform')) {
       return false;
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access

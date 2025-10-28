@@ -13,9 +13,17 @@ interface HealthResponse {
 
 describe('Main App', () => {
   beforeAll(async () => {
-    // Ensure DB is reachable (health check path will initialize pool)
-    // Optionally add other init steps here
-    await request(app).get('/health');
+    // Ensure DB is reachable and health check succeeds before running tests
+    try {
+      const response = await request(app).get('/health');
+      if (response.status !== 200) {
+        throw new Error(`Health check failed with status ${response.status}: ${JSON.stringify(response.body)}`);
+      }
+    } catch (error) {
+      // Fail fast with clear error message if health check fails
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Test setup failed: Health check endpoint not accessible or unhealthy. ${errorMessage}`);
+    }
   });
 
   afterAll(async () => {

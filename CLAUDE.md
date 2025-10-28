@@ -334,3 +334,115 @@ When Claude runs CodeRabbit with `--prompt-only`, the output is structured for m
 - Installation and authentication (standalone + Claude Code)
 - Testing integration and troubleshooting
 - Best practices and operational workflows
+
+### Autonomous Claude + CodeRabbit Workflow
+
+The CodeRabbit CLI enables a fully autonomous iterative review-and-fix loop between Claude Code and CodeRabbit's AI reviewer. This workflow allows Claude to:
+
+1. Implement features or fixes
+2. Run CodeRabbit review automatically
+3. Parse structured feedback from `--prompt-only` output
+4. Apply fixes for detected issues
+5. Re-run CodeRabbit to verify fixes
+6. Report results to user
+
+**How it works:**
+
+```text
+User Request
+    ↓
+Claude implements feature/fix
+    ↓
+Claude runs: coderabbit --prompt-only --type uncommitted (background)
+    ↓
+CodeRabbit analyzes code (7-30+ minutes)
+    ↓
+Claude receives structured output:
+  - File paths and line numbers
+  - Issue severity levels
+  - Specific recommendations
+  - Suggested fixes
+    ↓
+Claude applies fixes automatically
+    ↓
+Claude runs: coderabbit --prompt-only --type uncommitted (verify)
+    ↓
+Claude reports: issues found → fixes applied → verification status
+```
+
+**Example prompts for autonomous workflow:**
+
+```bash
+# Basic autonomous loop
+"Please implement user profile editing, then run CodeRabbit review and fix any issues it finds."
+
+# With explicit background execution
+"Add password reset functionality, then run coderabbit --prompt-only --type uncommitted
+in the background and fix the issues while continuing to work."
+
+# Multi-iteration loop
+"Refactor the authentication middleware, run CodeRabbit, fix issues, and re-run
+until the review passes with no critical or high-severity issues."
+
+# Focused review scope
+"Update the database migration logic, then run CodeRabbit with --type staged
+(review only staged changes) and fix any problems."
+```
+
+**Key advantages of `--prompt-only` for AI consumption:**
+
+- **Structured output:** Machine-parseable format with consistent schema
+- **Token efficiency:** Optimized for AI consumption, reduces token usage vs. human-readable output
+- **Direct actionability:** Includes file paths, line numbers, and specific fix suggestions
+- **Severity filtering:** Claude can prioritize critical/high issues first
+- **Batch processing:** Claude can apply multiple fixes before re-verification
+
+**Expected review times:**
+
+- **Small changes (1-5 files):** 7-12 minutes
+- **Medium changes (6-20 files):** 12-20 minutes
+- **Large changes (20+ files):** 20-30+ minutes
+- **Uncommitted vs. staged:** Uncommitted reviews are typically faster (focused scope)
+
+**Verification cycle example:**
+
+```text
+Iteration 1:
+  - CodeRabbit finds 8 issues (3 critical, 5 medium)
+  - Claude fixes all 8 issues
+  - Claude commits fixes or stages for re-review
+
+Iteration 2:
+  - CodeRabbit finds 2 issues (1 medium, 1 low)
+  - Claude fixes remaining 2 issues
+  - Claude stages for final verification
+
+Iteration 3:
+  - CodeRabbit finds 0 issues
+  - Claude reports: "All issues resolved, code passes review"
+```
+
+**Best practices for autonomous workflow:**
+
+1. **Use background execution for long reviews:** Reviews can take 7-30+ minutes, so run in background and continue working
+2. **Scope reviews appropriately:** Use `--type uncommitted` for work-in-progress, `--type staged` for pre-commit verification
+3. **Verify after fixes:** Always re-run CodeRabbit after applying fixes to confirm resolution
+4. **Track fixes consistently:** Document fixes in `CODERABBIT_FIXES.md` to maintain audit trail
+5. **Prioritize by severity:** Address critical/high-severity issues first, defer low-severity for later
+6. **Batch related fixes:** Group similar fixes together for efficiency
+7. **Use specific base branches:** `--base main` or `--base develop` to review against specific target branch
+
+**Troubleshooting autonomous workflow:**
+
+- **"No files found for review":** Check git status, verify CRLF/LF settings (`git config --global core.autocrlf input`)
+- **Review takes too long:** Use `--type uncommitted` or `--type staged` to narrow scope
+- **False positives:** Use judgment to skip non-actionable suggestions, document reasoning in commit message
+- **Authentication expired:** Re-authenticate with `coderabbit auth login` in both standalone WSL and Claude Code sessions
+- **Parsing errors:** If `--prompt-only` output is malformed, re-run review or check CLI version
+
+**Integration with existing process:**
+
+- **CODERABBIT_FIXES.md:** Continue tracking fixes in this file (automated + manual reviews)
+- **Git workflow:** Commit fixes with descriptive messages referencing CodeRabbit review
+- **CI/CD integration:** Local CLI reviews complement GitHub Actions CodeRabbit checks
+- **Pre-commit hooks:** Optional integration to run CodeRabbit before allowing commits

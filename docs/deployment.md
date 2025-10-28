@@ -32,10 +32,12 @@ sudo ./scripts/setup-cron.sh
 
 Quick migration from Postgres 15 (single-node):
 
+**Note:** Replace `<postgres-container>` with your actual container name. Find it with `docker compose ps` or `docker ps`.
+
 ```bash
 # 1) Backup all DBs from the Postgres 15 container
-docker exec kevinalthaus-postgres pg_dumpall -U postgres -f /backups/pre-upgrade.sql
-docker cp kevinalthaus-postgres:/backups/pre-upgrade.sql ./pre-upgrade.sql
+docker exec <postgres-container> pg_dumpall -U postgres -f /backups/pre-upgrade.sql
+docker cp <postgres-container>:/backups/pre-upgrade.sql ./pre-upgrade.sql
 
 # 2) Stop services and remove old data volume (destructive)
 docker compose down
@@ -45,8 +47,8 @@ docker volume rm kevinalthaus-com-oct_postgres_data
 docker compose up -d postgres
 
 # 4) Restore backup into Postgres 16
-docker cp ./pre-upgrade.sql kevinalthaus-postgres:/backups/pre-upgrade.sql
-docker exec kevinalthaus-postgres psql -U postgres -f /backups/pre-upgrade.sql
+docker cp ./pre-upgrade.sql <postgres-container>:/backups/pre-upgrade.sql
+docker exec <postgres-container> psql -U postgres -f /backups/pre-upgrade.sql
 ```
 
 ### PostgreSQL 16 Upgrade Checklist

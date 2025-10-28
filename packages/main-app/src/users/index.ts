@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { query } from '../db';
+import { query, transaction } from '../db';
 import { hashPassword, validateEmail, createLogger, LogLevel } from '@monorepo/shared';
 import { Role, Capability } from '@monorepo/shared';
 import { AuthenticatedRequest, authMiddleware } from '../auth';
@@ -415,9 +415,28 @@ router.delete(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+      const actorId = req.user?.userId;
+      const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.get('User-Agent') || 'unknown';
 
       // Prevent self-deletion
-      if (req.user?.userId === id) {
+      if (actorId === id) {
+        // Audit log: attempted self-deletion
+        try {
+          await query(
+            `INSERT INTO audit_logs(actor_id, target_user_id, action, details, created_at)
+             VALUES($1, $2, $3, $4, NOW())`,
+            [
+              actorId,
+              id,
+              'DELETE_USER_ATTEMPT',
+              JSON.stringify({ reason: 'self-deletion prevented', ip: clientIp, userAgent }),
+            ]
+          );
+        } catch (auditError) {
+          logger.error('Failed to log self-deletion attempt', auditError as Error);
+        }
+
         res.status(400).json({
           error: 'Bad Request',
           message: 'Cannot delete your own account',
@@ -425,14 +444,56 @@ router.delete(
         return;
       }
 
-      const result = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+      // Wrap DELETE and audit logging in transaction for atomicity
+      let userNotFound = false;
+      try {
+        await transaction(async (client) => {
+          const result = await client.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
 
-      if (result.rows.length === 0) {
-        res.status(404).json({
-          error: 'Not Found',
-          message: 'User not found',
+          if (result.rows.length === 0) {
+            userNotFound = true;
+            throw new Error('USER_NOT_FOUND'); // Rollback transaction (no DELETE occurred)
+          }
+
+          // Audit log: successful user deletion (committed with DELETE)
+          await client.query(
+            `INSERT INTO audit_logs(actor_id, target_user_id, action, details, created_at)
+             VALUES($1, $2, $3, $4, NOW())`,
+            [
+              actorId,
+              id,
+              'DELETE_USER',
+              JSON.stringify({ ip: clientIp, userAgent }),
+            ]
+          );
         });
-        return;
+      } catch (txError) {
+        // Handle USER_NOT_FOUND case
+        if (userNotFound) {
+          // Audit log: attempted deletion of non-existent user (outside transaction, always persists)
+          try {
+            await query(
+              `INSERT INTO audit_logs(actor_id, target_user_id, action, details, created_at)
+               VALUES($1, $2, $3, $4, NOW())`,
+              [
+                actorId,
+                id,
+                'DELETE_USER_ATTEMPT',
+                JSON.stringify({ reason: 'user not found', ip: clientIp, userAgent }),
+              ]
+            );
+          } catch (auditError) {
+            logger.error('Failed to log non-existent user deletion attempt', auditError as Error);
+          }
+
+          res.status(404).json({
+            error: 'Not Found',
+            message: 'User not found',
+          });
+          return;
+        }
+        // Re-throw other transaction errors to outer catch
+        throw txError;
       }
 
       res.json({ message: 'User deleted successfully' });

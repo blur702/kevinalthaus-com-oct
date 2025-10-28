@@ -19,7 +19,30 @@ const hashCache = new Map<string, string>();
  * See migration guide in docs/migrations/naming-strategy-v2.md
  */
 type NamingStrategy = 'legacy' | 'fnv1a';
-const NAMING_STRATEGY: NamingStrategy = (process.env.NAMING_STRATEGY as NamingStrategy) || 'legacy';
+
+// Validate NAMING_STRATEGY environment variable
+function getValidatedNamingStrategy(): NamingStrategy {
+  const rawStrategy = process.env.NAMING_STRATEGY;
+
+  if (rawStrategy === undefined || rawStrategy === '') {
+    // Default to legacy if not set
+    return 'legacy';
+  }
+
+  // Validate against allowed values
+  if (rawStrategy === 'legacy' || rawStrategy === 'fnv1a') {
+    return rawStrategy;
+  }
+
+  // Invalid value provided - log warning and fall back to legacy
+  console.warn(
+    `[NAMING_STRATEGY] Invalid value "${rawStrategy}" provided. ` +
+    `Must be "legacy" or "fnv1a". Falling back to "legacy".`
+  );
+  return 'legacy';
+}
+
+const NAMING_STRATEGY: NamingStrategy = getValidatedNamingStrategy();
 
 /**
  * Helper function to generate a name when sanitizedTable is empty
