@@ -26,8 +26,15 @@ const NAMING_STRATEGY: NamingStrategy = (process.env.NAMING_STRATEGY as NamingSt
  * Ensures the final name never exceeds MAX_IDENTIFIER_LENGTH
  */
 function generateNameWithEmptyTable(sanitizedPluginId: string, hash: string): string {
-  // Handle empty sanitizedPluginId by using a fallback prefix
-  const effectivePluginId = sanitizedPluginId.length > 0 ? sanitizedPluginId : 'plugin';
+  // Handle empty sanitizedPluginId by using a hash-based prefix to avoid collisions
+  let effectivePluginId: string;
+  if (sanitizedPluginId.length > 0) {
+    effectivePluginId = sanitizedPluginId;
+  } else {
+    // Use deterministic hash-based prefix instead of literal 'plugin'
+    const hashPrefix = 'p' + hash.substring(0, Math.min(3, hash.length));
+    effectivePluginId = hashPrefix;
+  }
 
   const tableToken = 't' + hash.substring(0, Math.min(4, hash.length));
   // Verify final length doesn't exceed limit

@@ -98,8 +98,7 @@ cat > "$CRON_FILE" <<EOF
 */5 * * * * cd $ESCAPED_FULL_APP_DIR && $ESCAPED_FULL_APP_DIR/scripts/monitor-postgres.sh >> $ESCAPED_FULL_LOG_DIR/monitor.log 2>&1
 
 # Weekly database optimization (VACUUM ANALYZE) on Sundays at 3 AM
-# Check container health before running
-0 3 * * 0 if docker ps --filter name=$ESCAPED_CONTAINER_NAME --filter status=running --format '{{.Names}}' | grep -q $ESCAPED_CONTAINER_NAME; then docker exec $ESCAPED_CONTAINER_NAME psql -U $ESCAPED_POSTGRES_USER -d $ESCAPED_POSTGRES_DB -c 'VACUUM ANALYZE;' >> $ESCAPED_FULL_LOG_DIR/vacuum.log 2>&1; else echo "\$(date '+\%Y-\%m-\%d \%H:\%M:\%S') - Container $ESCAPED_CONTAINER_NAME not running, skipping VACUUM ANALYZE" >> $ESCAPED_FULL_LOG_DIR/vacuum.log; fi
+0 3 * * 0 $ESCAPED_FULL_APP_DIR/scripts/vacuum-postgres.sh $ESCAPED_CONTAINER_NAME $ESCAPED_POSTGRES_USER $ESCAPED_POSTGRES_DB $ESCAPED_FULL_LOG_DIR/vacuum.log
 
 # Clean up old logs weekly (keep last 30 days)
 0 4 * * 0 $ESCAPED_FULL_APP_DIR/scripts/cleanup-logs.sh $ESCAPED_FULL_LOG_DIR 2>> $ESCAPED_FULL_LOG_DIR/cron_cleanup/cleanup.error.log

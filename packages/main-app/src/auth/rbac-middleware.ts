@@ -34,6 +34,16 @@ export function requireRole(...roles: Role[]) {
 
 export function requireCapability(...capabilities: Capability[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    // Fail fast for misconfiguration - empty capabilities array
+    if (capabilities.length === 0) {
+      console.error('[RBAC] requireCapability called with empty capabilities array - this is a misconfiguration');
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'No capabilities configured for this endpoint',
+      });
+      return;
+    }
+
     const user = ensureAuthenticated(req, res);
     if (!user) {
       return;

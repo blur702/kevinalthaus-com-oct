@@ -52,7 +52,7 @@ export async function runMigrations(): Promise<void> {
     const baseDelayMs = 1000;
 
     // eslint-disable-next-line no-console
-    console.log('[Migrations] Acquiring migration lock (timeout: ${lockTimeoutMs}ms)...');
+    console.log(`[Migrations] Acquiring migration lock (timeout: ${lockTimeoutMs}ms)...`);
 
     const startTime = Date.now();
     let acquired = false;

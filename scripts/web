@@ -265,16 +265,54 @@ wait_for_health() {
                 fi
             done <<< "$status"
         else
-            # Fallback: use grep/awk to parse JSON
-            total_count=$(echo "$status" | grep -c '"Name"' || echo "0")
+            # Fallback: use awk to parse JSON and count unique healthy containers
+            # Split by container objects and check each atomically
+            local healthy_count=0
+            total_count=0
 
-            # Count containers that are not healthy or running
-            # Look for "Health":"healthy" or "State":"running"
-            local healthy_or_running=$(echo "$status" | grep -c -E '("Health":"healthy"|"State":"running")' || echo "0")
+            # Use awk to split JSON array into individual container objects
+            # For each object, check if it contains Health:healthy OR State:running
+            while IFS= read -r container_json; do
+                if [ -z "$container_json" ] || [ "$container_json" = "{}" ]; then
+                    continue
+                fi
 
-            if [ "$total_count" -gt 0 ] && [ "$healthy_or_running" -lt "$total_count" ]; then
+                ((total_count++))
+
+                # Check if this container object contains health or running state
+                if echo "$container_json" | grep -q '"Health"[[:space:]]*:[[:space:]]*"healthy"' || \
+                   echo "$container_json" | grep -q '"State"[[:space:]]*:[[:space:]]*"running"'; then
+                    ((healthy_count++))
+                fi
+            done < <(echo "$status" | awk '
+                BEGIN { RS=""; FS="{" }
+                {
+                    for (i=2; i<=NF; i++) {
+                        # Find the matching closing brace
+                        obj = "{" $i
+                        # Simple heuristic: print objects that contain "Name"
+                        if (obj ~ /"Name"/) {
+                            # Extract complete object by balancing braces
+                            depth = 1
+                            for (j=1; j<=length(obj); j++) {
+                                c = substr(obj, j, 1)
+                                if (c == "{") depth++
+                                if (c == "}") {
+                                    depth--
+                                    if (depth == 0) {
+                                        print substr(obj, 1, j)
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            ')
+
+            if [ "$total_count" -gt 0 ] && [ "$healthy_count" -lt "$total_count" ]; then
                 all_healthy=false
-                unhealthy_count=$((total_count - healthy_or_running))
+                unhealthy_count=$((total_count - healthy_count))
             fi
         fi
 
@@ -417,7 +455,19 @@ handle_off_clean() {
     fi
 
     if [ "$is_production" = true ]; then
-        error "Refusing to run --off-clean in production environment. Override with NODE_ENV=development if intentional."
+        error "Refusing to run --off-clean in production environment.
+
+Production detected via:
+  - Environment variables (NODE_ENV, ENV, or ENVIRONMENT set to 'production')
+  - Active production compose overlay (docker-compose.prod.yml)
+
+To proceed safely in production:
+  1. Stop the production compose overlay: docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+  2. Remove/rename docker-compose.prod.yml if no longer needed
+  3. Set NODE_ENV=development explicitly
+  4. Set required flags: BACKUP_ACK=1 CONFIRM=1
+
+Example: BACKUP_ACK=1 CONFIRM=1 NODE_ENV=development $0 --off-clean"
     fi
 
     # Ensure backup acknowledgement

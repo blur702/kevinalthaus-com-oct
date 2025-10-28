@@ -84,6 +84,17 @@ function getCookieOptions(
   };
 }
 
+// Helper function for clearing cookies (no maxAge parameter)
+function getCookieClearOptions(): { httpOnly: boolean; secure: boolean; sameSite: 'lax' | 'strict' | 'none' } {
+  const isSecureRequired = COOKIE_SAMESITE === 'none' || process.env.NODE_ENV === 'production';
+
+  return {
+    httpOnly: true,
+    secure: isSecureRequired,
+    sameSite: COOKIE_SAMESITE,
+  };
+}
+
 // Parse a duration string like "15m", "30s", "2h", "1d" to milliseconds
 function parseDurationToMs(input: string, fallbackMs: number): number {
   const trimmed = String(input).trim();
@@ -595,9 +606,9 @@ router.post(
         );
       }
 
-      // Clear cookies using consistent options
-      res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, getCookieOptions(0));
-      res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getCookieOptions(0));
+      // Clear cookies using consistent options (without maxAge)
+      res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, getCookieClearOptions());
+      res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getCookieClearOptions());
 
       res.json({ message: 'Logout successful' });
     } catch (error) {
@@ -618,7 +629,7 @@ router.get('/validate', authMiddleware, (req: AuthenticatedRequest, res: Respons
   });
 });
 
-// GET /api/users/me
+// GET /api/auth/me
 router.get('/me', authMiddleware, (req: AuthenticatedRequest, res: Response) => {
   res.json({
     user: req.user,
@@ -655,6 +666,7 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
       error: 'Unauthorized',
       message: 'Invalid or expired token',
     });
+    return;
   }
 }
 

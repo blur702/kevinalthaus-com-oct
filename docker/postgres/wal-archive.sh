@@ -33,7 +33,11 @@ if [ ! -d "$LOG_DIR" ]; then
         echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] Failed to create log directory: $LOG_DIR" >&2
         exit 1
     fi
-    chmod 755 "$LOG_DIR" || true
+    # Set directory permissions; fail if critical for security
+    if ! chmod 755 "$LOG_DIR" 2>/dev/null; then
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] [WARN] Failed to set permissions on log directory: $LOG_DIR" >&2
+        # Continue execution as logging permissions are non-critical
+    fi
 fi
 
 # Logging function

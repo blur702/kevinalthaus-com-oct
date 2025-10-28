@@ -127,7 +127,9 @@ DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres:5432/kevinalthaus
 
 - Automated backups via `postgres-backup` service
 - Manual backup: `./scripts/backup-postgres.sh`
-- Restore: `./scripts/restore-postgres.sh <backup-file>` (destructive)
+- **⚠️ WARNING: DESTRUCTIVE OPERATION** — Restore: `./scripts/restore-postgres.sh <backup-file>`
+
+  **CAUTION:** This command will **irreversibly overwrite the entire database** with the backup file contents. All existing data will be permanently replaced. Only run this after verifying your backups and ensuring you have a recent backup of the current database state if needed.
 
 ## Monitoring
 
