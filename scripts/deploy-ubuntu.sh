@@ -136,9 +136,9 @@ mkdir -p "$APP_DIR/logs"
 # Configure firewall
 log "Configuring firewall..."
 ufw allow ssh || error "Failed to allow SSH in firewall"
-ufw --force enable
-ufw allow 80/tcp    # HTTP
-ufw allow 443/tcp   # HTTPS
+ufw --force enable || error "Failed to enable firewall"
+ufw allow 80/tcp || error "Failed to allow HTTP in firewall"    # HTTP
+ufw allow 443/tcp || error "Failed to allow HTTPS in firewall"   # HTTPS
 ufw status
 
 # Setup environment
@@ -265,8 +265,8 @@ if [ -f "$APP_DIR/.env" ]; then
         # Export the variable using safe two-step assignment
         # Step 1: Safely assign value to variable using printf (prevents injection)
         printf -v "$key" '%s' "$value"
-        # Step 2: Export the variable by name
-        export "$key"
+        # Step 2: Export the variable by name using declare -x for proper indirection
+        declare -x "$key"
     done < "$APP_DIR/.env"
 
     # Validate JWT_SECRET

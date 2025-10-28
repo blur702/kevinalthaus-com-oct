@@ -155,8 +155,8 @@ export class DatabaseIsolationEnforcer {
       }
       this.fallbackComplexity = Math.floor(fc);
     } else {
-      // Default: 80% of max complexity, minimum 1, maximum 100
-      this.fallbackComplexity = Math.max(1, Math.min(100, Math.floor(this.maxQueryComplexity * 0.8)));
+      // Default: 80% of max complexity, minimum 1
+      this.fallbackComplexity = Math.max(1, Math.floor(this.maxQueryComplexity * 0.8));
     }
     this.logger = options.logger || {
       info: (message, context) => {
@@ -209,8 +209,8 @@ export class DatabaseIsolationEnforcer {
       throw new Error('Query parameter cannot be empty or whitespace');
     }
 
-    if (!Number.isFinite(estimatedRows) || estimatedRows <= 0) {
-      throw new Error('Estimated rows must be a finite positive number greater than zero');
+    if (!Number.isFinite(estimatedRows) || estimatedRows < 0) {
+      throw new Error('Estimated rows must be a finite non-negative number');
     }
 
     // Require EXPLAIN-derived estimate if configured

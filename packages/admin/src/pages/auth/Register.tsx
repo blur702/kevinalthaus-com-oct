@@ -102,7 +102,7 @@ const Register: React.FC = () => {
       // Cookie-based auth: tokens are set via httpOnly cookies by the server
       // Response contains user info; no client-side token storage needed
 
-      // Redirect to dashboard after successful registration
+      // Redirect to root dashboard (/) after successful registration
       navigate('/', { replace: true });
     } catch (error) {
       if (error && typeof error === 'object' && 'response' in error) {

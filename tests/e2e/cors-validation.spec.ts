@@ -36,7 +36,7 @@ test.describe('CORS Startup Validation', () => {
 
       // Timeout after 10 seconds
       setTimeout(() => {
-        if (!exitCode) {
+        if (exitCode === null || exitCode === undefined) {
           proc.kill();
         }
         resolve();

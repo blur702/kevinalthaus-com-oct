@@ -58,6 +58,11 @@ if [ ! -f "$APP_DIR/scripts/cleanup-logs.sh" ] || [ ! -x "$APP_DIR/scripts/clean
     exit 1
 fi
 
+if [ ! -f "$APP_DIR/scripts/vacuum-postgres.sh" ] || [ ! -x "$APP_DIR/scripts/vacuum-postgres.sh" ]; then
+    echo "ERROR: $APP_DIR/scripts/vacuum-postgres.sh not found or not executable"
+    exit 1
+fi
+
 # Get absolute paths for cron
 # Use readlink -m (canonicalize) which works even if path doesn't exist
 # Fall back to readlink -f if -m is not available

@@ -129,7 +129,7 @@ const uploadPackage = multer({
     if (ALLOWED_ARCHIVE_MIME.has(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(null, false); // Reject non-allowed MIME types
+      cb(new Error('Unsupported file type'), false); // Reject non-allowed MIME types with explicit error
     }
   },
 });
@@ -279,13 +279,7 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), asyncHandler(asyn
     // Clean up uploaded file on error
     if (req.file) {
       const filePath = (req.file as Express.Multer.File & { path?: string }).path;
-      if (filePath) {
-        try {
-          await fs.unlink(filePath);
-        } catch (unlinkErr) {
-          logger.warn('Failed to delete uploaded file after error', { filePath, error: unlinkErr });
-        }
-      }
+      await cleanupFile(filePath);
     }
 
     logger.error('Error uploading plugin package', undefined, { error });

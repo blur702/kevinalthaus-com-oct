@@ -29,6 +29,12 @@ echo ""
 
 JWT_SECRET=$(openssl rand -base64 64 | tr -d '\n')
 
+# Validate that openssl command succeeded and JWT_SECRET is non-empty
+if [ $? -ne 0 ] || [ -z "$JWT_SECRET" ]; then
+  echo "Error: Failed to generate JWT_SECRET using openssl"
+  exit 1
+fi
+
 # Append to .env file
 echo "" >> "$ENV_FILE"
 echo "# JWT Secret for authentication (auto-generated on $(date +%Y-%m-%d))" >> "$ENV_FILE"
