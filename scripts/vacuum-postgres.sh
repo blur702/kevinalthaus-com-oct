@@ -32,9 +32,13 @@ fi
 if docker ps --format '{{.Names}}' | grep -F -q "$CONTAINER_NAME"; then
     echo "[$(timestamp)] Running VACUUM ANALYZE on database: $POSTGRES_DB" >> "$LOG_FILE" 2>&1
 
+    # Temporarily disable errexit to capture exit code and handle errors
+    set +e
     # Run VACUUM ANALYZE and capture exit code immediately
     docker exec "$CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 'VACUUM ANALYZE;' >> "$LOG_FILE" 2>&1
     rc=$?
+    # Restore errexit
+    set -e
 
     if [ "$rc" -eq 0 ]; then
         echo "[$(timestamp)] VACUUM ANALYZE completed successfully" >> "$LOG_FILE" 2>&1

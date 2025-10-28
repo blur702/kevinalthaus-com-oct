@@ -63,12 +63,19 @@ if [ ! -f "$WAL_PATH" ]; then
 fi
 
 # Atomic copy with retries
-TEMP_FILE="$BACKUP_DIR/${WAL_FILE}.tmp.$$"
 DEST_FILE="$BACKUP_DIR/$WAL_FILE"
 
 attempt=0
 while [ $attempt -lt $MAX_RETRIES ]; do
     attempt=$((attempt + 1))
+
+    # Create unique temporary file with mktemp (with fallback)
+    if command -v mktemp >/dev/null 2>&1; then
+        TEMP_FILE=$(mktemp --tmpdir="$BACKUP_DIR" "${WAL_FILE}.tmp.XXXXXX")
+    else
+        # Fallback for environments without mktemp
+        TEMP_FILE="$BACKUP_DIR/${WAL_FILE}.tmp.$(date +%s)-${RANDOM}"
+    fi
 
     # Copy to temporary file and capture exit status
     cp "$WAL_PATH" "$TEMP_FILE" 2>&1 | tee -a "$LOG_FILE"

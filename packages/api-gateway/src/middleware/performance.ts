@@ -4,6 +4,14 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import cookie from 'cookie';
 
+interface RequestWithUser extends Request {
+  user?: {
+    id: string;
+    role?: string;
+    [key: string]: unknown;
+  };
+}
+
 interface CacheEntry {
   data: unknown;
   timestamp: number;
@@ -190,8 +198,8 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   }
 
   // Check if request has authenticated user populated by auth middleware
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if ((req as any).user) {
+  const reqWithUser = req as RequestWithUser;
+  if (reqWithUser.user) {
     next();
     return;
   }

@@ -17,7 +17,8 @@ if (useConnString) {
   }
 }
 
-// Validate database password when not using connection string (skip in tests)
+// Require POSTGRES_PASSWORD when not using DATABASE_URL; skipped in tests when NODE_ENV === 'test'
+// Note: SKIP_DB_HEALTHCHECK is used only by the runtime health-check logic, not this validation
 if (
   !useConnString &&
   !process.env.POSTGRES_PASSWORD &&

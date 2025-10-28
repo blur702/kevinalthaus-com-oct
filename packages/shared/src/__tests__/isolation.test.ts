@@ -113,14 +113,8 @@ describe('DatabaseIsolationEnforcer.enforceQuotas', () => {
   it('handles malformed SQL gracefully', () => {
     const enforcer = new DatabaseIsolationEnforcer(limits);
     const malformed = `SELECT * FROM WHERE JOIN`;
-    // Should not crash; either throws or returns a safe complexity value
-    try {
-      enforcer.enforceQuotas(malformed, 10);
-      // If it doesn't throw, that's acceptable (returns fallback complexity)
-    } catch (error) {
-      // If it throws, error should be about complexity or validation
-      expect(error).toBeDefined();
-    }
+    // Should not throw; returns fallback complexity for unparseable SQL
+    expect(() => enforcer.enforceQuotas(malformed, 10)).not.toThrow();
   });
 
   it('handles SQL-injection-like patterns safely', () => {

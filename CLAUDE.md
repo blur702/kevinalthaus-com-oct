@@ -283,3 +283,54 @@ For comprehensive details, see:
 - `docs/plugins.md` - Plugin development guide
 - `docs/deployment.md` - Production deployment
 - `docs/api.md` - API reference
+
+## CodeRabbit CLI Integration
+
+This repository supports CodeRabbit CLI for local AI-powered code reviews in WSL, complementing the existing web-based CodeRabbit integration (tracked in `CODERABBIT_FIXES.md`).
+
+**Key capabilities:**
+- **Local-first workflow:** Review code before pushing to GitHub
+- **AI-friendly output:** `--prompt-only` flag produces token-efficient, structured feedback optimized for Claude Code
+- **Uncommitted changes:** Review work-in-progress code that hasn't been committed
+- **Automated fixes:** Claude can parse CodeRabbit output and apply fixes automatically
+
+**Quick setup:**
+```bash
+# Install in WSL
+curl -fsSL https://cli.coderabbit.ai/install.sh | sh
+source ~/.bashrc
+
+# Authenticate (do this both standalone and within Claude Code sessions)
+coderabbit auth login
+
+# Test review
+coderabbit --prompt-only --type uncommitted
+```
+
+**Example Claude Code workflow:**
+```
+"Please implement <task>, then run coderabbit --prompt-only --type uncommitted
+in the background, let it take as long as it needs, and fix the issues it finds."
+```
+
+When Claude runs CodeRabbit with `--prompt-only`, the output is structured for machine parsing with file paths, line numbers, severity levels, and suggested fixes. Reviews typically take 7-30+ minutes and can run in background while continuing work.
+
+**Common flags:**
+- `--prompt-only` - AI-friendly output format (essential for Claude integration)
+- `--type uncommitted` - Review only uncommitted changes (faster, focused)
+- `--type staged` - Review only staged changes
+- `--base main` - Review changes against specific branch
+
+**Important notes:**
+- Authentication must be done separately for standalone WSL and Claude Code sessions
+- Reviews can take 7-30+ minutes; use background execution for long reviews
+- Track fixes in `CODERABBIT_FIXES.md` to maintain consistency with existing process
+- Configure Git line-ending settings (`git config --global core.autocrlf input` in WSL) to avoid CRLF/LF issues
+- For best performance, work in WSL Linux filesystem (`~/projects/`) rather than `/mnt/c/` Windows drives
+
+**Comprehensive setup guide:** See `docs/coderabbit-cli.md` for:
+- Prerequisites verification (WSL, curl, unzip, git)
+- Git configuration for line endings
+- Installation and authentication (standalone + Claude Code)
+- Testing integration and troubleshooting
+- Best practices and operational workflows

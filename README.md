@@ -23,6 +23,7 @@ Full docs are now consolidated under `/docs`:
 - Security: `docs/security.md`
 - Implementation Status: `docs/status.md`
 - Scripts: `docs/scripts.md`
+- CodeRabbit CLI Integration: `docs/coderabbit-cli.md`
 
 ## Quick Start
 

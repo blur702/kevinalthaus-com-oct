@@ -3,21 +3,28 @@
 // This script demonstrates that the app can be imported without starting a server
 import app from './index';
 
-/* eslint-disable no-console */
-console.log('✅ Successfully imported app without starting server');
-console.log('🏷️  App type:', typeof app);
-console.log('📊 Express app properties:', Object.getOwnPropertyNames(app).slice(0, 5));
-console.log('🚀 App is ready for testing or programmatic use');
+try {
+  /* eslint-disable no-console */
+  console.log('✅ Successfully imported app without starting server');
+  console.log('🏷️  App type:', typeof app);
+  console.log('📊 Express app properties:', Object.getOwnPropertyNames(app).slice(0, 5));
+  console.log('🚀 App is ready for testing or programmatic use');
 
-// Show that we can access app properties
-interface ExpressRouter {
-  stack: unknown[];
+  // Show that we can access app properties
+  interface ExpressRouter {
+    stack: unknown[];
+  }
+
+  // Intentional use of private API (_router) for demo/debugging purposes only
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+  const router = (app as any)._router as ExpressRouter | undefined;
+  console.log('🛣️  App has', router?.stack?.length ?? 0, 'registered routes');
+  /* eslint-enable no-console */
+
+  process.exit(0);
+} catch (error) {
+  /* eslint-disable no-console */
+  console.error('❌ Failed to import or introspect app:', error);
+  /* eslint-enable no-console */
+  process.exit(1);
 }
-
-// Intentional use of private API (_router) for demo/debugging purposes only
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-const router = (app as any)._router as ExpressRouter | undefined;
-console.log('🛣️  App has', router?.stack?.length ?? 0, 'registered routes');
-/* eslint-enable no-console */
-
-process.exit(0);
