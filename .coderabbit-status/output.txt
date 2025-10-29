@@ -5,4 +5,70 @@ Setting up
 Analyzing
 Reviewing
 
+============================================================================
+File: docs/api.md
+Line: 100
+Type: potential_issue
+
+Prompt for AI Agent:
+In docs/api.md around line 100, the phrase "Token must not be expired (30 minute validity)" uses a missing hyphen in the compound adjective; update the text to "Token must not be expired (30-minute validity)" so the numeric modifier and noun are hyphenated per coding guidelines.
+
+
+
+============================================================================
+File: packages/admin/src/pages/Users.tsx
+Line: 285 to 289
+Type: potential_issue
+
+Prompt for AI Agent:
+In packages/admin/src/pages/Users.tsx around lines 285 to 289, the handler uses React.ChangeEvent which is the wrong event type for Material‑UI Select; change the parameter type to SelectChangeEvent and update the import (import { SelectChangeEvent } from '@mui/material/Select') so the signature becomes (event: SelectChangeEvent) => void and keep the existing value extraction/cast and setState logic unchanged.
+
+
+
+============================================================================
+File: packages/admin/src/pages/Users.tsx
+Line: 280 to 283
+Type: potential_issue
+
+Prompt for AI Agent:
+In packages/admin/src/pages/Users.tsx around lines 280 to 283: the handler uses the wrong event type (React.ChangeEvent) for MUI v5 Select; replace the type with SelectChangeEvent, import SelectChangeEvent from '@mui/material/Select' (or from '@mui/material' if your setup exports it), and update the handler signature to use SelectChangeEvent so you can keep setRoleFilter(event.target.value as Role | 'all') and setPage(0) unchanged.
+
+
+
+============================================================================
+File: packages/admin/src/components/users/BulkOperationsDialog.tsx
+Line: 100 to 134
+Type: potential_issue
+
+
+
+
+============================================================================
+File: packages/admin/src/components/users/BulkOperationsDialog.tsx
+Line: 136 to 175
+Type: potential_issue
+
+
+
+
+============================================================================
+File: packages/main-app/src/auth/index.ts
+Line: 203 to 225
+Type: potential_issue
+
+Prompt for AI Agent:
+In packages/main-app/src/auth/index.ts around lines 203 to 225, the current password-history check returns immediately on the first match and fails open on errors, creating a timing oracle and an availability/security mismatch; change the logic to always perform verification against every returned history row (do not early-return), aggregate the match result (e.g., set a local flag if any verifyPassword resolves true) and only return after all entries have been checked so timing is independent of match position, and modify the error path to fail closed (or make the fail-open vs fail-closed behavior configurable) so that on verification/query errors the function rejects the password instead of allowing it.
+
+
+
+============================================================================
+File: packages/admin/src/components/users/UserFormDialog.tsx
+Line: 108 to 132
+Type: potential_issue
+
+Prompt for AI Agent:
+In packages/admin/src/components/users/UserFormDialog.tsx around lines 108-132 (and update helper text at lines 260-264), the password validation currently requires uppercase, lowercase, and a digit but omits the required special character; update the validation regex used in both the 'create' and 'edit' branches to also require at least one special character (e.g. add a lookahead for a set like (?=.[!@#$%^&()_+\-=[\]{};':"\\|,./?]) or equivalent), keep the existing length and match checks, and then update the helper text at lines 260-264 to mention the special character requirement so the UI matches the API docs.
+
+
+
 Review completed ✔
