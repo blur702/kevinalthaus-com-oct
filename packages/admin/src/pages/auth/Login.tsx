@@ -84,7 +84,7 @@ const Login: React.FC = () => {
 
     try {
       await api.post<AuthResponse>('/auth/login', {
-        identifier: formData.identifier,
+        username: formData.identifier,
         password: formData.password,
       });
 

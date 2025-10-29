@@ -268,6 +268,44 @@ export async function runMigrations(): Promise<void> {
       // Logins should use LOWER(username) = LOWER($1) with this index for performance
     });
 
+    await runMigration('09-create-password-reset-tokens-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          token_hash VARCHAR(255) NOT NULL,
+          expires_at TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          used_at TIMESTAMP,
+          created_by_ip INET,
+          CONSTRAINT unique_token_hash UNIQUE (token_hash)
+        )
+      `);
+
+      // Create indexes for efficient lookups
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+        CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token_hash ON password_reset_tokens(token_hash);
+      `);
+    });
+
+    await runMigration('10-create-password-history-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS password_history (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          password_hash VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Create index for efficient retrieval of recent passwords
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_password_history_user_id_created_at ON password_history(user_id, created_at DESC);
+      `);
+    });
+
     // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');
   } catch (error) {
