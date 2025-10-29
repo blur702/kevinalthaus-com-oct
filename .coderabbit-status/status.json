@@ -1,0 +1,11 @@
+{
+  "status": "completed",
+  "startTime": "2025-10-28T20:36:06-04:00",
+  "pid": 8217,
+  "phase": "notification",
+  "testsRun": false,
+  "testsPassed": null,
+  "reviewComplete": false,
+  "issuesFound": 0,
+  "exitCode": 0
+}

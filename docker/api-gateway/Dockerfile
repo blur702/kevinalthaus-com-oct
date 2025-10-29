@@ -41,12 +41,14 @@ COPY tsconfig.json ./
 COPY packages/shared/package*.json ./packages/shared/
 COPY packages/api-gateway/package*.json ./packages/api-gateway/
 
-# Install only production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
-
-# Copy built artifacts from builder stage
+# Copy built artifacts from builder stage BEFORE npm install
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/packages/api-gateway/dist ./packages/api-gateway/dist
+COPY --from=builder /app/packages/api-gateway/package.json ./packages/api-gateway/
+
+# Install only production dependencies (this will create proper symlinks to packages/shared)
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Set ownership and switch to non-root user
 RUN chown -R appuser:appuser /app

@@ -377,7 +377,10 @@ export const timingMiddleware = (_req: Request, res: Response, next: NextFunctio
   res.end = function (this: Response, ...args: Parameters<EndFunction>): ReturnType<EndFunction> {
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1000000; // Convert to milliseconds
-    res.setHeader('X-Response-Time', `${duration.toFixed(2)}ms`);
+    // Only set header if headers haven't been sent yet
+    if (!res.headersSent) {
+      res.setHeader('X-Response-Time', `${duration.toFixed(2)}ms`);
+    }
     return originalEnd(...args);
   } as EndFunction;
 

@@ -347,7 +347,7 @@ router.post(
         return;
       }
 
-      // Find user
+      // Find user by username or email
       const result = await query<{
         id: string;
         email: string;
@@ -355,7 +355,7 @@ router.post(
         password_hash: string;
         role: string;
         is_active: boolean;
-      }>('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [normalizedUsername]);
+      }>('SELECT * FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1)', [normalizedUsername]);
 
       const user = result.rows.length > 0 ? result.rows[0] : null;
 

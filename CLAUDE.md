@@ -446,3 +446,340 @@ Iteration 3:
 - **Git workflow:** Commit fixes with descriptive messages referencing CodeRabbit review
 - **CI/CD integration:** Local CLI reviews complement GitHub Actions CodeRabbit checks
 - **Pre-commit hooks:** Optional integration to run CodeRabbit before allowing commits
+
+### CodeRabbit Integration Wrapper Scripts
+
+This repository includes a comprehensive wrapper system that solves communication issues between Claude Code and CodeRabbit CLI. The wrapper provides real-time progress updates, automatic test execution, structured status tracking, and completion notifications.
+
+**Problem solved:**
+- CodeRabbit reviews take 7-30+ minutes with no intermediate feedback
+- No automatic test execution before reviews
+- No structured status tracking for Claude to monitor
+- No completion notifications
+
+**Solution:**
+Three integrated scripts that provide complete monitoring and automation:
+
+#### 1. CodeRabbit Wrapper (`scripts/coderabbit-wrapper.sh`)
+
+Main wrapper script that orchestrates the entire review workflow.
+
+**Features:**
+- Runs tests automatically before CodeRabbit review (linting + unit tests)
+- Provides real-time progress updates with elapsed time counter
+- Creates structured JSON status file for AI parsing
+- Generates completion notification with summary
+- Handles errors gracefully with proper cleanup
+- Supports background execution
+
+**Usage:**
+```bash
+# Full review with automatic testing
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-wrapper.sh"
+
+# Review without running tests
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-wrapper.sh --no-tests"
+
+# Review staged changes only
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-wrapper.sh --type staged"
+
+# Show help
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-wrapper.sh --help"
+```
+
+**Output locations:**
+- Status JSON: `.coderabbit-status/status.json`
+- Progress log: `.coderabbit-status/progress.log`
+- Review output: `.coderabbit-status/output.txt`
+- Notification: `.coderabbit-status/notification.txt`
+
+**Status JSON structure:**
+```json
+{
+  "status": "running_review",
+  "startTime": "2025-10-28T15:03:45",
+  "pid": 12345,
+  "phase": "reviewing",
+  "testsRun": true,
+  "testsPassed": true,
+  "reviewComplete": false,
+  "issuesFound": null,
+  "exitCode": null,
+  "endTime": null
+}
+```
+
+#### 2. Status Monitor (`scripts/coderabbit-status.sh`)
+
+Check progress and monitor running reviews.
+
+**Features:**
+- Human-readable status display with colors
+- JSON output mode for AI consumption
+- Follow mode for real-time log tailing
+- Wait mode to block until completion
+- Process status checking
+
+**Usage:**
+```bash
+# Show current status (human-readable)
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh"
+
+# Get JSON status for AI parsing
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh json"
+
+# Follow progress log in real-time
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh follow"
+
+# Wait for review to complete
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh wait"
+
+# Show last 50 lines of progress
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh tail 50"
+
+# Show review output
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh output"
+```
+
+#### 3. Test Runner (`scripts/run-tests.sh`)
+
+Standalone test runner for pre-review validation.
+
+**Features:**
+- Automatically discovers packages with tests
+- Runs linting before tests
+- Optional TypeScript type checking
+- Detailed results per package
+- Configurable flags
+
+**Usage:**
+```bash
+# Run all checks (lint + tests)
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/run-tests.sh"
+
+# Run lint only (skip tests)
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/run-tests.sh --no-tests"
+
+# Run with type checking
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/run-tests.sh --typecheck"
+
+# Exit on first error
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/run-tests.sh --exit-on-error"
+```
+
+#### Autonomous Workflow with Wrappers
+
+The wrapper scripts enable a fully autonomous review loop for Claude Code:
+
+**Recommended workflow:**
+```text
+1. Claude implements feature/fix
+2. Claude runs: ./scripts/coderabbit-wrapper.sh (in background)
+3. Claude continues working on other tasks
+4. Claude periodically checks: ./scripts/coderabbit-status.sh json
+5. When status.reviewComplete = true:
+   - Claude reads: cat .coderabbit-status/notification.txt
+   - Claude reads: cat .coderabbit-status/output.txt
+   - Claude parses issues and applies fixes
+   - Claude re-runs wrapper to verify fixes
+6. Claude reports final results to user
+```
+
+**Example Claude Code prompts:**
+
+```bash
+# Basic autonomous workflow
+"Please implement user authentication, then run the CodeRabbit wrapper script
+and fix any issues it finds."
+
+# With explicit monitoring
+"Add the new API endpoint, run ./scripts/coderabbit-wrapper.sh in background,
+monitor progress with the status script, and fix issues when complete."
+
+# Multi-iteration verification
+"Refactor the database layer, run CodeRabbit via the wrapper, fix all issues,
+and re-run until the review passes with zero critical/high-severity issues."
+```
+
+**Checking progress during long reviews:**
+
+```bash
+# Claude can run this periodically (every 2-3 minutes)
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh json"
+
+# Parse the JSON to check:
+# - "status": current phase (running_tests, running_review, completed, failed)
+# - "reviewComplete": boolean (true when review is done)
+# - "issuesFound": number of issues found
+# - "exitCode": final exit code (0 = success)
+```
+
+**Reading results:**
+
+```bash
+# Get completion notification
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && cat .coderabbit-status/notification.txt"
+
+# Get full review output (AI-friendly format)
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && cat .coderabbit-status/output.txt"
+
+# Get progress log for debugging
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && cat .coderabbit-status/progress.log"
+```
+
+#### Testing the Integration
+
+Comprehensive test suites validate the wrapper scripts:
+
+```bash
+# Quick validation (~1-2 minutes)
+bash scripts/test-coderabbit-simple.sh
+
+# Comprehensive tests (~2-3 minutes)
+bash scripts/test-coderabbit-integration.sh
+
+# Syntax validation only
+bash -n scripts/coderabbit-wrapper.sh && \
+bash -n scripts/coderabbit-status.sh && \
+bash -n scripts/run-tests.sh && \
+echo "✓ All scripts syntax OK"
+```
+
+**Test coverage:**
+- Script initialization and permissions
+- Bash syntax validation
+- Help command display
+- Directory/file creation
+- Error handling
+- Exit codes
+- Flag parsing
+- Package discovery
+- JSON output format
+
+**Test results:** All 19 tests passing (100% success rate)
+
+**Documentation:**
+- `TEST_RESULTS.md` - Detailed test results with all scenarios
+- `TESTING_SUMMARY.md` - Executive summary and recommendations
+- `QUICK_TEST_REFERENCE.md` - Quick reference guide
+
+#### Wrapper Script Features
+
+**Real-time progress tracking:**
+- Live elapsed time counter: `[03:45] Review in progress...`
+- Phase transitions logged: `setup → testing → reviewing → notification`
+- Color-coded output for visibility
+- Timestamped progress log
+
+**Automatic test execution:**
+- Discovers all packages with test scripts
+- Runs linting first (npm run lint)
+- Runs unit tests per package
+- Captures test results in status
+- Continues to review even if tests fail (logs warning)
+
+**Completion notification example:**
+```
+=============================================================================
+                    CODERABBIT REVIEW COMPLETE
+=============================================================================
+
+Status: SUCCESS
+Exit Code: 0
+
+Timeline:
+  Started:  2025-10-28T15:03:45
+  Finished: 2025-10-28T15:18:22
+
+Test Results:
+  Tests Run: Yes
+  Tests Passed: Yes
+
+Review Results:
+  Issues Found: 8
+
+Output Location:
+  Full output: /path/to/.coderabbit-status/output.txt
+  Progress log: /path/to/.coderabbit-status/progress.log
+  Status JSON: /path/to/.coderabbit-status/status.json
+
+=============================================================================
+
+Next Steps:
+1. Review the output file: cat /path/to/.coderabbit-status/output.txt
+2. Apply fixes as recommended
+3. Re-run tests to verify fixes
+4. Run this script again to verify all issues are resolved
+
+=============================================================================
+```
+
+**Error handling:**
+- Checks if CodeRabbit CLI is installed
+- Validates Git configuration
+- Handles missing dependencies gracefully
+- Cleanup handlers ensure status is updated even on failure
+- Clear error messages with troubleshooting guidance
+
+#### Best Practices for Claude Code
+
+**1. Always use the wrapper script (not raw CodeRabbit CLI)**
+```bash
+# ✓ GOOD - Use wrapper
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-wrapper.sh"
+
+# ✗ BAD - Direct CLI call (no status tracking)
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && coderabbit review --prompt-only --type uncommitted"
+```
+
+**2. Monitor progress periodically**
+```bash
+# Check status every 2-3 minutes during long reviews
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh json"
+```
+
+**3. Wait for completion before applying fixes**
+```bash
+# Parse JSON to check reviewComplete field
+status=$(wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh json")
+# When reviewComplete = true, read output and apply fixes
+```
+
+**4. Track fixes in CODERABBIT_FIXES.md**
+```bash
+# After applying fixes, document them
+echo "### Fix Applied: $(date)" >> CODERABBIT_FIXES.md
+echo "- Issue: <description>" >> CODERABBIT_FIXES.md
+echo "- File: <file>:<line>" >> CODERABBIT_FIXES.md
+echo "- Fix: <description>" >> CODERABBIT_FIXES.md
+```
+
+**5. Re-run wrapper to verify fixes**
+```bash
+# After applying fixes, verify with another review
+wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-wrapper.sh --type staged"
+```
+
+#### Troubleshooting Wrapper Scripts
+
+**Issue: "CodeRabbit CLI not found"**
+- Solution: Install CodeRabbit CLI first: `curl -fsSL https://cli.coderabbit.ai/install.sh | sh`
+- Verify: `wsl bash -c "which coderabbit"`
+
+**Issue: "Status directory does not exist"**
+- Solution: Run the wrapper script at least once to initialize
+- Verify: `ls -la .coderabbit-status/`
+
+**Issue: Review hangs or takes too long**
+- Solution: Check progress with follow mode: `./scripts/coderabbit-status.sh follow`
+- Alternative: Narrow scope with `--type staged` flag
+
+**Issue: Tests fail before review**
+- Solution: Wrapper continues to review (tests are non-blocking)
+- Check: Review progress log for test output
+- Fix tests first if desired: `./scripts/run-tests.sh`
+
+**Issue: JSON parsing errors**
+- Solution: Check if jq is installed: `wsl bash -c "which jq"`
+- Fallback: Scripts use sed if jq is unavailable
+- Verify: Read status.json manually: `cat .coderabbit-status/status.json`

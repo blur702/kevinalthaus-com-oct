@@ -3,7 +3,6 @@ import multer from 'multer';
 import path from 'path';
 import { promises as fs, mkdirSync } from 'fs';
 import { createHash, createVerify, randomBytes } from 'crypto';
-import { fileTypeFromBuffer } from 'file-type';
 import { authMiddleware } from '../auth';
 import { requireRole } from '../auth/rbac-middleware';
 import { Role, sanitizeFilename, createLogger, LogLevel } from '@monorepo/shared';
@@ -129,7 +128,7 @@ const uploadPackage = multer({
     if (ALLOWED_ARCHIVE_MIME.has(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Unsupported file type'), false); // Reject non-allowed MIME types with explicit error
+      cb(new Error('Unsupported file type')); // Reject non-allowed MIME types with explicit error
     }
   },
 });
@@ -140,6 +139,8 @@ async function sniffMime(filePath: string): Promise<string | undefined> {
     const fd = await fs.open(filePath, 'r');
     try {
       const { buffer } = await fd.read(Buffer.alloc(4100), 0, 4100, 0);
+      // Dynamic import for ESM-only file-type package
+      const { fileTypeFromBuffer } = await import('file-type');
       const type = await fileTypeFromBuffer(buffer);
       return type?.mime;
     } finally {
