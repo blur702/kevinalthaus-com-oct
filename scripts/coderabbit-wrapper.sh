@@ -28,6 +28,7 @@ readonly STATUS_FILE="${STATUS_DIR}/status.json"
 readonly OUTPUT_FILE="${STATUS_DIR}/output.txt"
 readonly PROGRESS_FILE="${STATUS_DIR}/progress.log"
 readonly NOTIFICATION_FILE="${STATUS_DIR}/notification.txt"
+readonly HEARTBEAT_FILE="${STATUS_DIR}/heartbeat.txt"
 
 # Timestamp helper
 timestamp() {
@@ -62,7 +63,7 @@ init_status_dir() {
     mkdir -p "${STATUS_DIR}"
 
     # Clear old files
-    rm -f "${OUTPUT_FILE}" "${PROGRESS_FILE}" "${NOTIFICATION_FILE}"
+    rm -f "${OUTPUT_FILE}" "${PROGRESS_FILE}" "${NOTIFICATION_FILE}" "${HEARTBEAT_FILE}"
 
     # Initialize status JSON
     cat > "${STATUS_FILE}" <<EOF
@@ -203,7 +204,7 @@ run_coderabbit_review() {
     log INFO "Running: ${cmd[*]}"
     log PROGRESS "Review in progress (this may take 7-30+ minutes)..."
 
-    # Start background progress indicator
+    # Start background progress indicator with heartbeat
     local progress_pid
     {
         local elapsed=0
@@ -211,6 +212,12 @@ run_coderabbit_review() {
             local mins=$((elapsed / 60))
             local secs=$((elapsed % 60))
             printf "\r${CYAN}[%02d:%02d] Review in progress...${NC}" $mins $secs
+
+            # Update heartbeat every 30 seconds
+            if (( elapsed % 30 == 0 )); then
+                echo "[$(timestamp)] Heartbeat: Review in progress (${mins}m ${secs}s elapsed)" > "${HEARTBEAT_FILE}"
+            fi
+
             sleep 1
             ((elapsed++))
         done

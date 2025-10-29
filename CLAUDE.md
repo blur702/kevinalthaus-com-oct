@@ -315,6 +315,101 @@ in the background, let it take as long as it needs, and fix the issues it finds.
 
 When Claude runs CodeRabbit with `--prompt-only`, the output is structured for machine parsing with file paths, line numbers, severity levels, and suggested fixes. Reviews typically take 7-30+ minutes and can run in background while continuing work.
 
+### Active Monitoring Protocol for Claude Code
+
+**CRITICAL:** When running long-running processes (CodeRabbit reviews, Docker builds, etc.), Claude Code MUST actively monitor them, not just launch and wait. This prevents going idle between tasks.
+
+**Required workflow for ALL long-running external tools:**
+
+1. **Verify Process Started**
+   ```bash
+   # Launch process in background
+   wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-wrapper.sh --type uncommitted" 2>&1 &
+
+   # Immediately check it started successfully (within 5 seconds)
+   wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh json"
+   ```
+
+   Verify `status.json` exists and contains `"status": "running_tests"` or `"status": "running_review"`.
+
+2. **Active Monitoring Loop**
+   Create a TODO item: "Monitor CodeRabbit review - check status every 2 minutes"
+
+   ```bash
+   # Check status every 2 minutes using JSON output
+   wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && ./scripts/coderabbit-status.sh json"
+   ```
+
+   Parse the JSON response:
+   - `"reviewComplete": true` → Process complete, read results
+   - `"reviewComplete": false` → Still running, report progress to user
+   - Check heartbeat timestamp in `.coderabbit-status/heartbeat.txt` (updates every 30s)
+   - If heartbeat is stale (>3 minutes old), alert user of potential stall
+
+3. **Report Progress to User**
+   Every 2-3 monitoring checks, inform the user:
+   ```
+   "CodeRabbit review is running (12 minutes elapsed). Still in progress, checking again in 2 minutes..."
+   ```
+
+4. **Detect Completion and Transition**
+   When `reviewComplete: true`:
+   ```bash
+   # Read completion notification
+   wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && cat .coderabbit-status/notification.txt"
+
+   # Read full review output
+   wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && cat .coderabbit-status/output.txt"
+   ```
+
+   **Automatically** parse results and move to next task (apply fixes, report to user, etc.). DO NOT wait for user prompt.
+
+5. **Staleness Detection**
+   Check heartbeat file to detect if process is still alive:
+   ```bash
+   wsl bash -c "cd /mnt/e/OneDrive/Documents/kevinalthaus-com-oct && cat .coderabbit-status/heartbeat.txt"
+   ```
+
+   If timestamp hasn't updated in 3+ minutes, process may be stalled. Alert user and offer to check logs or restart.
+
+**Status File Structure:**
+The wrapper creates several tracking files in `.coderabbit-status/`:
+- `status.json` - Machine-readable current state (phase, completion status, exit code)
+- `heartbeat.txt` - Timestamp updated every 30 seconds (proves process is alive)
+- `progress.log` - Human-readable timestamped progress log
+- `output.txt` - Final CodeRabbit review output (AI-friendly format)
+- `notification.txt` - Human-readable completion summary
+
+**Key Monitoring Commands:**
+```bash
+# Get JSON status (AI-friendly)
+./scripts/coderabbit-status.sh json
+
+# Get human-readable status
+./scripts/coderabbit-status.sh
+
+# Follow progress in real-time
+./scripts/coderabbit-status.sh follow
+
+# Wait for completion (blocking)
+./scripts/coderabbit-status.sh wait
+```
+
+**Example Autonomous Loop:**
+```text
+1. User: "Implement feature X, then run CodeRabbit and fix issues"
+2. Claude: Implements feature X
+3. Claude: Launches wrapper script in background
+4. Claude: Verifies script started (checks status.json)
+5. Claude: Creates TODO "Monitor CodeRabbit review"
+6. Claude: Every 2 mins, checks status.json
+7. Claude: Reports progress to user: "Review running - 8 mins elapsed"
+8. Claude: Detects reviewComplete = true
+9. Claude: Reads output.txt, parses issues
+10. Claude: Applies fixes automatically
+11. Claude: Marks TODO complete, reports results to user
+```
+
 **Common flags:**
 - `--prompt-only` - AI-friendly output format (essential for Claude integration)
 - `--type uncommitted` - Review only uncommitted changes (faster, focused)

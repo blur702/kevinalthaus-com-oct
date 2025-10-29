@@ -5,24 +5,4 @@ Setting up
 Analyzing
 Reviewing
 
-============================================================================
-File: scripts/coderabbit-status.sh
-Line: 63 to 72
-Type: potential_issue
-
-Prompt for AI Agent:
-In scripts/coderabbit-status.sh around lines 63 to 72, replace the GNU-only grep -P JSON extraction with jq-based extraction (using jq -r '' "${STATUS_FILE}" 2>/dev/null || echo "") for each field (status, phase, startTime, endTime, testsRun, testsPassed, reviewComplete, issuesFound, exitCode, pid); if jq is not available in the environment, provide a POSIX-compatible fallback using sed or awk patterns to safely extract the same fields and preserve the same default values.
-
-
-
-============================================================================
-File: scripts/run-tests.sh
-Line: 121 to 129
-Type: potential_issue
-
-Prompt for AI Agent:
-In scripts/run-tests.sh around lines 121 to 129, the variable packages is assigned as a plain string but later treated like an array, which risks word-splitting for package names with spaces or special characters; fix by making packages a real Bash array when capturing the command output (e.g., read the command output into an array using a line-splitting reader such as readarray/mapfile or a while-read loop that appends entries), ensure find_packages_with_tests emits one package per line, and then use the array length and expansion (${#packages[@]} and ${packages[@]}) consistently when logging and iterating.
-
-
-
 Review completed ✔
