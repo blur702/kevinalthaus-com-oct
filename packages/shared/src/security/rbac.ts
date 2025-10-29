@@ -1,28 +1,6 @@
-export enum Role {
-  ADMIN = 'admin',
-  EDITOR = 'editor',
-  VIEWER = 'viewer',
-  GUEST = 'guest',
-}
-
-export enum Capability {
-  PLUGIN_INSTALL = 'plugin:install',
-  PLUGIN_ACTIVATE = 'plugin:activate',
-  PLUGIN_DEACTIVATE = 'plugin:deactivate',
-  PLUGIN_UNINSTALL = 'plugin:uninstall',
-  PLUGIN_UPDATE = 'plugin:update',
-  PLUGIN_VIEW = 'plugin:view',
-  THEME_MODIFY = 'theme:modify',
-  THEME_VIEW = 'theme:view',
-  SETTINGS_READ = 'settings:read',
-  SETTINGS_WRITE = 'settings:write',
-  USER_MANAGE = 'user:manage',
-  USER_VIEW = 'user:view',
-  CONTENT_CREATE = 'content:create',
-  CONTENT_EDIT = 'content:edit',
-  CONTENT_DELETE = 'content:delete',
-  CONTENT_VIEW = 'content:view',
-}
+// Import and re-export enums from rbac-types (browser-safe)
+import { Role, Capability } from './rbac-types';
+export { Role, Capability };
 
 export interface Permission {
   role: Role;

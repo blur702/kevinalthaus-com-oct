@@ -1112,6 +1112,11 @@ router.get('/me', authMiddleware, (req: AuthenticatedRequest, res: Response) => 
 
 // Auth middleware
 export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  // Set no-cache headers for all authenticated pages
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   let token: string | undefined;
 
   // 1. Check for token in httpOnly cookie

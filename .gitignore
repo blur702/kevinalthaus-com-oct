@@ -67,6 +67,9 @@ public/uploads/
 .nuxt/
 .vuepress/dist
 
+# CodeRabbit local status (ephemeral)
+.coderabbit-status/
+
 # Lock files (include only one based on your package manager)
 # Uncomment the ones you want to ignore
 # package-lock.json

@@ -8,7 +8,9 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     trace: 'retain-on-failure',
-    baseURL: process.env.FRONTEND_URL || 'http://localhost:3002',
+    baseURL: process.env.ADMIN_URL || 'http://localhost:3003',
+    bypassCSP: true,
+    javaScriptEnabled: true,
   },
   projects: [
     {
@@ -16,5 +18,11 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+  webServer: {
+    command: 'cd packages/admin && npm run dev',
+    url: 'http://localhost:3003',
+    reuseExistingServer: true,
+    timeout: 120_000,
+  },
 });
 

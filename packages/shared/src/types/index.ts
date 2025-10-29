@@ -2,6 +2,10 @@ import { Role } from '../security/rbac';
 
 // Express type declarations are included via express.d.ts (ambient module)
 
+// Re-export Role for convenience
+export { Role };
+export type { Role as RoleType };
+
 export interface BaseEntity {
   id: string;
   createdAt: Date;
