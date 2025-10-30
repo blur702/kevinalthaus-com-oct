@@ -105,3 +105,7 @@ secrets/
 *.secret
 .csrf-secret
 .env.local
+
+# Lint output files
+lint-output.txt
+lint-final.txt
