@@ -16,7 +16,7 @@ test.describe('Service health', () => {
 
     // Reuse captured response instead of making duplicate request
     // Accept 200 or 503 (degraded) so the test doesn't fail if a downstream is down
-    expect([200, 503]).toContain(resp!.status());
+    expect([200, 503]).toContain(resp.status());
   });
 
   test('Main App /health is 200', async ({ request }) => {

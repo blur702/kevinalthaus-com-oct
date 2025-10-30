@@ -287,7 +287,7 @@ const Users: React.FC = () => {
   };
 
   const handleStatusFilterChange = (event: SelectChangeEvent): void => {
-    const value = event.target.value as string;
+    const value = event.target.value;
     setStatusFilter(value === 'all' ? 'all' : value === 'true');
     setPage(0);
   };

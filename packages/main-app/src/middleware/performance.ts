@@ -152,7 +152,7 @@ class ResponseCache {
 
     // LRU eviction: if cache is full, evict least-recently-used (first entry)
     if (this.cache.size >= this.maxSize) {
-      const oldestKey = this.cache.keys().next().value as string | undefined;
+      const oldestKey = this.cache.keys().next().value;
       if (oldestKey) {
         const oldestEntry = this.cache.get(oldestKey);
         this.cache.delete(oldestKey);
@@ -173,7 +173,7 @@ class ResponseCache {
 
     // Coordinated eviction: when metadata is full, remove oldest metadata AND related cache entries using reverse index
     if (this.metadata.size >= this.maxSize) {
-      const oldestMetaKey = this.metadata.keys().next().value as string | undefined;
+      const oldestMetaKey = this.metadata.keys().next().value;
       if (oldestMetaKey) {
         this.metadata.delete(oldestMetaKey);
         const relatedKeys = this.reverseIndex.get(oldestMetaKey);

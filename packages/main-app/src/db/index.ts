@@ -3,6 +3,9 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
+// Re-export types from pg for consumers
+export type { PoolClient, QueryResult, QueryResultRow } from 'pg';
+
 const useConnString = !!process.env.DATABASE_URL;
 
 // Validate DATABASE_URL when using connection string mode

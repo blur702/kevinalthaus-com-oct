@@ -6,9 +6,13 @@
     "sourceType": "module",
     "project": [
       "./tsconfig.json",
+      "./tsconfig.playwright.json",
       "./packages/*/tsconfig.json",
+      "./packages/*/tsconfig.test.json",
       "./packages/*/tsconfig.node.json",
-      "./plugins/*/tsconfig.json"
+      "./plugins/*/tsconfig.json",
+      "./tests/tsconfig.json",
+      "./scripts/tsconfig.json"
     ]
   },
   "env": {

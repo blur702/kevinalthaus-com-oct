@@ -130,7 +130,7 @@ const BulkOperationsDialog: React.FC<BulkOperationsDialogProps> = ({
     const errors: string[] = [];
     const users: CreateUserRequest[] = [];
 
-    const validRoles = new Set<string>(Object.values(Role) as string[]);
+    const validRoles = new Set<string>(Object.values(Role));
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     data.forEach((row, i) => {

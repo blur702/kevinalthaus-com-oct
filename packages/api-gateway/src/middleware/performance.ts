@@ -54,7 +54,7 @@ class ResponseCache {
       }
       if (typeof val === 'object') {
         // Check for circular reference
-        if (seen.has(val as object)) {
+        if (seen.has(val)) {
           return '[Circular]';
         }
         const obj = val as Record<string, unknown>;
