@@ -327,7 +327,6 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, user, onClose
                   }}
                 />
                 <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                  { }
                   <Button
                     variant="contained"
                     onClick={handleSaveCustomFields}

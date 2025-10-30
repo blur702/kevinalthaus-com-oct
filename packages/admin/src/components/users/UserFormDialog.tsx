@@ -19,6 +19,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
 import { Role } from '@monorepo/shared';
 import type { User, UserFormMode, CreateUserRequest, UpdateUserRequest } from '../../types/user';
 import { createUser, updateUser } from '../../services/usersService';
@@ -73,6 +74,12 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
         active: user.active,
       });
       setErrors({});
+    } else if (mode === 'edit' && !user) {
+      // Edge case: edit mode requested but no user provided
+      console.error('UserFormDialog: edit mode requested without a user');
+      setErrors({ submit: 'Cannot edit user: no user selected.' });
+      // Ensure no loading state lingers
+      setLoading(false);
     } else if (mode === 'create') {
       setFormData({
         username: '',
@@ -187,17 +194,26 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
     }
   };
 
-  const handleChange = (field: keyof FormData): ((event: React.ChangeEvent<HTMLInputElement | { value: unknown }>) => void) => (
-    event: React.ChangeEvent<HTMLInputElement | { value: unknown }>
+  type TextFieldKey = 'username' | 'email' | 'password' | 'confirmPassword';
+  const handleChange = (field: TextFieldKey) => (
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
+    const { value } = event.target;
     setFormData((prev) => ({
       ...prev,
-      [field]: event.target.value as string & Role,
+      [field]: value,
     }));
     // Clear error for this field
     if (errors[field as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
+  };
+
+  const handleRoleChange = (event: SelectChangeEvent<string>): void => {
+    setFormData((prev) => ({
+      ...prev,
+      role: event.target.value as Role,
+    }));
   };
 
   const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -290,7 +306,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
               <Select
                 labelId="role-label"
                 value={formData.role}
-                onChange={handleChange('role')}
+                onChange={handleRoleChange}
                 label="Role"
                 inputProps={{
                   'aria-label': 'User role',

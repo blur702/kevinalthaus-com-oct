@@ -197,13 +197,13 @@ router.post(
         return;
       }
 
-      // Validate username format (alphanumeric, dots, hyphens, underscores, 3-30 chars)
+      // Validate username format (alphanumeric, hyphens, underscores, 3-30 chars)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const usernameRegex = /^[a-zA-Z0-9._-]{3,30}$/;
+      const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
       if (!usernameRegex.test(username)) {
         res.status(400).json({
           error: 'Bad Request',
-          message: 'Username must be 3-30 characters and contain only letters, numbers, dots, hyphens, and underscores',
+          message: 'Username must be 3-30 characters and contain only letters, numbers, hyphens, and underscores',
         });
         return;
       }
@@ -307,13 +307,13 @@ router.patch(
       }
 
       if (username !== undefined) {
-        // Validate username format (alphanumeric, dots, hyphens, underscores, 3-30 chars)
+        // Validate username format (alphanumeric, hyphens, underscores, 3-30 chars)
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        const usernameRegex = /^[a-zA-Z0-9._-]{3,30}$/;
+        const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
         if (!usernameRegex.test(username)) {
           res.status(400).json({
             error: 'Bad Request',
-            message: 'Username must be 3-30 characters and contain only letters, numbers, dots, hyphens, and underscores',
+            message: 'Username must be 3-30 characters and contain only letters, numbers, hyphens, and underscores',
           });
           return;
         }
@@ -358,8 +358,8 @@ router.patch(
       }
 
       updates.push(`updated_at = CURRENT_TIMESTAMP`);
-      params.push(id);
       paramCount++;
+      params.push(id);
 
       const result = await query<{
         id: string;

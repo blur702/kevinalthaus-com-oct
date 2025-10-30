@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import { query, transaction } from '../db';
+import { query, transaction, type PoolClient } from '../db';
 import { hashPassword, verifyPassword, hashSHA256, defaultLogger, validateEmail } from '@monorepo/shared';
 import { Role } from '@monorepo/shared';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -72,7 +72,9 @@ if (!['lax', 'strict', 'none'].includes(COOKIE_SAMESITE)) {
 // Password reset configuration
 const PASSWORD_RESET_TOKEN_EXPIRY_MINUTES = (() => {
   const envValue = process.env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES;
-  if (!envValue) return 30; // Default: 30 minutes
+  if (!envValue) {
+    return 30; // Default: 30 minutes
+  }
   const parsed = parseInt(envValue, 10);
   if (!Number.isFinite(parsed) || parsed < 1 || parsed > 1440) {
     console.warn(`Invalid PASSWORD_RESET_TOKEN_EXPIRY_MINUTES: ${envValue}. Using default: 30 minutes. Must be between 1 and 1440.`);
@@ -84,7 +86,9 @@ const PASSWORD_RESET_TOKEN_EXPIRY_MINUTES = (() => {
 // Password history configuration
 const PASSWORD_HISTORY_LIMIT = (() => {
   const envValue = process.env.PASSWORD_HISTORY_LIMIT;
-  if (!envValue) return 3; // Default: 3 passwords
+  if (!envValue) {
+    return 3; // Default: 3 passwords
+  }
   const parsed = parseInt(envValue, 10);
   if (!Number.isFinite(parsed) || parsed < 1 || parsed > 10) {
     console.warn(`Invalid PASSWORD_HISTORY_LIMIT: ${envValue}. Using default: 3. Must be between 1 and 10.`);
@@ -229,7 +233,7 @@ async function checkPasswordHistory(userId: string, newPassword: string): Promis
 
 // Add password to history and maintain configured limit
 // Accepts a transaction client to be used within an existing transaction
-async function addPasswordToHistory(userId: string, passwordHash: string, client: any): Promise<void> {
+async function addPasswordToHistory(userId: string, passwordHash: string, client: PoolClient): Promise<void> {
   // Insert new password hash
   await client.query(
     'INSERT INTO password_history (user_id, password_hash) VALUES ($1, $2)',

@@ -19,6 +19,8 @@ interface CacheMetadata {
 class ResponseCache {
   private cache = new Map<string, CacheEntry>();
   private metadata = new Map<string, CacheMetadata>(); // Maps base key to vary headers
+  // Reverse index: baseKey -> set of cache keys for fast coordinated eviction
+  private reverseIndex = new Map<string, Set<string>>();
   private maxSize = 500; // Smaller cache for main app
   private defaultTTL = 180000; // 3 minutes
 
@@ -74,7 +76,8 @@ class ResponseCache {
 
   private generateBaseKey(req: Request): string {
     const canonicalQuery = this.canonicalizeQuery(req.query);
-    return `${req.method}:${req.originalUrl.split('?')[0]}:${canonicalQuery}`;
+    // Use req.path to reliably get the URL path without query string
+    return `${req.method}:${req.path}:${canonicalQuery}`;
   }
 
   private generateKey(req: Request, varyHeaders?: string[]): string {
@@ -110,8 +113,19 @@ class ResponseCache {
     }
 
     if (Date.now() - entry.timestamp > this.defaultTTL) {
+      // Expired: remove from cache and reverse index; cleanup metadata if last
       this.cache.delete(key);
-      this.metadata.delete(baseKey);
+      const keySet = this.reverseIndex.get(baseKey);
+      if (keySet) {
+        keySet.delete(key);
+        if (keySet.size === 0) {
+          this.reverseIndex.delete(baseKey);
+          this.metadata.delete(baseKey);
+        }
+      } else {
+        // Fallback cleanup
+        this.metadata.delete(baseKey);
+      }
       return null;
     }
 
@@ -125,6 +139,9 @@ class ResponseCache {
       }
     }
 
+    // Update access order for true LRU behavior by re-inserting
+    this.cache.delete(key);
+    this.cache.set(key, entry);
     return entry;
   }
 
@@ -133,28 +150,44 @@ class ResponseCache {
     const baseKey = this.generateBaseKey(req);
     const timestamp = Date.now();
 
-    // Coordinated eviction: when cache is full, remove oldest entry AND its metadata
+    // LRU eviction: if cache is full, evict least-recently-used (first entry)
     if (this.cache.size >= this.maxSize) {
-      const oldestKey = this.cache.keys().next().value;
+      const oldestKey = this.cache.keys().next().value as string | undefined;
       if (oldestKey) {
         const oldestEntry = this.cache.get(oldestKey);
         this.cache.delete(oldestKey);
-        // Remove corresponding metadata entry
-        if (oldestEntry && oldestEntry.baseKey) {
-          this.metadata.delete(oldestEntry.baseKey);
+        if (oldestEntry) {
+          const setForBase = this.reverseIndex.get(oldestEntry.baseKey);
+          if (setForBase) {
+            setForBase.delete(oldestKey);
+            if (setForBase.size === 0) {
+              this.reverseIndex.delete(oldestEntry.baseKey);
+              this.metadata.delete(oldestEntry.baseKey);
+            }
+          } else {
+            this.metadata.delete(oldestEntry.baseKey);
+          }
         }
       }
     }
 
-    // Coordinated eviction: when metadata is full, remove oldest metadata AND related cache entries
+    // Coordinated eviction: when metadata is full, remove oldest metadata AND related cache entries using reverse index
     if (this.metadata.size >= this.maxSize) {
-      const oldestMetaKey = this.metadata.keys().next().value;
+      const oldestMetaKey = this.metadata.keys().next().value as string | undefined;
       if (oldestMetaKey) {
         this.metadata.delete(oldestMetaKey);
-        // Remove all cache entries that have this baseKey
-        for (const [cacheKey, entry] of this.cache.entries()) {
-          if (entry.baseKey === oldestMetaKey) {
+        const relatedKeys = this.reverseIndex.get(oldestMetaKey);
+        if (relatedKeys) {
+          for (const cacheKey of relatedKeys) {
             this.cache.delete(cacheKey);
+          }
+          this.reverseIndex.delete(oldestMetaKey);
+        } else {
+          // Fallback: scan as a safety net (should be rare)
+          for (const [cacheKey, entry] of this.cache.entries()) {
+            if (entry.baseKey === oldestMetaKey) {
+              this.cache.delete(cacheKey);
+            }
           }
         }
       }
@@ -168,6 +201,11 @@ class ResponseCache {
       baseKey, // Store baseKey for coordinated eviction
     });
 
+    // Maintain reverse index mapping
+    const keySet = this.reverseIndex.get(baseKey) ?? new Set<string>();
+    keySet.add(key);
+    this.reverseIndex.set(baseKey, keySet);
+
     // Store metadata if vary headers exist
     if (varyHeaders && varyHeaders.length > 0) {
       this.metadata.set(baseKey, {
@@ -180,6 +218,7 @@ class ResponseCache {
   clear(): void {
     this.cache.clear();
     this.metadata.clear();
+    this.reverseIndex.clear();
   }
 
   clearByPrefix(prefix: string): number {
@@ -188,7 +227,18 @@ class ResponseCache {
     for (const key of Array.from(this.cache.keys())) {
       // keys are METHOD:URL:QUERY...; match URL prefix for GETs
       if (key.startsWith(`GET:${normalized}`)) {
+        const entry = this.cache.get(key);
         this.cache.delete(key);
+        if (entry) {
+          const setForBase = this.reverseIndex.get(entry.baseKey);
+          if (setForBase) {
+            setForBase.delete(key);
+            if (setForBase.size === 0) {
+              this.reverseIndex.delete(entry.baseKey);
+              this.metadata.delete(entry.baseKey);
+            }
+          }
+        }
         cleared++;
       }
     }

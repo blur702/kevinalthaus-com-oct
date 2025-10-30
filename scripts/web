@@ -74,7 +74,7 @@ check_port() {
         netstat -ltn | awk '{print $4}' | grep -E ":$port$" >/dev/null 2>&1
     else
         warn "No port-checking tool (lsof/ss/netstat) found; cannot check port $port"
-        return 1
+        return 2
     fi
     local result=$?
     set -e
@@ -84,74 +84,96 @@ check_port() {
 kill_port_process() {
     local port=$1
     set +e
-    local pid=""
+    local pids=()
     if command -v lsof >/dev/null 2>&1; then
-        pid=$(lsof -t -i:$port 2>/dev/null)
+        # lsof prints one PID per line
+        mapfile -t pids < <(lsof -t -i:$port 2>/dev/null | sort -u)
     elif command -v ss >/dev/null 2>&1; then
-        pid=$(ss -lptn 'sport = :'$port 2>/dev/null | awk -F',' '/pid=/ {print $2}' | sed 's/pid=//g' | head -n1)
+        mapfile -t pids < <(ss -lptn 'sport = :'$port 2>/dev/null | awk -F',' '/pid=/ {print $2}' | sed 's/pid=//g' | tr -d ' ' | sort -u)
     elif command -v netstat >/dev/null 2>&1; then
-        pid=$(netstat -lptn 2>/dev/null | awk -v p=:$port '$4 ~ p {print $7}' | cut -d'/' -f1 | head -n1)
+        mapfile -t pids < <(netstat -lptn 2>/dev/null | awk -v p=:$port '$4 ~ p {print $7}' | cut -d'/' -f1 | tr -d ' ' | sort -u)
+    else
+        warn "No tools available to find PIDs for port $port"
+        set -e
+        return 2
     fi
     set -e
 
-    if [ -n "$pid" ]; then
-        local process_name=$(ps -p $pid -o comm= 2>/dev/null || echo "unknown")
-        local process_cmd=$(ps -p $pid -o args= 2>/dev/null || echo "unknown")
+    if [ ${#pids[@]} -eq 0 ]; then
+        return 0
+    fi
 
-        # Display process information
-        warn "Found process using port $port:"
-        echo "  PID: $pid"
-        echo "  Command: $process_name"
-        echo "  Full command: $process_cmd"
-        echo ""
+    if [ ${#pids[@]} -gt 1 ]; then
+        warn "Multiple processes are using port $port: ${pids[*]}"
+    else
+        warn "Found process using port $port: ${pids[0]}"
+    fi
 
-        # Check if shell is interactive (stdin is a terminal)
-        if [ -t 0 ]; then
-            # Interactive mode: prompt user for confirmation
-            echo -n "Kill this process? [y/N] "
-            read -r response
-            case "$response" in
-                [yY][eE][sS]|[yY])
-                    log "User confirmed killing process"
-                    ;;
-                *)
-                    log "Skipping process (user declined)"
-                    return 0
-                    ;;
-            esac
+    # Display process info for each PID
+    for pid in "${pids[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            local process_name=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
+            local process_cmd=$(ps -p "$pid" -o args= 2>/dev/null || echo "unknown")
+            echo "  PID: $pid"
+            echo "  Command: $process_name"
+            echo "  Full command: $process_cmd"
+            echo ""
         else
-            # Non-interactive mode: check AUTO_KILL environment flag
-            if [ "${AUTO_KILL:-false}" = "true" ]; then
-                log "AUTO_KILL=true in non-interactive mode, proceeding without confirmation"
-            else
-                warn "Non-interactive mode detected and AUTO_KILL is not set to true"
-                log "Skipping process kill (set AUTO_KILL=true to allow automated killing)"
-                return 0
-            fi
+            warn "PID $pid no longer exists; skipping"
         fi
+    done
 
-        log "Sending SIGTERM to $process_name (PID: $pid) on port $port"
-        kill -15 $pid 2>/dev/null || true
-        # Wait up to 5 seconds for graceful shutdown
+    # Confirmation
+    if [ -t 0 ]; then
+        echo -n "Kill ${#pids[@]} process(es) holding port $port? [y/N] "
+        read -r response
+        case "$response" in
+            [yY][eE][sS]|[yY])
+                log "User confirmed killing ${#pids[@]} process(es)"
+                ;;
+            *)
+                log "Skipping process kill (user declined)"
+                return 0
+                ;;
+        esac
+    else
+        if [ "${AUTO_KILL:-false}" = "true" ]; then
+            log "AUTO_KILL=true in non-interactive mode, proceeding without confirmation"
+        else
+            warn "Non-interactive mode detected and AUTO_KILL is not set to true"
+            log "Skipping process kill (set AUTO_KILL=true to allow automated killing)"
+            return 0
+        fi
+    fi
+
+    # Kill each PID individually, re-validating existence
+    for pid in "${pids[@]}"; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            warn "PID $pid already exited; skipping"
+            continue
+        fi
+        local pname=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
+        log "Sending SIGTERM to $pname (PID: $pid) on port $port"
+        kill -15 "$pid" 2>/dev/null || true
+        # Wait up to 5 seconds per PID
         for i in {1..5}; do
             sleep 1
-            if ! check_port $port; then
+            if ! kill -0 "$pid" 2>/dev/null; then
                 break
             fi
         done
-        # Force kill if still running
-        if check_port $port; then
-            warn "Process still holding port $port; sending SIGKILL"
-            kill -9 $pid 2>/dev/null || true
+        if kill -0 "$pid" 2>/dev/null; then
+            warn "PID $pid still running; sending SIGKILL"
+            kill -9 "$pid" 2>/dev/null || true
             sleep 1
         fi
+    done
 
-        # Verify port is freed
-        if check_port $port; then
-            warn "Port $port still in use after killing process"
-        else
-            log "Port $port freed successfully"
-        fi
+    # Verify port status after attempting to kill all PIDs
+    if check_port $port; then
+        warn "Port $port still in use after attempting to kill processes"
+    else
+        log "Port $port freed successfully"
     fi
 }
 
@@ -161,9 +183,13 @@ check_and_kill_ports() {
     log "Checking for port conflicts..."
 
     for port in "${PORTS[@]}"; do
-        if check_port $port; then
+        check_port $port
+        rc=$?
+        if [ $rc -eq 2 ]; then
+            error "Cannot determine status of port $port (no lsof/ss/netstat available). Aborting."
+        elif [ $rc -eq 0 ]; then
             warn "Port $port is in use"
-            kill_port_process $port
+            kill_port_process $port || true
             ((killed_count++))
         fi
     done

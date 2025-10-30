@@ -78,7 +78,7 @@ export async function uploadPluginPackage(file: File, options: UploadPluginOptio
     form.append('signature', options.signatureBase64);
   }
   const { data } = await api.post('/plugins/upload', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    // Do not set Content-Type for FormData; let the browser/axios set the boundary
     timeout: UPLOAD_TIMEOUT, // Extended timeout for large file uploads
   });
   return data;

@@ -69,9 +69,9 @@ const CSRF_SECRET: string = (() => {
     const resolvedPath = path.resolve(requestedPath);
     const relativePath = path.relative(baseDir, resolvedPath);
 
-    // Reject paths outside baseDir by checking if relative path starts with '..' or is absolute
-    // This allows absolute paths WITHIN baseDir (e.g., /app/.csrf-secret when baseDir is /app)
-    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    // Use path.relative(baseDir, resolvedPath) and reject paths starting with '..'
+    // A leading '..' indicates the resolved path is outside baseDir, so this single check is sufficient.
+    if (relativePath.startsWith('..')) {
       logger.error('CSRF_SECRET_FILE path traversal attempt blocked', undefined, {
         requested: requestedPath,
         resolved: resolvedPath,

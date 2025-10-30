@@ -53,8 +53,9 @@ const NotFound: React.FC = () => (
     <Typography variant="body1" sx={{ mb: 3 }}>
       The page you're looking for doesn't exist.
     </Typography>
-    <Button component={RouterLink} to="/" variant="contained" color="primary">
-      Go to Dashboard
+    {/* Link to a public, safe route to avoid redirect chains for unauthenticated users */}
+    <Button component={RouterLink} to="/login" variant="contained" color="primary">
+      Go to Login
     </Button>
   </Box>
 );

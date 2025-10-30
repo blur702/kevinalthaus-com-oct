@@ -33,6 +33,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { Role } from '@monorepo/shared';
+import Papa from 'papaparse';
 import type { CreateUserRequest } from '../../types/user';
 import { bulkImport, bulkExport } from '../../services/usersService';
 
@@ -40,7 +41,7 @@ interface BulkOperationsDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  selectedUserIds?: string[];
+  selectedUserIds?: readonly string[];
 }
 
 type OperationType = 'import' | 'export';
@@ -92,42 +93,102 @@ const BulkOperationsDialog: React.FC<BulkOperationsDialogProps> = ({
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
     if (file) {
+      // Reject files over 5MB to prevent heavy parsing in browser
+      const maxBytes = 5 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        setError('Selected file is too large. Maximum allowed size is 5MB.');
+        setSelectedFile(null);
+        return;
+      }
       setSelectedFile(file);
       setError(null);
     }
   };
 
   const parseCSV = (csvText: string): CreateUserRequest[] => {
-    const lines = csvText.split('\n').filter((line) => line.trim());
-    if (lines.length < 2) {
-      throw new Error('CSV file must contain header and at least one data row');
+    const result = Papa.parse<Record<string, string>>(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => h.trim(),
+    });
+
+    if (result.errors && result.errors.length > 0) {
+      const message = result.errors
+        .map((e) => `Row ${typeof e.row === 'number' ? e.row + 1 : 'unknown'}: ${e.message}`)
+        .join('\n');
+      throw new Error(`CSV parse error(s):\n${message}`);
     }
 
-    const headers = lines[0].split(',').map((h) => h.trim());
+    const fields = result.meta?.fields || [];
     const requiredHeaders = ['username', 'email', 'password', 'role'];
-
-    for (const header of requiredHeaders) {
-      if (!headers.includes(header)) {
-        throw new Error(`Missing required header: ${header}`);
-      }
+    const missing = requiredHeaders.filter((h) => !fields.includes(h));
+    if (missing.length > 0) {
+      throw new Error(`Missing required header(s): ${missing.join(', ')}`);
     }
 
+    const data = result.data || [];
+    const errors: string[] = [];
     const users: CreateUserRequest[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map((v) => v.trim());
-      const user: Record<string, string> = {};
 
-      headers.forEach((header, index) => {
-        user[header] = values[index] || '';
-      });
+    const validRoles = new Set<string>(Object.values(Role) as string[]);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-      users.push({
-        username: user.username,
-        email: user.email,
-        password: user.password,
-        role: user.role as Role,
-        active: user.active?.toLowerCase() === 'true',
-      });
+    data.forEach((row, i) => {
+      const humanRow = i + 2; // account for header row (row 1)
+      const username = (row.username || '').trim();
+      const email = (row.email || '').trim();
+      const password = (row.password || '').toString();
+      const roleRaw = (row.role || '').trim();
+      const activeRaw = (row.active || '').trim().toLowerCase();
+
+      // Required fields
+      if (!username) {
+        errors.push(`Row ${humanRow}: username is required and cannot be empty`);
+      } else if (username.length < 3 || username.length > 30) {
+        errors.push(`Row ${humanRow}: username must be 3-30 characters long`);
+      }
+
+      if (!email) {
+        errors.push(`Row ${humanRow}: email is required and cannot be empty`);
+      } else if (email.length > 254 || !emailRegex.test(email)) {
+        errors.push(`Row ${humanRow}: email is invalid or too long`);
+      }
+
+      if (!password) {
+        errors.push(`Row ${humanRow}: password is required and cannot be empty`);
+      }
+
+      if (!roleRaw) {
+        errors.push(`Row ${humanRow}: role is required and cannot be empty`);
+      } else if (!validRoles.has(roleRaw)) {
+        errors.push(
+          `Row ${humanRow}: role '${roleRaw}' is invalid. Allowed values: ${Array.from(validRoles).join(', ')}`
+        );
+      }
+
+      let active: boolean | undefined = undefined;
+      if (activeRaw) {
+        if (activeRaw === 'true' || activeRaw === 'false') {
+          active = activeRaw === 'true';
+        } else {
+          errors.push(`Row ${humanRow}: active must be 'true' or 'false' when provided`);
+        }
+      }
+
+      // Only push this user if there are no errors recorded for THIS specific row
+      if (!errors.some((e) => e.startsWith(`Row ${humanRow}:`))) {
+        users.push({
+          username,
+          email,
+          password,
+          role: roleRaw as Role,
+          active,
+        });
+      }
+    });
+
+    if (errors.length > 0) {
+      throw new Error(`CSV validation error(s):\n${errors.join('\n')}`);
     }
 
     return users;
@@ -136,6 +197,12 @@ const BulkOperationsDialog: React.FC<BulkOperationsDialogProps> = ({
   const handleImport = async (): Promise<void> => {
     if (!selectedFile) {
       setError('Please select a file');
+      return;
+    }
+    // Additional guard in case file came from a different source than the input
+    const maxBytes = 5 * 1024 * 1024;
+    if (selectedFile.size > maxBytes) {
+      setError('Selected file is too large. Maximum allowed size is 5MB.');
       return;
     }
 
@@ -181,7 +248,7 @@ const BulkOperationsDialog: React.FC<BulkOperationsDialogProps> = ({
     try {
       const blob = await bulkExport(
         exportFormat,
-        selectedUserIds.length > 0 ? selectedUserIds : undefined
+        selectedUserIds.length > 0 ? [...selectedUserIds] : undefined
       );
 
       // Create download link

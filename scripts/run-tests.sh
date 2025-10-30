@@ -58,6 +58,8 @@ run_lint() {
 
 # Run type checking
 run_typecheck() {
+    # Runs the monorepo type checker and returns its exit code.
+    # Callers rely on the return value to decide failure handling.
     log INFO "Running TypeScript type checking..."
 
     local typecheck_output
@@ -68,8 +70,9 @@ run_typecheck() {
         return 0
     else
         typecheck_exit_code=$?
-        log WARNING "Type checking found issues (may be expected if no typecheck script exists)"
-        return 0  # Don't fail if typecheck script doesn't exist
+        log ERROR "Type checking failed with exit code: ${typecheck_exit_code}"
+        echo "$typecheck_output"
+        return ${typecheck_exit_code}
     fi
 }
 

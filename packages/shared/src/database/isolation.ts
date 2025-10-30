@@ -121,8 +121,9 @@ export class DatabaseIsolationEnforcer {
   private readonly maxQueryComplexity: number;
   private readonly maxQueryRows: number;
   private readonly weights: ComplexityWeights;
-  private readonly fallbackComplexity: number;
   private readonly logger: MinimalLogger;
+  private readonly parseFailureThreshold: number;
+  private readonly parseFailureCounts: Map<string, number>;
 
   constructor(limits: QueryExecutionLimits, weights?: Partial<ComplexityWeights>);
   constructor(options: IsolationEnforcerOptions);
@@ -147,17 +148,6 @@ export class DatabaseIsolationEnforcer {
     this.maxQueryComplexity = Math.floor(mc);
     this.maxQueryRows = Math.floor(mr);
     this.weights = { ...DEFAULT_COMPLEXITY_WEIGHTS, ...(options.weights || {}) };
-    // Fallback complexity: validated explicit value or conservative default
-    const fc = options.fallbackComplexity;
-    if (fc !== undefined) {
-      if (!Number.isFinite(fc) || Math.floor(fc) < 1) {
-        throw new Error(`[Isolation] Invalid fallbackComplexity: ${fc}`);
-      }
-      this.fallbackComplexity = Math.floor(fc);
-    } else {
-      // Default: 80% of max complexity, minimum 1
-      this.fallbackComplexity = Math.max(1, Math.floor(this.maxQueryComplexity * 0.8));
-    }
     this.logger = options.logger || {
       info: (message, context) => {
         // eslint-disable-next-line no-console
@@ -172,6 +162,8 @@ export class DatabaseIsolationEnforcer {
         console.warn(message, context);
       },
     };
+    this.parseFailureThreshold = Math.max(1, Math.floor((options as { parseFailureThreshold?: number }).parseFailureThreshold ?? 3));
+    this.parseFailureCounts = new Map<string, number>();
   }
 
   /**
@@ -209,8 +201,8 @@ export class DatabaseIsolationEnforcer {
       throw new Error('Query parameter cannot be empty or whitespace');
     }
 
-    if (!Number.isFinite(estimatedRows) || estimatedRows < 0) {
-      throw new Error('Estimated rows must be a finite non-negative number');
+    if (!Number.isFinite(estimatedRows) || estimatedRows <= 0) {
+      throw new Error('Estimated rows must be a finite positive number');
     }
 
     // Require EXPLAIN-derived estimate if configured
@@ -452,6 +444,12 @@ export class DatabaseIsolationEnforcer {
 
       statements.forEach(visit);
 
+      // Reset parse failure counter on successful parse for this query key
+      const key = (query || '').trim().substring(0, 256);
+      if (this.parseFailureCounts.has(key)) {
+        this.parseFailureCounts.delete(key);
+      }
+
       // Conservative approach: only count set operations when explicitly detected by parser
       // Do not increment unions based solely on statements.length to avoid false positives
       // for batch or independent semicolon-separated queries
@@ -472,14 +470,31 @@ export class DatabaseIsolationEnforcer {
 
       return Math.min(complexity, Number.MAX_SAFE_INTEGER);
     } catch (err) {
-      // If parsing fails, log details for debugging, then use configurable fallback complexity
-      // Fallback uses a validated explicit value (if provided) or a safe low default (1) to avoid over-blocking.
-      this.logger.error('[Isolation] SQL parse failed; using fallback complexity', {
+      const key = query.trim().substring(0, 256);
+      const prev = this.parseFailureCounts.get(key) ?? 0;
+      const next = prev + 1;
+      this.parseFailureCounts.set(key, next);
+
+      // Conservative fallback: clamp to maxQueryComplexity - 1 (non-negative)
+      const conservativeFallback = Math.max(0, this.maxQueryComplexity - 1);
+
+      this.logger.warn('[Isolation] SQL parse failed; using conservative fallback complexity', {
         error: err instanceof Error ? err.message : String(err),
-        query,
-        fallbackComplexity: this.fallbackComplexity,
+        query: query.substring(0, 200),
+        fallbackComplexity: conservativeFallback,
+        failures: next,
+        threshold: this.parseFailureThreshold,
       });
-      return this.fallbackComplexity;
+
+      if (next > this.parseFailureThreshold) {
+        this.logger.error('[Isolation] Repeated SQL parse failures exceeded threshold; rejecting query', {
+          failures: next,
+          threshold: this.parseFailureThreshold,
+        });
+        throw new Error('[Isolation] Rejected unparseable SQL after repeated failures');
+      }
+
+      return conservativeFallback;
     }
   }
 }
@@ -529,4 +544,3 @@ export class ResourceQuotaEnforcer {
     return tableIndexCount < this.quota.maxIndexesPerTable;
   }
 }
-

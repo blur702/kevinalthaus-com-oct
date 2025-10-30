@@ -48,4 +48,5 @@ if docker ps --format '{{.Names}}' | grep -Fx -q "$CONTAINER_NAME"; then
     fi
 else
     echo "[$(timestamp)] Container $CONTAINER_NAME not running, skipping VACUUM ANALYZE" >> "$LOG_FILE" 2>&1
+    exit 2
 fi

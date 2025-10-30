@@ -362,8 +362,8 @@ export const rateLimitMiddleware = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for health checks
-  skip: (req: Request) => req.path === '/health',
+  // Skip rate limiting for health checks (all health endpoints)
+  skip: (req: Request) => req.path === '/health' || req.path.startsWith('/health/'),
 });
 
 // Request/Response timing middleware

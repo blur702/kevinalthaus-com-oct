@@ -89,6 +89,7 @@ const Users: React.FC = () => {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // Snackbar state
   const [snackbar, setSnackbar] = useState<{
@@ -240,13 +241,15 @@ const Users: React.FC = () => {
     }
 
     try {
-      const result = await bulkDelete(selected);
+      const result = await bulkDelete([...selected]);
       showSnackbar(`Successfully deleted ${result.deleted} user(s)`, 'success');
       setSelected([]);
+      setShowBulkDeleteConfirm(false);
       void fetchUsers();
     } catch (err) {
       console.error('Failed to bulk delete:', err);
       showSnackbar('Failed to delete users', 'error');
+      setShowBulkDeleteConfirm(false);
     }
   };
 
@@ -374,8 +377,7 @@ const Users: React.FC = () => {
           </FormControl>
 
           <Tooltip title="Refresh">
-            {/* eslint-disable-next-line @typescript-eslint/no-misused-promises */}
-            <IconButton onClick={fetchUsers} disabled={loading}>
+            <IconButton onClick={() => void fetchUsers()} disabled={loading}>
               <RefreshIcon />
             </IconButton>
           </Tooltip>
@@ -385,12 +387,11 @@ const Users: React.FC = () => {
           {selected.length > 0 && (
             <>
               <Chip label={`${selected.length} selected`} color="primary" />
-              { }
               <Button
                 variant="outlined"
                 color="error"
                 startIcon={<DeleteIcon />}
-                onClick={handleBulkDelete}
+                onClick={() => setShowBulkDeleteConfirm(true)}
                 size="small"
               >
                 Delete Selected
@@ -616,9 +617,28 @@ const Users: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          {/* eslint-disable-next-line @typescript-eslint/no-misused-promises */}
-          <Button onClick={confirmDelete} color="error" variant="contained">
+          <Button onClick={() => void confirmDelete()} color="error" variant="contained">
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog
+        open={showBulkDeleteConfirm && selected.length > 0}
+        onClose={() => setShowBulkDeleteConfirm(false)}
+      >
+        <DialogTitle>Confirm Bulk Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete {selected.length} selected user(s)? This action cannot
+            be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkDeleteConfirm(false)}>Cancel</Button>
+          <Button onClick={() => void handleBulkDelete()} color="error" variant="contained">
+            Confirm
           </Button>
         </DialogActions>
       </Dialog>

@@ -41,57 +41,33 @@ export function verifyPluginSignature(
  * Prevents timing attacks by validating inputs and using fixed-length buffers
  */
 function timingSafeEqual(a: string, b: string): boolean {
-  // Expected length for SHA256 hex strings (64 hex chars = 32 bytes)
-  const EXPECTED_HEX_LENGTH = 64;
-  const FIXED_LENGTH = 32; // 32 bytes
+  // Fixed expected byte length for SHA256 (32 bytes)
+  const FIXED_LENGTH = 32;
 
-  /**
-   * Validates hex string format and length without throwing
-   * @returns true if valid, false otherwise
-   */
-  function isValidHex(hexString: string): boolean {
-    // Check exact length
-    if (hexString.length !== EXPECTED_HEX_LENGTH) {
-      return false;
-    }
-    // Check only valid hex characters
-    return /^[0-9a-fA-F]{64}$/.test(hexString);
-  }
+  // Convert both inputs to buffers using hex decoding
+  // Buffer.from will produce a buffer whose length is half the hex string length (rounded down)
+  const bufA = Buffer.from(a, 'hex');
+  const bufB = Buffer.from(b, 'hex');
 
-  /**
-   * Converts validated hex string to fixed-length buffer
-   * Must only be called after validation passes
-   */
-  function hexToFixedBuffer(hexString: string): Buffer {
-    return Buffer.from(hexString, 'hex');
-  }
+  const aLenOk = bufA.length === FIXED_LENGTH;
+  const bLenOk = bufB.length === FIXED_LENGTH;
 
-  // Validate both inputs (same operation on both to preserve timing)
-  const aValid = isValidHex(a);
-  const bValid = isValidHex(b);
-
-  // If either input is invalid, return false (but still process both)
-  if (!aValid || !bValid) {
-    // Still create buffers to maintain timing consistency
-    const dummyA = Buffer.alloc(FIXED_LENGTH);
-    const dummyB = Buffer.alloc(FIXED_LENGTH);
+  if (!aLenOk || !bLenOk) {
+    // Use zeroed buffers of fixed length to maintain constant-time comparison path
+    const zeroA = Buffer.alloc(FIXED_LENGTH);
+    const zeroB = Buffer.alloc(FIXED_LENGTH);
     try {
-      cryptoTimingSafeEqual(dummyA, dummyB);
+      cryptoTimingSafeEqual(zeroA, zeroB);
     } catch {
-      // Suppress errors
+      // ignore
     }
     return false;
   }
 
-  // Both inputs validated - convert to buffers
-  const bufA = hexToFixedBuffer(a);
-  const bufB = hexToFixedBuffer(b);
-
-  // Perform constant-time comparison on equal-length buffers
   try {
     return cryptoTimingSafeEqual(bufA, bufB);
   } catch {
-    // This should never happen since buffers are same length
+    // Should not occur since lengths are fixed and equal
     return false;
   }
 }

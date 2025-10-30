@@ -45,6 +45,29 @@ display_json_status() {
     cat "${STATUS_FILE}"
 }
 
+# Portable JSON field extractor using Node.js
+extract_fields() {
+    STATUS_FILE="${STATUS_FILE}" node -e '
+      const fs = require("fs");
+      const p = process.env.STATUS_FILE;
+      let s={};
+      try { s = JSON.parse(fs.readFileSync(p, "utf8")||"{}"); } catch {}
+      const out=[
+        s.status ?? "unknown",
+        s.phase ?? "unknown",
+        s.startTime ?? "unknown",
+        s.endTime ?? "not finished",
+        String(Boolean(s.testsRun)),
+        s.testsPassed === true ? "true" : (s.testsPassed === false ? "false" : "null"),
+        String(Boolean(s.reviewComplete)),
+        s.issuesFound != null ? String(s.issuesFound) : "null",
+        s.exitCode != null ? String(s.exitCode) : "null",
+        Number.isFinite(Number(s.pid)) ? String(s.pid) : "unknown",
+      ];
+      process.stdout.write(out.join("\n"));
+    '
+}
+
 # Display human-readable status
 display_human_status() {
     check_status_dir
@@ -59,17 +82,8 @@ display_human_status() {
     echo -e "${CYAN}==============================================================================${NC}"
     echo ""
 
-    # Parse status JSON
-    local status=$(grep -oP '(?<="status": ")[^"]*' "${STATUS_FILE}" || echo "unknown")
-    local phase=$(grep -oP '(?<="phase": ")[^"]*' "${STATUS_FILE}" || echo "unknown")
-    local start_time=$(grep -oP '(?<="startTime": ")[^"]*' "${STATUS_FILE}" || echo "unknown")
-    local end_time=$(grep -oP '(?<="endTime": ")[^"]*' "${STATUS_FILE}" || echo "not finished")
-    local tests_run=$(grep -oP '(?<="testsRun": )[^,}]*' "${STATUS_FILE}" || echo "false")
-    local tests_passed=$(grep -oP '(?<="testsPassed": )[^,}]*' "${STATUS_FILE}" || echo "null")
-    local review_complete=$(grep -oP '(?<="reviewComplete": )[^,}]*' "${STATUS_FILE}" || echo "false")
-    local issues_found=$(grep -oP '(?<="issuesFound": )[^,}]*' "${STATUS_FILE}" || echo "null")
-    local exit_code=$(grep -oP '(?<="exitCode": )[^,}]*' "${STATUS_FILE}" || echo "null")
-    local pid=$(grep -oP '(?<="pid": )\d+' "${STATUS_FILE}" || echo "unknown")
+    # Parse status JSON (portable)
+    IFS=$'\n' read -r status phase start_time end_time tests_run tests_passed review_complete issues_found exit_code pid < <(extract_fields)
 
     # Display status with colors
     echo -e "${BLUE}Status:${NC} $status"
@@ -193,9 +207,14 @@ wait_for_completion() {
             exit 1
         fi
 
-        local status=$(grep -oP '(?<="status": ")[^"]*' "${STATUS_FILE}" || echo "unknown")
-        local phase=$(grep -oP '(?<="phase": ")[^"]*' "${STATUS_FILE}" || echo "unknown")
-        local review_complete=$(grep -oP '(?<="reviewComplete": )[^,}]*' "${STATUS_FILE}" || echo "false")
+        IFS=$'\n' read -r status phase review_complete < <( STATUS_FILE="${STATUS_FILE}" node -e '
+          const fs = require("fs");
+          const p = process.env.STATUS_FILE;
+          let s={};
+          try { s = JSON.parse(fs.readFileSync(p, "utf8")||"{}"); } catch {}
+          const out=[ s.status ?? "unknown", s.phase ?? "unknown", String(Boolean(s.reviewComplete)) ];
+          process.stdout.write(out.join("\n"));
+        ' )
 
         # Show phase changes
         if [ "$phase" != "$last_phase" ]; then
@@ -287,3 +306,4 @@ USAGE
 
 # Execute main function
 main "$@"
+

@@ -1,6 +1,15 @@
 #!/bin/bash
 # PostgreSQL Monitoring Script
 # Usage: ./scripts/monitor-postgres.sh [--json]
+#
+# Exit codes:
+#   0 = ready/healthy
+#   1 = general error or warning threshold exceeded
+#   2 = not ready (container not running or readiness timed out)
+#   3 = dependency error (e.g., jq missing for --json)
+
+set -euo pipefail
+IFS=$'\n\t'
 
 CONTAINER_NAME="kevinalthaus-postgres-1"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"

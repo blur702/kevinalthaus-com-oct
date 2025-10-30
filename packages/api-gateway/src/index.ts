@@ -6,6 +6,8 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { createProxyMiddleware, Options } from 'http-proxy-middleware';
 import { randomBytes } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import {
   compressionMiddleware,
   rateLimitMiddleware,
@@ -32,35 +34,30 @@ const PLUGIN_ENGINE_URL = process.env.PLUGIN_ENGINE_URL || 'http://localhost:300
 let INTERNAL_GATEWAY_TOKEN = process.env.INTERNAL_GATEWAY_TOKEN;
 if (!INTERNAL_GATEWAY_TOKEN) {
   if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-    INTERNAL_GATEWAY_TOKEN = randomBytes(32).toString('hex');
-    // eslint-disable-next-line no-console
-    console.warn('');
-    // eslint-disable-next-line no-console
-    console.warn('═══════════════════════════════════════════════════════════════');
-    // eslint-disable-next-line no-console
-    console.warn('⚠️  [Gateway] INTERNAL_GATEWAY_TOKEN not set - using random ephemeral token');
-    // eslint-disable-next-line no-console
-    console.warn('═══════════════════════════════════════════════════════════════');
-    // eslint-disable-next-line no-console
-    console.warn('This is acceptable for development but has implications:');
-    // eslint-disable-next-line no-console
-    console.warn('  - Token becomes invalid on gateway restart');
-    // eslint-disable-next-line no-console
-    console.warn('  - Must match across all services for verification');
-    // eslint-disable-next-line no-console
-    console.warn('  - Not suitable for any production or staging environment');
-    // eslint-disable-next-line no-console
-    console.warn('');
-    // eslint-disable-next-line no-console
-    console.warn('Set INTERNAL_GATEWAY_TOKEN in .env to match across services:');
-    // eslint-disable-next-line no-console
-    console.warn('  Generate a token with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
-    // eslint-disable-next-line no-console
-    console.warn('  Then set: INTERNAL_GATEWAY_TOKEN=<generated-token>');
-    // eslint-disable-next-line no-console
-    console.warn('═══════════════════════════════════════════════════════════════');
-    // eslint-disable-next-line no-console
-    console.warn('');
+    // Persist a shared dev token to a well-known file so all services reuse the same value
+    const baseDir = process.cwd();
+    const tokenFile = path.resolve(baseDir, '.internal_gateway_token');
+    try {
+      if (fs.existsSync(tokenFile)) {
+        const existing = fs.readFileSync(tokenFile, 'utf8').trim();
+        if (existing && existing.length >= 32) {
+          INTERNAL_GATEWAY_TOKEN = existing;
+        }
+      }
+      if (!INTERNAL_GATEWAY_TOKEN) {
+        const generated = randomBytes(32).toString('hex');
+        fs.writeFileSync(tokenFile, generated + '\n', { mode: 0o600 });
+        INTERNAL_GATEWAY_TOKEN = generated;
+      }
+      process.env.INTERNAL_GATEWAY_TOKEN = INTERNAL_GATEWAY_TOKEN;
+      // eslint-disable-next-line no-console
+      console.warn('[Gateway] Using persistent INTERNAL_GATEWAY_TOKEN for development');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[Gateway] Failed to persist dev INTERNAL_GATEWAY_TOKEN; using ephemeral token');
+      INTERNAL_GATEWAY_TOKEN = randomBytes(32).toString('hex');
+      process.env.INTERNAL_GATEWAY_TOKEN = INTERNAL_GATEWAY_TOKEN;
+    }
   } else {
     throw new Error(
       'INTERNAL_GATEWAY_TOKEN is required for API Gateway in production. Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
@@ -401,7 +398,7 @@ function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {
 app.use(
   '/api/plugins',
   jwtMiddleware,
-  createProxy({ target: PLUGIN_ENGINE_URL, pathRewrite: { '^/api/plugins': '/plugins' } })
+  createProxy({ target: PLUGIN_ENGINE_URL, pathRewrite: { '^/api/plugins': '/plugins' }, timeout: 30000 })
 );
 
 // Auth routes (no JWT required, but stricter rate limiting)

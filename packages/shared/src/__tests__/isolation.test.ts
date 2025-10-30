@@ -96,7 +96,7 @@ describe('DatabaseIsolationEnforcer.enforceQuotas', () => {
     expect(() => enforcer.enforceQuotas(q, -Infinity)).toThrow(/finite positive/i);
   });
 
-  it('allows boundary when estimatedRows equals maxQueryRows', () => {
+  it('rejects when estimatedRows equals maxQueryRows (exclusive limit)', () => {
     const rowTight = {
       maxQueryComplexity: Number.MAX_SAFE_INTEGER,
       maxQueryRows: 500,

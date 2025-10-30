@@ -1,5 +1,6 @@
 // Simple test server without any dependencies
 import * as http from 'http';
+import * as net from 'net';
 
 const parsedPort = process.env.PORT ? Number(process.env.PORT) : NaN;
 const PORT = !isNaN(parsedPort) && Number.isFinite(parsedPort) && parsedPort >= 1 && parsedPort <= 65535 ? parsedPort : 3001;
@@ -18,6 +19,15 @@ const server = http.createServer((req, res) => {
       JSON.stringify({ error: 'Not Found', message: `Route ${url} not found`, statusCode: 404 })
     );
   }
+});
+
+// Track active connections so we can force-close them on shutdown
+const connections = new Set<net.Socket>();
+server.on('connection', (conn: net.Socket) => {
+  connections.add(conn);
+  conn.on('close', () => {
+    connections.delete(conn);
+  });
 });
 
 /* eslint-disable no-console */
@@ -40,11 +50,21 @@ function gracefulShutdown(signal: string): void {
     process.exit(1);
   }, 10000);
 
+  // Stop accepting new connections
   server.close(() => {
     clearTimeout(forceExitTimeout);
     console.log('Test server closed cleanly');
     process.exit(0);
   });
+
+  // Destroy any active sockets to ensure close completes
+  for (const socket of connections) {
+    try {
+      socket.destroy();
+    } catch {
+      // ignore
+    }
+  }
 }
 /* eslint-enable no-console */
 

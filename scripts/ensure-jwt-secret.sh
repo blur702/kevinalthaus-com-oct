@@ -13,6 +13,8 @@ echo "Checking JWT_SECRET in $ENV_FILE..."
 if [ ! -f "$ENV_FILE" ]; then
   echo "Creating $ENV_FILE file..."
   touch "$ENV_FILE"
+  # Restrict permissions to owner read/write only
+  chmod 600 "$ENV_FILE" || true
 fi
 
 # Check if JWT_SECRET is already set
