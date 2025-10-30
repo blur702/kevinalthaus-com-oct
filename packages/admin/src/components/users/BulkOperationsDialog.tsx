@@ -360,13 +360,7 @@ const BulkOperationsDialog: React.FC<BulkOperationsDialogProps> = ({
           </Alert>
 
           <Box sx={{ mt: 3 }}>
-            <input
-              accept=".csv,.json"
-              style={{ display: 'none' }}
-              id="bulk-import-file"
-              type="file"
-              onChange={handleFileSelect}
-            />
+            <Box component="input" accept=".csv,.json" id="bulk-import-file" type="file" onChange={handleFileSelect} sx={{ display: 'none' }} />
             <label htmlFor="bulk-import-file">
               <Button variant="outlined" component="span" startIcon={<UploadIcon />} fullWidth>
                 {selectedFile ? selectedFile.name : 'Choose File'}

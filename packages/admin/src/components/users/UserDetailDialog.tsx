@@ -378,9 +378,10 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, user, onClose
                       </Button>
                     </Box>
                     <Paper variant="outlined" sx={{ p: 2 }}>
-                      <pre
-                        style={{
-                          margin: 0,
+                      <Box
+                        component="pre"
+                        sx={{
+                          m: 0,
                           fontFamily: 'monospace',
                           fontSize: '0.875rem',
                           whiteSpace: 'pre-wrap',
@@ -388,7 +389,7 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, user, onClose
                         }}
                       >
                         {JSON.stringify(customFields, null, 2)}
-                      </pre>
+                      </Box>
                     </Paper>
                   </Box>
                 )}
