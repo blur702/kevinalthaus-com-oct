@@ -198,8 +198,8 @@ router.post(
       }
 
       // Validate username format (alphanumeric, hyphens, underscores, 3-30 chars)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       if (!usernameRegex.test(username)) {
         res.status(400).json({
           error: 'Bad Request',
@@ -308,8 +308,8 @@ router.patch(
 
       if (username !== undefined) {
         // Validate username format (alphanumeric, hyphens, underscores, 3-30 chars)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!usernameRegex.test(username)) {
           res.status(400).json({
             error: 'Bad Request',

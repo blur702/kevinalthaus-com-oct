@@ -1,7 +1,14 @@
 import { Pool } from 'pg';
 import { hashPassword } from '@monorepo/shared';
 
-async function seedAdminUser() {
+interface AdminUserRow {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+}
+
+async function seedAdminUser(): Promise<void> {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL || 'postgresql://postgres:changeme_secure_password@localhost:55432/kevinalthaus',
   });
@@ -17,31 +24,39 @@ async function seedAdminUser() {
     );
 
     if (existingUser.rows.length > 0) {
+      // eslint-disable-next-line no-console
       console.log('✓ Admin user already exists');
       await pool.end();
       return;
     }
 
     // Insert admin user
-    const result = await pool.query(
+    const result = await pool.query<AdminUserRow>(
       `INSERT INTO users (id, email, username, password, role, created_at, updated_at)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW())
        RETURNING id, email, username, role`,
       ['admin@kevinalthaus.com', 'admin', hashedPassword, 'admin']
     );
 
+    const adminUser = result.rows[0];
+    // eslint-disable-next-line no-console
     console.log('✓ Admin user created successfully:');
-    console.log('  Email:', result.rows[0].email);
-    console.log('  Username:', result.rows[0].username);
-    console.log('  Role:', result.rows[0].role);
-    console.log('  ID:', result.rows[0].id);
+    // eslint-disable-next-line no-console
+    console.log('  Email:', adminUser.email);
+    // eslint-disable-next-line no-console
+    console.log('  Username:', adminUser.username);
+    // eslint-disable-next-line no-console
+    console.log('  Role:', adminUser.role);
+    // eslint-disable-next-line no-console
+    console.log('  ID:', adminUser.id);
 
     await pool.end();
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('✗ Error seeding admin user:', error);
     await pool.end();
     process.exit(1);
   }
 }
 
-seedAdminUser();
+void seedAdminUser();

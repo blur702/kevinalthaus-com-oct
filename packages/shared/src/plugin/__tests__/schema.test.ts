@@ -2,7 +2,7 @@ import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { PLUGIN_MANIFEST_SCHEMA } from '../schema';
 import type { PluginManifest } from '../manifest';
-import { PluginCapability } from '../../constants';
+import type { PluginCapability } from '../../constants';
 
 describe('PLUGIN_MANIFEST_SCHEMA', () => {
   let ajv: Ajv;
@@ -31,7 +31,7 @@ describe('PLUGIN_MANIFEST_SCHEMA', () => {
       },
       license: 'MIT',
       keywords: ['test', 'plugin'],
-      capabilities: [PluginCapability.DATABASE_READ, PluginCapability.API_CALL],
+      capabilities: ['database:read' as PluginCapability, 'api:call' as PluginCapability],
       hooks: {
         install: 'install.js',
         activate: 'activate.js',
@@ -52,7 +52,7 @@ describe('PLUGIN_MANIFEST_SCHEMA', () => {
             path: '/test',
             handler: 'handleGet',
             middleware: ['authMiddleware'],
-            requiredCapabilities: [PluginCapability.API_CALL],
+            requiredCapabilities: ['api:call' as PluginCapability],
           },
         ],
       },
@@ -100,7 +100,7 @@ describe('PLUGIN_MANIFEST_SCHEMA', () => {
       author: {
         name: 'Minimal Author',
       },
-      capabilities: [PluginCapability.DATABASE_READ],
+      capabilities: ['database:read' as PluginCapability],
       entrypoint: 'index.js',
     };
 
@@ -134,7 +134,7 @@ describe('PLUGIN_MANIFEST_SCHEMA', () => {
       displayName: 'Invalid Plugin',
       description: 'Plugin with invalid name',
       author: { name: 'Author' },
-      capabilities: [PluginCapability.DATABASE_READ],
+      capabilities: ['database:read' as PluginCapability],
       entrypoint: 'index.js',
     };
 

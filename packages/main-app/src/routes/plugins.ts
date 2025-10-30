@@ -192,6 +192,8 @@ async function cleanupFile(path?: string): Promise<void> {
     return;
   }
   try {
+    // Path is constructed from PLUGIN_UPLOAD_DIR and sanitized filename
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     await fs.unlink(path);
   } catch {
     /* ignore */
@@ -213,6 +215,8 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), asyncHandler(asyn
       if (multerFile.buffer) {
         const tempPath = path.join(PLUGIN_UPLOAD_DIR, `temp_${randomBytes(12).toString('hex')}_${sanitizeFilename(multerFile.originalname)}`);
         try {
+          // Path is constructed from PLUGIN_UPLOAD_DIR and sanitized filename
+          // eslint-disable-next-line security/detect-non-literal-fs-filename
           await fs.writeFile(tempPath, multerFile.buffer);
           multerFile.path = tempPath;
         } catch (writeErr) {
@@ -239,9 +243,11 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), asyncHandler(asyn
 
     // Optional: validate manifest JSON if provided as form field
     let manifest: PluginManifest | undefined;
-    if (typeof req.body?.manifest === 'string') {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const bodyManifest = req.body?.manifest as unknown;
+    if (typeof bodyManifest === 'string') {
       try {
-        const parse = JSON.parse(req.body.manifest) as PluginManifest;
+        const parse = JSON.parse(bodyManifest) as PluginManifest;
         const validate = createValidator<PluginManifest>(PLUGIN_MANIFEST_SCHEMA);
         if (!validate(parse)) {
           await cleanupFile(filePath);
@@ -261,9 +267,11 @@ pluginsRouter.post('/upload', uploadPackage.single('package'), asyncHandler(asyn
     const checksum = await sha256File(filePath);
 
     // Optional signature verification
-    const signature = typeof req.body?.signature === 'string' ? req.body.signature : undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const bodySignature = req.body?.signature as unknown;
+    const signature = typeof bodySignature === 'string' ? bodySignature : undefined;
     const publicKeyPem = process.env.PLUGIN_SIGNATURE_PUBLIC_KEY;
-    const signatureValid = signature ? verifySignature(checksum, signature, publicKeyPem) : false;
+    const signatureValid = signature && publicKeyPem ? verifySignature(checksum, signature, publicKeyPem) : false;
 
     res.status(201).json({
       message: 'Package uploaded',

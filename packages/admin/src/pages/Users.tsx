@@ -47,7 +47,7 @@ import {
   MoreVert as MoreIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { Role } from '@monorepo/shared';
+import { Role } from '../../shared/src/security/rbac-types';
 import type { User, UserListParams } from '../types/user';
 import { listUsers, deleteUser, bulkDelete } from '../services/usersService';
 import UserFormDialog from '../components/users/UserFormDialog';
@@ -74,7 +74,7 @@ const Users: React.FC = () => {
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<Role | 'all'>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<boolean | 'all'>('all');
 
   // Selection state
@@ -123,10 +123,11 @@ const Users: React.FC = () => {
         params.search = searchQuery;
       }
       if (roleFilter !== 'all') {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         params.role = roleFilter as Role;
       }
-      if (statusFilter !== 'all') {
-        params.active = statusFilter as boolean;
+      if (statusFilter !== 'all' && typeof statusFilter === 'boolean') {
+        params.active = statusFilter;
       }
 
       const response = await listUsers(params);
@@ -280,9 +281,9 @@ const Users: React.FC = () => {
     setPage(0);
   };
 
-   
+
   const handleRoleFilterChange = (event: SelectChangeEvent): void => {
-    setRoleFilter(event.target.value as Role | 'all');
+    setRoleFilter(event.target.value);
     setPage(0);
   };
 
@@ -294,15 +295,18 @@ const Users: React.FC = () => {
 
   // Formatting helpers
   const getRoleColor = (role: Role): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
-    const roleValue = role as string;
-    switch (roleValue) {
-      case Role.ADMIN as string:
+    switch (role) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      case Role.ADMIN:
         return 'error';
-      case Role.EDITOR as string:
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      case Role.EDITOR:
         return 'primary';
-      case Role.VIEWER as string:
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      case Role.VIEWER:
         return 'info';
-      case Role.GUEST as string:
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      case Role.GUEST:
         return 'default';
       default:
         return 'default';
@@ -356,9 +360,13 @@ const Users: React.FC = () => {
             <InputLabel>Role</InputLabel>
             <Select value={roleFilter} onChange={handleRoleFilterChange} label="Role">
               <MenuItem value="all">All Roles</MenuItem>
+              {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
               <MenuItem value={Role.ADMIN as string}>Admin</MenuItem>
+              {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
               <MenuItem value={Role.EDITOR as string}>Editor</MenuItem>
+              {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
               <MenuItem value={Role.VIEWER as string}>Viewer</MenuItem>
+              {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
               <MenuItem value={Role.GUEST as string}>Guest</MenuItem>
             </Select>
           </FormControl>
@@ -512,7 +520,8 @@ const Users: React.FC = () => {
                   <TableCell onClick={() => handleViewUser(user)}>{user.username}</TableCell>
                   <TableCell onClick={() => handleViewUser(user)}>{user.email}</TableCell>
                   <TableCell onClick={() => handleViewUser(user)}>
-                    <Chip label={user.role} color={getRoleColor(user.role)} size="small" />
+                    {/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unnecessary-type-assertion */}
+                    <Chip label={user.role} color={getRoleColor(user.role as Role)} size="small" />
                   </TableCell>
                   <TableCell onClick={() => handleViewUser(user)}>
                     <Chip

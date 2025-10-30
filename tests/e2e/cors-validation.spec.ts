@@ -24,7 +24,7 @@ test.describe('CORS Startup Validation', () => {
     let timedOut = false;
 
     // Collect stderr
-    proc.stderr.on('data', (data) => {
+    proc.stderr.on('data', (data: Buffer) => {
       stderr += data.toString();
     });
 
@@ -84,7 +84,7 @@ test.describe('CORS Startup Validation', () => {
     let stdout = '';
     let startedSuccessfully = false;
 
-    proc.stdout.on('data', (data) => {
+    proc.stdout.on('data', (data: Buffer) => {
       stdout += data.toString();
       if (stdout.includes('Server running on port') || stdout.includes('listening')) {
         startedSuccessfully = true;

@@ -60,7 +60,7 @@ export async function runMigrations(): Promise<void> {
 
     while (!acquired && Date.now() - startTime < lockTimeoutMs) {
       attempt++;
-      const result = await lockClient.query('SELECT pg_try_advisory_lock($1) AS acquired', [MIGRATION_LOCK_ID]);
+      const result = await lockClient.query<{ acquired: boolean }>('SELECT pg_try_advisory_lock($1) AS acquired', [MIGRATION_LOCK_ID]);
       acquired = result.rows[0]?.acquired === true;
 
       if (!acquired) {

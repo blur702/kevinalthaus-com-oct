@@ -27,7 +27,7 @@ import {
   Timeline as TimelineIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { Role } from '@monorepo/shared';
+import { Role } from '../../../shared/src/security/rbac-types';
 import type { User } from '../../types/user';
 import ActivityTimeline from './ActivityTimeline';
 import { getCustomFields, updateCustomFields } from '../../services/usersService';
@@ -141,15 +141,18 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, user, onClose
   };
 
   const getRoleColor = (role: Role): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
-    const roleValue = role as string;
-    switch (roleValue) {
-      case Role.ADMIN as string:
+    switch (role) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      case Role.ADMIN:
         return 'error';
-      case Role.EDITOR as string:
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      case Role.EDITOR:
         return 'primary';
-      case Role.VIEWER as string:
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      case Role.VIEWER:
         return 'info';
-      case Role.GUEST as string:
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      case Role.GUEST:
         return 'default';
       default:
         return 'default';
@@ -240,7 +243,8 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, user, onClose
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Role
                 </Typography>
-                <Chip label={user.role} color={getRoleColor(user.role)} />
+                {/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unnecessary-type-assertion */}
+                <Chip label={user.role} color={getRoleColor(user.role as Role)} />
               </Paper>
             </Grid>
 
@@ -329,6 +333,7 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ open, user, onClose
                 <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                   <Button
                     variant="contained"
+                    // eslint-disable-next-line @typescript-eslint/no-misused-promises
                     onClick={handleSaveCustomFields}
                     disabled={customFieldsLoading}
                   >

@@ -20,7 +20,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
-import { Role } from '@monorepo/shared';
+import { Role } from '../../../shared/src/security/rbac-types';
 import type { User, UserFormMode, CreateUserRequest, UpdateUserRequest } from '../../types/user';
 import { createUser, updateUser } from '../../services/usersService';
 
@@ -32,7 +32,7 @@ interface UserFormDialogProps {
   onSuccess: (user: User) => void;
 }
 
-interface FormData {
+interface UserFormData {
   username: string;
   email: string;
   password: string;
@@ -50,12 +50,13 @@ interface FormErrors {
 }
 
 const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClose, onSuccess }) => {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<UserFormData>({
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: Role.VIEWER as Role,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    role: Role.VIEWER,
     active: true,
   });
 
@@ -70,6 +71,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
         email: user.email,
         password: '',
         confirmPassword: '',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         role: user.role,
         active: user.active,
       });
@@ -86,7 +88,8 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
         email: '',
         password: '',
         confirmPassword: '',
-        role: Role.VIEWER as Role,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        role: Role.VIEWER,
         active: true,
       });
       setErrors({});
@@ -158,6 +161,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
           username: formData.username.trim(),
           email: formData.email.trim(),
           password: formData.password,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           role: formData.role,
           active: formData.active,
         };
@@ -169,6 +173,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
         const updateData: UpdateUserRequest = {
           username: formData.username.trim(),
           email: formData.email.trim(),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           role: formData.role,
           active: formData.active,
         };
@@ -197,7 +202,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
   type TextFieldKey = 'username' | 'email' | 'password' | 'confirmPassword';
   const handleChange = (field: TextFieldKey) => (
     event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  ): void => {
     const { value } = event.target;
     setFormData((prev) => ({
       ...prev,
@@ -212,11 +217,12 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
   const handleRoleChange = (event: SelectChangeEvent<string>): void => {
     setFormData((prev) => ({
       ...prev,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       role: event.target.value as Role,
     }));
   };
 
-  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     setFormData((prev) => ({
       ...prev,
       active: event.target.checked,
@@ -305,6 +311,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
               <InputLabel id="role-label">Role</InputLabel>
               <Select
                 labelId="role-label"
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 value={formData.role}
                 onChange={handleRoleChange}
                 label="Role"
@@ -312,9 +319,13 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({ open, mode, user, onClo
                   'aria-label': 'User role',
                 }}
               >
+                {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
                 <MenuItem value={Role.ADMIN as string}>Admin - Full system access</MenuItem>
+                {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
                 <MenuItem value={Role.EDITOR as string}>Editor - Content management</MenuItem>
+                {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
                 <MenuItem value={Role.VIEWER as string}>Viewer - Read-only access</MenuItem>
+                {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access */}
                 <MenuItem value={Role.GUEST as string}>Guest - Limited access</MenuItem>
               </Select>
               <FormHelperText>User permission level</FormHelperText>

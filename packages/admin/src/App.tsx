@@ -232,6 +232,7 @@ const App: React.FC = () => {
                   drawerWidth={drawerWidth}
                   mobileOpen={mobileOpen}
                   handleDrawerToggle={handleDrawerToggle}
+                  // eslint-disable-next-line @typescript-eslint/no-misused-promises
                   handleLogout={handleLogout}
                 >
                   {route.element}

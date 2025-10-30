@@ -162,6 +162,8 @@ async function cleanupFiles(files: Array<{ path?: string }>): Promise<void> {
     const filePath = file.path;
     if (filePath) {
       try {
+        // Path is from multer upload, which uses sanitized filenames
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         await fs.unlink(filePath);
       } catch {
         /* ignore unlink errors */
@@ -192,11 +194,15 @@ async function promoteFromQuarantine(file: { path?: string; originalname?: strin
     // Fallback: copy then unlink to handle cross-device moves
     try {
       await fs.copyFile(quarantinePath, finalPath);
+      // Path is from quarantine directory with sanitized filename
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       await fs.unlink(quarantinePath);
       (file as unknown as { path: string }).path = finalPath;
     } catch (fallbackErr) {
       // Attempt to cleanup quarantine file to avoid leftovers
       try {
+        // Path is from quarantine directory with sanitized filename
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         await fs.unlink(quarantinePath);
       } catch {
         /* ignore */

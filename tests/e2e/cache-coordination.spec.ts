@@ -23,7 +23,7 @@ test.describe('Cache Coordination Tests', () => {
     const responses = await Promise.all(requests);
 
     // Verify all requests succeeded
-    responses.forEach((response, index) => {
+    responses.forEach((response) => {
       expect(response.ok()).toBe(true);
     });
 

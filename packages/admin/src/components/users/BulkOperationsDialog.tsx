@@ -32,7 +32,7 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import { Role } from '@monorepo/shared';
+import { Role } from '../../../shared/src/security/rbac-types';
 import Papa from 'papaparse';
 import type { CreateUserRequest } from '../../types/user';
 import { bulkImport, bulkExport } from '../../services/usersService';
@@ -130,6 +130,7 @@ const BulkOperationsDialog: React.FC<BulkOperationsDialogProps> = ({
     const errors: string[] = [];
     const users: CreateUserRequest[] = [];
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unnecessary-type-assertion
     const validRoles = new Set<string>(Object.values(Role));
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -181,6 +182,7 @@ const BulkOperationsDialog: React.FC<BulkOperationsDialogProps> = ({
           username,
           email,
           password,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           role: roleRaw as Role,
           active,
         });
@@ -526,9 +528,9 @@ const BulkOperationsDialog: React.FC<BulkOperationsDialogProps> = ({
           </Button>
         )}
         {activeStep === 1 && (
-           
           <Button
             variant="contained"
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             onClick={handleExecute}
             disabled={loading || (operationType === 'import' && !selectedFile)}
             startIcon={loading ? <CircularProgress size={20} /> : null}

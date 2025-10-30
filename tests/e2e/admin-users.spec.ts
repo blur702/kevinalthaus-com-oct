@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 // Helper to login before tests
-async function loginAsAdmin(page) {
+async function loginAsAdmin(page: Page): Promise<void> {
   await page.goto('/login');
   await page.locator('input[name="identifier"]').fill('admin@kevinalthaus.com');
   await page.locator('input[name="password"]').fill('Admin123!');

@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from './index';
 import { Role, Capability, hasCapability, createPermissionContext } from '@monorepo/shared';
 
-function ensureAuthenticated(req: AuthenticatedRequest, res: Response) {
+function ensureAuthenticated(req: AuthenticatedRequest, res: Response): { userId: string; role: Role } | null {
   if (!req.user) {
     res.status(401).json({
       error: 'Unauthorized',
