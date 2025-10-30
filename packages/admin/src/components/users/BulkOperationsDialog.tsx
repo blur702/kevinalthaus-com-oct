@@ -32,7 +32,7 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import { Role } from '../../../shared/src/security/rbac-types';
+import { Role } from '@monorepo/shared';
 import Papa from 'papaparse';
 import type { CreateUserRequest } from '../../types/user';
 import { bulkImport, bulkExport } from '../../services/usersService';

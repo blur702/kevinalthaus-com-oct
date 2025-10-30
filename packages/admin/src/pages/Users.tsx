@@ -47,7 +47,7 @@ import {
   MoreVert as MoreIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { Role } from '../../shared/src/security/rbac-types';
+import { Role } from '@monorepo/shared';
 import type { User, UserListParams } from '../types/user';
 import { listUsers, deleteUser, bulkDelete } from '../services/usersService';
 import UserFormDialog from '../components/users/UserFormDialog';

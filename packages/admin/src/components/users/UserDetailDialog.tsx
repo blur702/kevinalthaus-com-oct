@@ -27,7 +27,7 @@ import {
   Timeline as TimelineIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { Role } from '../../../shared/src/security/rbac-types';
+import { Role } from '@monorepo/shared';
 import type { User } from '../../types/user';
 import ActivityTimeline from './ActivityTimeline';
 import { getCustomFields, updateCustomFields } from '../../services/usersService';

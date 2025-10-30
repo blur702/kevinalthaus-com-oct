@@ -1,6 +1,6 @@
 // User management types for admin panel
 
-import { Role } from '../../shared/src/security/rbac-types';
+import { Role } from '@monorepo/shared';
 
 export interface User {
   id: string;

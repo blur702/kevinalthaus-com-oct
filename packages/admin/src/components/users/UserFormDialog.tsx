@@ -20,7 +20,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
-import { Role } from '../../../shared/src/security/rbac-types';
+import { Role } from '@monorepo/shared';
 import type { User, UserFormMode, CreateUserRequest, UpdateUserRequest } from '../../types/user';
 import { createUser, updateUser } from '../../services/usersService';
 
