@@ -1,28 +1,122 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/**
+ * Playwright E2E Testing Configuration
+ *
+ * This configuration sets up end-to-end testing for the admin panel
+ * with support for multiple browsers, screenshots, traces, and parallel execution.
+ */
 export default defineConfig({
-  testDir: 'tests/e2e',
-  timeout: 30_000,
-  expect: { timeout: 5_000 },
+  // Test directory
+  testDir: './e2e',
+
+  // Test files pattern
+  testMatch: '**/*.spec.ts',
+
+  // Timeout for each test (30 seconds)
+  timeout: 30000,
+
+  // Timeout for expect assertions (5 seconds)
+  expect: {
+    timeout: 5000,
+  },
+
+  // Run tests in parallel
   fullyParallel: true,
-  reporter: [['list']],
+
+  // Fail the build on CI if test.only is used
+  forbidOnly: !!process.env.CI,
+
+  // Retry failed tests on CI
+  retries: process.env.CI ? 2 : 0,
+
+  // Number of parallel workers (use half of available CPUs)
+  workers: process.env.CI ? 1 : undefined,
+
+  // Reporter configuration
+  reporter: [
+    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['list'],
+  ],
+
+  // Global setup/teardown
+  globalSetup: './e2e/global-setup.ts',
+
+  // Shared settings for all projects
   use: {
-    trace: 'retain-on-failure',
-    baseURL: process.env.ADMIN_URL || 'http://localhost:3003',
-    bypassCSP: true,
+    // Base URL for all tests
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3003',
+
+    // Capture screenshot on failure
+    screenshot: 'only-on-failure',
+
+    // Capture video on first retry
+    video: 'retain-on-failure',
+
+    // Trace on first retry
+    trace: 'on-first-retry',
+
+    // Browser context options
+    viewport: { width: 1280, height: 720 },
+
+    // Navigation timeout (30 seconds)
+    navigationTimeout: 30000,
+
+    // Action timeout (10 seconds)
+    actionTimeout: 10000,
+
+    // Ignore HTTPS errors only in development (not production/CI)
+    // In production, tests should validate proper SSL configuration
+    ignoreHTTPSErrors: !process.env.CI && process.env.NODE_ENV !== 'production',
+
+    // Bypass CSP only in development for easier testing
+    // In production/CI, tests should work with CSP enabled
+    bypassCSP: !process.env.CI && process.env.NODE_ENV !== 'production',
+
+    // Enable JavaScript
     javaScriptEnabled: true,
   },
+
+  // Configure projects for major browsers
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+
+    // Mobile viewports (optional)
+    // {
+    //   name: 'Mobile Chrome',
+    //   use: { ...devices['Pixel 5'] },
+    // },
+    // {
+    //   name: 'Mobile Safari',
+    //   use: { ...devices['iPhone 12'] },
+    // },
   ],
-  webServer: {
+
+  // Web server configuration - start admin panel before tests
+  webServer: process.env.CI ? undefined : {
     command: 'cd packages/admin && npm run dev',
     url: 'http://localhost:3003',
-    reuseExistingServer: true,
-    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000, // 2 minutes to start
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
+
+  // Output folder for test artifacts
+  outputDir: 'test-results',
 });
 

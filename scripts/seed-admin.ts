@@ -15,12 +15,12 @@ async function seedAdminUser(): Promise<void> {
 
   try {
     // Hash the password
-    const hashedPassword = await hashPassword('Admin123!');
+    const hashedPassword = await hashPassword('(130Bpm)');
 
     // Check if admin user already exists
     const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      ['admin@kevinalthaus.com']
+      'SELECT id FROM users WHERE username = $1',
+      ['kevin']
     );
 
     if (existingUser.rows.length > 0) {
@@ -30,12 +30,12 @@ async function seedAdminUser(): Promise<void> {
       return;
     }
 
-    // Insert admin user
+    // Insert admin user (permanent, cannot be deleted)
     const result = await pool.query<AdminUserRow>(
-      `INSERT INTO users (id, email, username, password, role, created_at, updated_at)
+      `INSERT INTO users (id, email, username, password_hash, role, created_at, updated_at)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW())
        RETURNING id, email, username, role`,
-      ['admin@kevinalthaus.com', 'admin', hashedPassword, 'admin']
+      ['kevin@kevinalthaus.com', 'kevin', hashedPassword, 'admin']
     );
 
     const adminUser = result.rows[0];

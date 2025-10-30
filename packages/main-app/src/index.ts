@@ -20,6 +20,8 @@ import { discoverPlugins } from './plugins';
 import { pluginManager } from './plugins/manager';
 import { pluginsRouter } from './routes/plugins';
 import { adminPluginsRouter } from './routes/adminPlugins';
+import { usersManagerRouter } from './routes/usersManager';
+import { dashboardRouter } from './routes/dashboard';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { asyncHandler } from './utils/asyncHandler';
 import { requestIdMiddleware } from './middleware/requestId';
@@ -276,6 +278,8 @@ app.get('/', (_req, res) => {
 // API routes
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/users-manager', usersManagerRouter);
+app.use('/api/dashboard', dashboardRouter);
 app.use('/api/uploads', uploadsRouter);
 // pluginsRouter already has authMiddleware and requireRole(Role.ADMIN) applied at line 37 of routes/plugins.ts
 app.use('/api/plugins', pluginsRouter);

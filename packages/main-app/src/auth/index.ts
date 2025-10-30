@@ -441,6 +441,10 @@ router.post(
 
       // Validate input types
       if (typeof username !== 'string' || typeof password !== 'string') {
+        defaultLogger.debug('Login validation failed - invalid input types', {
+          hasUsername: typeof username,
+          hasPassword: typeof password !== 'undefined',
+        });
         res.status(400).json({
           error: 'Bad Request',
           message: 'Username and password must be strings',

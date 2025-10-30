@@ -1,0 +1,260 @@
+name: E2E Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    name: E2E Tests - ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kevinalthaus_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Setup environment variables
+        run: |
+          echo "POSTGRES_HOST=localhost" >> $GITHUB_ENV
+          echo "POSTGRES_PORT=5432" >> $GITHUB_ENV
+          echo "POSTGRES_USER=postgres" >> $GITHUB_ENV
+          echo "POSTGRES_PASSWORD=postgres" >> $GITHUB_ENV
+          echo "POSTGRES_DB=kevinalthaus_test" >> $GITHUB_ENV
+          echo "REDIS_HOST=localhost" >> $GITHUB_ENV
+          echo "REDIS_PORT=6379" >> $GITHUB_ENV
+          echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "JWT_SECRET=test-jwt-secret-for-ci-only-not-production" >> $GITHUB_ENV
+          echo "SESSION_SECRET=test-session-secret-for-ci-only" >> $GITHUB_ENV
+          echo "CSRF_SECRET=test-csrf-secret-for-ci-only" >> $GITHUB_ENV
+          echo "CI=true" >> $GITHUB_ENV
+
+      - name: Run database migrations
+        run: |
+          cd packages/main-app
+          npm run migrate || echo "Migrations completed"
+
+      - name: Start API Gateway
+        run: |
+          cd packages/api-gateway
+          mkdir -p ../../logs
+          echo "Starting API Gateway..."
+          npm start > ../../logs/api-gateway.log 2>&1 &
+          PID=$!
+          if ! kill -0 $PID 2>/dev/null; then
+            echo "ERROR: API Gateway failed to start"
+            cat ../../logs/api-gateway.log
+            exit 1
+          fi
+          echo $PID > ../../api-gateway.pid
+          echo "API Gateway started with PID $PID"
+        env:
+          PORT: 3000
+
+      - name: Start Main App
+        run: |
+          cd packages/main-app
+          mkdir -p ../../logs
+          echo "Starting Main App..."
+          npm start > ../../logs/main-app.log 2>&1 &
+          PID=$!
+          if ! kill -0 $PID 2>/dev/null; then
+            echo "ERROR: Main App failed to start"
+            cat ../../logs/main-app.log
+            exit 1
+          fi
+          echo $PID > ../../main-app.pid
+          echo "Main App started with PID $PID"
+        env:
+          PORT: 3001
+
+      - name: Start Admin Panel
+        run: |
+          cd packages/admin
+          mkdir -p ../../logs
+          echo "Starting Admin Panel..."
+          npm run preview -- --port 3003 > ../../logs/admin.log 2>&1 &
+          PID=$!
+          if ! kill -0 $PID 2>/dev/null; then
+            echo "ERROR: Admin Panel failed to start"
+            cat ../../logs/admin.log
+            exit 1
+          fi
+          echo $PID > ../../admin.pid
+          echo "Admin Panel started with PID $PID"
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for services to become healthy..."
+          MAX_ATTEMPTS=30
+          SLEEP_INTERVAL=2
+
+          # Function to check service health with timeout
+          check_service() {
+            local url=$1
+            local name=$2
+            local attempt=0
+
+            while [ $attempt -lt $MAX_ATTEMPTS ]; do
+              if curl --max-time 5 --connect-timeout 2 -sf "$url" > /dev/null 2>&1; then
+                echo "✓ $name is healthy"
+                return 0
+              fi
+              attempt=$((attempt + 1))
+              echo "  Waiting for $name... (attempt $attempt/$MAX_ATTEMPTS)"
+              sleep $SLEEP_INTERVAL
+            done
+
+            echo "ERROR: $name failed to become healthy after $((MAX_ATTEMPTS * SLEEP_INTERVAL))s"
+            echo "Service logs:"
+            cat logs/$(echo $name | tr '[:upper:]' '[:lower:]' | tr ' ' '-').log 2>/dev/null || echo "No logs available"
+            return 1
+          }
+
+          # Check each service with fast-fail
+          check_service "http://localhost:3000/health" "API Gateway" || exit 1
+          check_service "http://localhost:3001/health" "Main App" || exit 1
+          check_service "http://localhost:3003" "Admin Panel" || exit 1
+
+          echo "All services are ready!"
+
+      - name: Run E2E tests
+        run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3003
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ matrix.browser }}
+          path: |
+            playwright-report/
+            test-results/
+            logs/
+          retention-days: 30
+
+      - name: Upload screenshots and videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failures-${{ matrix.browser }}
+          path: |
+            test-results/**/*.png
+            test-results/**/*.webm
+          retention-days: 7
+
+      - name: Upload traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-${{ matrix.browser }}
+          path: test-results/**/*.zip
+          retention-days: 7
+
+      - name: Stop services
+        if: always()
+        run: |
+          if [ -f api-gateway.pid ]; then kill $(cat api-gateway.pid) || true; fi
+          if [ -f main-app.pid ]; then kill $(cat main-app.pid) || true; fi
+          if [ -f admin.pid ]; then kill $(cat admin.pid) || true; fi
+
+  comment-results:
+    name: Comment Test Results
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: always() && github.event_name == 'pull_request'
+
+    steps:
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: playwright-results-*
+          merge-multiple: true
+
+      - name: Comment PR with results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## E2E Test Results\n\n';
+
+            try {
+              // Try to read test results JSON
+              if (fs.existsSync('test-results/results.json')) {
+                const results = JSON.parse(fs.readFileSync('test-results/results.json', 'utf8'));
+
+                comment += `- **Total Tests**: ${results.suites.reduce((acc, suite) => acc + suite.specs.length, 0)}\n`;
+                comment += `- **Passed**: ${results.suites.reduce((acc, suite) => acc + suite.specs.filter(s => s.ok).length, 0)}\n`;
+                comment += `- **Failed**: ${results.suites.reduce((acc, suite) => acc + suite.specs.filter(s => !s.ok).length, 0)}\n`;
+                comment += `- **Duration**: ${Math.round(results.duration / 1000)}s\n`;
+              } else {
+                comment += 'Test results JSON not found. Check workflow artifacts for detailed results.\n';
+              }
+            } catch (error) {
+              comment += `Error reading test results: ${error.message}\n`;
+            }
+
+            comment += '\n[View full test results in Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

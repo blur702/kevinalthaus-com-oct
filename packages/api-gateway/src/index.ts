@@ -425,6 +425,30 @@ app.use(
   })
 );
 
+// Users manager routes (admin panel)
+app.use(
+  '/api/users-manager',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/users-manager': '/api/users-manager' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
+// Dashboard stats routes (admin panel)
+app.use(
+  '/api/dashboard',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/dashboard': '/api/dashboard' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
 // (removed) Previous proxy to main-app for /api/plugins to avoid duplicate registrations
 
 app.use(

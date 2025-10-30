@@ -38,8 +38,31 @@ This document summarizes the concrete changes applied to address the reported is
 
 ---
 
+## DevOps and CI/CD Improvements (2025-10-30)
+
+- **E2E workflow service startup: Enhanced startup validation and log capture**
+  - File: .github/workflows/e2e-tests.yml:91-173
+  - Changes:
+    - Capture stdout/stderr for each service (API Gateway, Main App, Admin Panel) to dedicated log files in `logs/` directory
+    - Check process exit codes immediately after background startup using `kill -0 $PID`
+    - Fail fast if service fails to start, displaying captured logs for debugging
+    - Only write PID files after successful startup verification
+    - Replace wait-on with custom health check function with timeouts (--max-time 5 --connect-timeout 2)
+    - Implement retry loop with configurable attempts (30 attempts x 2s = 60s max wait)
+    - Display service logs in error messages when health checks fail
+    - Include service logs in test artifacts for post-mortem analysis
+  - Impact: Prevents hanging CI jobs, provides clear error messages with relevant logs, enables faster debugging of startup failures
+
+- **Validation script curl timeout: Add connection and max-time limits**
+  - File: scripts/validate-e2e-setup.sh:150
+  - Change: Added `--max-time 5 --connect-timeout 2` flags to curl command checking admin panel availability
+  - Impact: Prevents script from hanging indefinitely if admin panel is unresponsive, provides fast failure for better user experience
+
+---
+
 Validation Notes for CodeRabbit:
 - TypeScript changes compile with stricter type guards for header handling.
 - DB config changes surface actionable errors early and support secret files.
 - Docker and docs now warn explicitly about the PostgreSQL 16 breaking change and provide safe migration steps.
+- CI/CD improvements ensure services start reliably with comprehensive error reporting and prevent hanging jobs through proper timeouts.
 
