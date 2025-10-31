@@ -59,7 +59,6 @@ volumes/
 
 # Uploads and user-generated content
 uploads/
-plugins/
 public/uploads/
 
 # Cache

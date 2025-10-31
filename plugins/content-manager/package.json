@@ -1,0 +1,51 @@
+{
+  "name": "@monorepo/content-manager",
+  "version": "1.0.0",
+  "description": "Content management plugin with rich text editing and media uploads",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf dist",
+    "watch": "tsc -b --watch",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "keywords": [
+    "content",
+    "cms",
+    "editor",
+    "tinymce"
+  ],
+  "author": "Kevin Althaus <contact@kevinalthaus.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@monorepo/shared": "*",
+    "express": "^4.18.2",
+    "pg": "^8.16.3",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.33.5",
+    "file-type": "^16.5.4",
+    "slugify": "^1.6.6",
+    "node-cron": "^3.0.3",
+    "joi": "^17.13.3",
+    "sanitize-html": "^2.13.1",
+    "mime-types": "^2.1.35"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.15.5",
+    "@types/multer": "^1.4.12",
+    "@types/node-cron": "^3.0.11",
+    "@types/mime-types": "^2.1.4",
+    "@types/sanitize-html": "^2.13.0",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.12",
+    "ts-jest": "^29.2.5"
+  }
+}
