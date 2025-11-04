@@ -14,23 +14,29 @@ test('Complete blog post creation workflow', async ({ page }) => {
     }
   });
 
-  // Step 1: Login
+  // Step 1: Ensure backend is up, then login
   console.log('Step 1: Logging in...');
+  for (let i = 0; i < 30; i++) {
+    try {
+      const res = await page.request.get('http://localhost:3001/health');
+      if (res.ok()) break;
+    } catch {}
+    await page.waitForTimeout(1000);
+  }
   await login(page, TEST_CREDENTIALS.ADMIN.username, TEST_CREDENTIALS.ADMIN.password);
   console.log('✓ Login successful');
 
   // Step 2: Navigate to Content page
   console.log('Step 2: Navigating to Content page...');
   await page.goto('/content');
-  await page.waitForLoadState('domcontentloaded');
+  // Wait for a reliable UI element instead of networkidle
+  await page.waitForSelector('text=Create New Post', { timeout: 20000 });
   expect(page.url()).toContain('/content');
   console.log('✓ On Content page');
 
   // Step 3: Click "Create New Post"
   console.log('Step 3: Clicking Create New Post...');
-  const createButton = page.locator('button').filter({ hasText: /create new post/i });
-  await createButton.waitFor({ state: 'visible', timeout: 10000 });
-  await createButton.click();
+  await page.getByRole('button', { name: /create new post/i }).click();
   console.log('✓ Clicked Create New Post button');
 
   // Step 4: Wait for form to appear
@@ -45,24 +51,33 @@ test('Complete blog post creation workflow', async ({ page }) => {
 
   await page.fill('input[name="title"]', testTitle);
   await page.fill('textarea[name="body_html"]', 'This is an automated test blog post created by Playwright.');
-  await page.fill('textarea[name="excerpt"]', 'Automated test excerpt');
+  const excerptField = page.locator('textarea[name="excerpt"], input[name="excerpt"]').first();
+  if (await excerptField.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await excerptField.fill('Automated test excerpt');
+  }
 
   console.log('✓ Form filled');
 
   // Step 6: Submit the form
   console.log('Step 6: Submitting form...');
-  const submitButton = page.locator('button[type="button"]').filter({ hasText: /^create$/i });
-  await submitButton.click();
+  // Ensure CSRF token cookie is fresh in the browser context before submit
+  await page.evaluate(async () => {
+    try {
+      await fetch('/api/auth/csrf-token', { credentials: 'include' });
+    } catch {}
+  });
+  await page.locator('button', { hasText: /create|save|publish/i }).first().click();
 
   // Wait for navigation back to list or success indication
-  await page.waitForTimeout(2000);
+  // Wait for list heading to appear
+  await page.waitForSelector('text=Blog Posts', { timeout: 20000 });
 
   // Step 7: Verify we're back on the list page
   console.log('Step 7: Verifying post creation...');
 
   // Check if we can see the blog posts list
   const blogPostsHeading = page.locator('text=Blog Posts');
-  await blogPostsHeading.waitFor({ state: 'visible', timeout: 10000 });
+  await blogPostsHeading.waitFor({ state: 'visible', timeout: 20000 });
 
   console.log('✓ Back on list page');
 

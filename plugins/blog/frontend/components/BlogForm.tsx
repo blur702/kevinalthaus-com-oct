@@ -30,6 +30,9 @@ import {
 import type { BlogPost, BlogPostFormData } from '../types';
 import { RichTextEditor } from '@monorepo/shared';
 
+// Use the same API base URL as the admin app
+const API_BASE: string = (import.meta as any).env?.VITE_API_URL || '/api';
+
 interface BlogFormProps {
   onClose: () => void;
   onSave: () => void;
@@ -149,7 +152,7 @@ export const BlogForm: React.FC<BlogFormProps> = ({
       setLoading(true);
       setError(null);
 
-      const url = editPost ? `/api/blog/${editPost.id}` : '/api/blog';
+      const url = editPost ? `${API_BASE}/blog/${editPost.id}` : `${API_BASE}/blog`;
       const method = editPost ? 'PUT' : 'POST';
 
       // Get CSRF token from cookie

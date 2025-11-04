@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Box, Paper, FormLabel, FormHelperText } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { BlockNoteViewRaw, useBlockNote } from '@blocknote/react';
+import { BlockNoteViewRaw, useCreateBlockNote } from '@blocknote/react';
 // Note: CSS must be imported in the consuming application (admin/frontend)
 // import '@blocknote/react/style.css' in your app's main entry point
 import { htmlToBlocks, blocksToHtml } from './utils/htmlConverter';
@@ -80,7 +80,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   // Create BlockNote editor instance
-  const editor = useBlockNote({
+  const editor = useCreateBlockNote({
     initialContent,
     uploadFile: handleUpload,
   });

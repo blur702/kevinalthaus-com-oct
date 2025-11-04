@@ -18,9 +18,17 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@monorepo/shared": ["../shared/src/browser.ts"],
+      "@monorepo/shared/*": ["../shared/src/*"]
     }
   },
-  "include": ["src", "../../plugins/*/frontend/**/*.tsx", "../../plugins/*/frontend/**/*.ts"],
+  "include": [
+    "src",
+    "../../plugins/*/frontend/**/*.tsx",
+    "../../plugins/*/frontend/**/*.ts",
+    "../shared/src/**/*.ts",
+    "../shared/src/**/*.tsx"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
