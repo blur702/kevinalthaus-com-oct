@@ -8,7 +8,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import type { Pool } from 'pg';
-import type { Knex } from 'knex';
+import type Knex from 'knex';
 import type { Role, Capability } from '../security/rbac';
 
 // ============================================================================
@@ -160,6 +160,7 @@ export interface TokenPayload {
   role: Role;
   iat: number;
   exp: number;
+  id?: string; // Optional alias for compatibility with User/UserContext
 }
 
 /**
@@ -172,8 +173,9 @@ export interface UserContext {
   username: string;
   role: Role;
   capabilities: Capability[];
-  createdAt?: Date; // Optional for compatibility with User type
-  updatedAt?: Date; // Optional for compatibility with User type
+  createdAt: Date; // Required for compatibility with User type
+  updatedAt: Date; // Required for compatibility with User type
+  userId?: string; // Optional alias for compatibility with TokenPayload
 }
 
 // ============================================================================
@@ -184,7 +186,8 @@ export interface IDatabaseService extends IService {
   /**
    * Get Knex query builder for schema
    */
-  getKnex(schema?: string): Knex;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getKnex(schema?: string): any;
 
   /**
    * Execute raw SQL query (use sparingly, prefer query builder)
@@ -194,8 +197,9 @@ export interface IDatabaseService extends IService {
   /**
    * Start a transaction
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transaction<T>(
-    callback: (trx: Knex.Transaction) => Promise<T>,
+    callback: (trx: any) => Promise<T>,
     schema?: string
   ): Promise<T>;
 

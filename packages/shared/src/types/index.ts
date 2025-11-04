@@ -17,6 +17,8 @@ export interface User extends BaseEntity {
   email: string;
   username: string;
   role: Role;
+  // Optional alias for compatibility with TokenPayload
+  userId?: string;
 }
 
 export interface ApiResponse<T = unknown> {

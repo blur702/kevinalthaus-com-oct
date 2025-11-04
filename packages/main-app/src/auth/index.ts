@@ -188,9 +188,10 @@ interface TokenPayload {
   role: Role;
 }
 
-interface AuthenticatedRequest extends Request {
-  user?: TokenPayload;
-}
+// Note: AuthenticatedRequest now uses the global Express.Request user type
+// which includes User | UserContext | TokenPayload | null
+// This allows compatibility with the service layer
+type AuthenticatedRequest = Request;
 
 // Helper function to extract real client IP from proxied requests
 // Note: Only use X-Forwarded-For when Express trust proxy is configured

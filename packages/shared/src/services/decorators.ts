@@ -77,6 +77,8 @@ export function RequireAuth(): MethodDecorator {
           username: payload.username,
           role: payload.role,
           capabilities: [], // Will be populated by service
+          createdAt: new Date(),
+          updatedAt: new Date(),
         };
 
         // Call original method

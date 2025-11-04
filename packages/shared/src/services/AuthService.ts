@@ -222,6 +222,8 @@ export abstract class AuthService implements IAuthService {
       username: payload.username,
       role: payload.role,
       capabilities: [],  // Will be populated by impl
+      createdAt: new Date(), // Placeholder - will be fetched by impl
+      updatedAt: new Date(), // Placeholder - will be fetched by impl
     };
   }
 }
