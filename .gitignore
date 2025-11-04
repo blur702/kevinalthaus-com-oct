@@ -109,3 +109,5 @@ secrets/
 # Lint output files
 lint-output.txt
 lint-final.txt
+cookies.txt
+NUL
