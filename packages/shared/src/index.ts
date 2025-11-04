@@ -7,6 +7,9 @@ export * from './database';
 export * from './utils';
 export * from './middleware/requestId';
 
+// Export Services
+export * from './services';
+
 // Export Rich Text Editor components
 export { RichTextEditor } from './components/editor/RichTextEditor';
 export type { RichTextEditorProps } from './components/editor/RichTextEditor';
