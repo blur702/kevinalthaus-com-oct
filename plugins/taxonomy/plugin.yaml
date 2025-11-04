@@ -1,0 +1,114 @@
+name: taxonomy
+version: 1.0.0
+displayName: Taxonomy Service
+description: Shared taxonomy service providing categories and tags for all plugins
+author: System
+license: MIT
+
+# Service plugin - provides shared functionality
+type: service
+
+capabilities:
+  - database:read
+  - database:write
+
+entrypoint: dist/index.js
+
+# API routes
+routes:
+  # Categories
+  - path: /api/taxonomy/categories
+    method: GET
+    handler: getCategories
+    public: false
+
+  - path: /api/taxonomy/categories/:id
+    method: GET
+    handler: getCategory
+    public: false
+
+  - path: /api/taxonomy/categories
+    method: POST
+    handler: createCategory
+    public: false
+
+  - path: /api/taxonomy/categories/:id
+    method: PUT
+    handler: updateCategory
+    public: false
+
+  - path: /api/taxonomy/categories/:id
+    method: DELETE
+    handler: deleteCategory
+    public: false
+
+  # Tags
+  - path: /api/taxonomy/tags
+    method: GET
+    handler: getTags
+    public: false
+
+  - path: /api/taxonomy/tags/:id
+    method: GET
+    handler: getTag
+    public: false
+
+  - path: /api/taxonomy/tags
+    method: POST
+    handler: createTag
+    public: false
+
+  - path: /api/taxonomy/tags/:id
+    method: PUT
+    handler: updateTag
+    public: false
+
+  - path: /api/taxonomy/tags/:id
+    method: DELETE
+    handler: deleteTag
+    public: false
+
+  # Relationships
+  - path: /api/taxonomy/relationships/:namespace/:entityId/categories
+    method: GET
+    handler: getEntityCategories
+    public: false
+
+  - path: /api/taxonomy/relationships/:namespace/:entityId/categories
+    method: POST
+    handler: attachCategories
+    public: false
+
+  - path: /api/taxonomy/relationships/:namespace/:entityId/tags
+    method: GET
+    handler: getEntityTags
+    public: false
+
+  - path: /api/taxonomy/relationships/:namespace/:entityId/tags
+    method: POST
+    handler: attachTags
+    public: false
+
+# Lifecycle hooks
+lifecycle:
+  onInstall: onInstall
+  onActivate: onActivate
+  onDeactivate: onDeactivate
+  onUninstall: onUninstall
+  onUpdate: onUpdate
+
+# Plugin settings
+settings:
+  - key: max_category_depth
+    label: Maximum Category Depth
+    type: number
+    default: 5
+    description: Maximum allowed nesting level for hierarchical categories
+
+  - key: enable_auto_slug
+    label: Enable Auto Slug Generation
+    type: boolean
+    default: true
+    description: Automatically generate slugs from names
+
+dependencies: []

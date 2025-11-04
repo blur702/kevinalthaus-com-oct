@@ -2,6 +2,10 @@
  * Content Manager Plugin Type Definitions
  */
 
+// Import and re-export shared taxonomy types
+import type { Category, Tag } from '@monorepo/taxonomy';
+export type { Category, Tag };
+
 export type ContentStatus = 'draft' | 'published' | 'scheduled' | 'archived';
 
 export type MediaType = 'image' | 'document' | 'video' | 'audio' | 'archive' | 'other';
@@ -38,28 +42,6 @@ export interface ContentVersion {
   meta_keywords?: string;
   status: ContentStatus;
   change_summary?: string;
-  created_at: Date;
-  created_by: string;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  parent_id?: string;
-  display_order: number;
-  created_at: Date;
-  updated_at: Date;
-  created_by: string;
-  updated_by?: string;
-  children?: Category[];
-}
-
-export interface Tag {
-  id: string;
-  name: string;
-  slug: string;
   created_at: Date;
   created_by: string;
 }

@@ -1,9 +1,17 @@
+// Load environment variables from root .env file first, before any other imports
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
 import app from './index';
 import { Server } from 'http';
 import { runMigrations } from './db/migrations';
 import { closePool } from './db';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { ensureUploadDirectory } from './middleware/upload';
+import { initializeRedisRateLimiter, closeRedisRateLimiter } from './middleware/rateLimitRedis';
+import { secretsService } from './services/secretsService';
+import { settingsCacheService } from './services/settingsCacheService';
 
 function getLogLevel(): LogLevel {
   const envLevel = process.env.LOG_LEVEL;
@@ -50,6 +58,43 @@ const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 let server: Server | undefined;
 let isShuttingDown = false; // Idempotency guard for graceful shutdown
 
+// Initialize services (Vault, Redis, Email, Settings Cache)
+async function initializeServices(): Promise<void> {
+  try {
+    logger.info('Initializing services...');
+
+    // Initialize Redis rate limiter
+    initializeRedisRateLimiter();
+    logger.info('Redis rate limiter initialized');
+
+    // Initialize Vault secrets service
+    try {
+      await secretsService.initialize();
+      logger.info('Vault secrets service initialized');
+    } catch (error) {
+      logger.warn(`Vault initialization failed - will use fallback mechanisms: ${(error as Error).message}`);
+      // Don't exit - service will use environment variable fallbacks
+    }
+
+    // Initialize email service (lazy initialization on first use)
+    logger.info('Email service ready (will initialize on first use)');
+
+    // Initialize settings cache
+    try {
+      await settingsCacheService.refreshCache();
+      logger.info('Settings cache initialized');
+    } catch (error) {
+      logger.warn(`Settings cache initialization failed - will use defaults: ${(error as Error).message}`);
+      // Don't exit - service will use secure defaults
+    }
+
+    logger.info('All services initialized successfully');
+  } catch (error) {
+    logger.error('Failed to initialize services', error as Error);
+    // Don't throw - services have fallback mechanisms
+  }
+}
+
 // Initialize database and start server
 async function start(): Promise<void> {
   try {
@@ -60,6 +105,9 @@ async function start(): Promise<void> {
     // Run database migrations
     await runMigrations();
     logger.info('Database migrations completed');
+
+    // Initialize services
+    await initializeServices();
 
     // Start server
     server = app
@@ -104,15 +152,19 @@ function gracefulShutdown(signal: string): void {
   if (!server) {
     logger.warn('Server not initialized, skipping server.close()');
 
-    // Close database pool directly
-    closePool()
+    // Close Redis and database pool directly
+    closeRedisRateLimiter()
+      .then(() => {
+        logger.info('Redis rate limiter closed');
+        return closePool();
+      })
       .then(() => {
         logger.info('Database pool closed');
         clearTimeout(shutdownTimer);
         process.exit(0);
       })
-      .catch((dbError) => {
-        logger.error('Error closing database pool', dbError as Error);
+      .catch((error) => {
+        logger.error('Error during shutdown', error as Error);
         clearTimeout(shutdownTimer);
         process.exit(1);
       });
@@ -128,15 +180,21 @@ function gracefulShutdown(signal: string): void {
 
     logger.info('Server closed successfully');
 
-    // Close database pool
-    closePool()
+    // Close Redis rate limiter
+    closeRedisRateLimiter()
+      .then(() => {
+        logger.info('Redis rate limiter closed');
+
+        // Close database pool
+        return closePool();
+      })
       .then(() => {
         logger.info('Database pool closed');
         clearTimeout(shutdownTimer); // Clear timeout on successful shutdown
         process.exit(0);
       })
-      .catch((dbError) => {
-        logger.error('Error closing database pool', dbError as Error);
+      .catch((error) => {
+        logger.error('Error during shutdown', error as Error);
         clearTimeout(shutdownTimer);
         process.exit(1);
       });

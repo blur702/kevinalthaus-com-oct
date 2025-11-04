@@ -4,11 +4,15 @@ import { chromium, FullConfig } from '@playwright/test';
  * Global setup runs once before all tests
  *
  * This setup performs any necessary pre-test initialization:
+ * - Sets E2E_TESTING environment variable to disable rate limiting
  * - Verifies API endpoints are accessible
  * - Can create test database state if needed
  * - Can generate test data
  */
 async function globalSetup(config: FullConfig): Promise<void> {
+  // Set E2E_TESTING environment variable to disable rate limiting
+  process.env.E2E_TESTING = 'true';
+
   // Validate that projects are configured
   if (!config.projects || config.projects.length === 0) {
     throw new Error('No projects configured in playwright.config.ts');

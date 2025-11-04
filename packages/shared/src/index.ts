@@ -7,5 +7,9 @@ export * from './database';
 export * from './utils';
 export * from './middleware/requestId';
 
+// Export Rich Text Editor components
+export { RichTextEditor } from './components/editor/RichTextEditor';
+export type { RichTextEditorProps } from './components/editor/RichTextEditor';
+
 // Import type augmentations to ensure they're available to consumers
-import type {} from './types/express';
+import './types/express-types';

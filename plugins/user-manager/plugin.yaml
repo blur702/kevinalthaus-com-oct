@@ -1,0 +1,108 @@
+name: user-manager
+version: 1.0.0
+displayName: User Manager Plugin
+description: Advanced user management with activity tracking, bulk operations, custom user fields, and comprehensive audit logging for enterprise-grade user administration
+author:
+  name: Kevin Althaus
+  email: contact@kevinalthaus.com
+license: MIT
+keywords:
+  - user-management
+  - admin
+  - audit
+  - activity-tracking
+  - bulk-operations
+
+capabilities:
+  - database:read
+  - database:write
+  - api:call
+
+entrypoint: dist/index.js
+
+backend:
+  routes:
+    - path: /api/users-manager
+      method: GET
+      handler: listUsersHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: List all users with advanced filtering and pagination
+
+    - path: /api/users-manager/:id
+      method: GET
+      handler: getUserHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get detailed user information with activity history
+
+    - path: /api/users-manager/:id/activity
+      method: GET
+      handler: getUserActivityHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get user activity log with filtering
+
+    - path: /api/users-manager/:id/custom-fields
+      method: GET
+      handler: getUserCustomFieldsHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get user custom fields
+
+    - path: /api/users-manager/:id/custom-fields
+      method: PATCH
+      handler: updateUserCustomFieldsHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Update user custom fields
+
+    - path: /api/users-manager/bulk/import
+      method: POST
+      handler: bulkImportHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Bulk import users from CSV/JSON
+
+    - path: /api/users-manager/bulk/export
+      method: POST
+      handler: bulkExportHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Bulk export users to CSV/JSON
+
+    - path: /api/users-manager/audit
+      method: GET
+      handler: getAuditLogHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Query audit log for administrative actions
+
+database:
+  migrations:
+    - 01-create-schema.sql
+    - 02-create-custom-fields.sql
+    - 03-create-activity-log.sql
+
+hooks:
+  install: onInstall
+  activate: onActivate
+  deactivate: onDeactivate
+  uninstall: onUninstall
+  update: onUpdate

@@ -1,16 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import type {} from '@monorepo/shared/src/types/express';
 import type { ParsedQs } from 'qs';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import cookie from 'cookie';
-
-interface RequestWithUser extends Request {
-  user?: {
-    id: string;
-    role?: string;
-    [key: string]: unknown;
-  };
-}
 
 interface CacheEntry {
   data: unknown;
@@ -198,8 +191,7 @@ export const cacheMiddleware = (req: Request, res: Response, next: NextFunction)
   }
 
   // Check if request has authenticated user populated by auth middleware
-  const reqWithUser = req as RequestWithUser;
-  if (reqWithUser.user) {
+  if (req.user) {
     next();
     return;
   }
@@ -351,10 +343,11 @@ export const compressionMiddleware = compression({
 });
 
 // Rate limiting middleware
+// Disabled in test/development environments to allow E2E tests to run
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 export const rateLimitMiddleware = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per windowMs
+  max: process.env.NODE_ENV === 'test' || process.env.E2E_TESTING === 'true' ? 50000 : 1000, // Higher limit for test environments
   message: {
     error: 'Too many requests',
     message: 'Please try again later',
@@ -362,8 +355,8 @@ export const rateLimitMiddleware = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for health checks (all health endpoints)
-  skip: (req: Request) => req.path === '/health' || req.path.startsWith('/health/'),
+  // Skip rate limiting for health checks and in test environments
+  skip: (req: Request) => req.path === '/health' || req.path.startsWith('/health/') || process.env.E2E_TESTING === 'true',
 });
 
 // Request/Response timing middleware

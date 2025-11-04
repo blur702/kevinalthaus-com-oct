@@ -1,0 +1,71 @@
+name: auth-plugin
+version: 1.0.0
+displayName: Authentication Plugin
+description: Comprehensive JWT-based authentication system with user registration, login, token refresh, logout, and role-based access control for secure user management
+author:
+  name: Kevin Althaus
+  email: contact@kevinalthaus.com
+license: MIT
+keywords:
+  - authentication
+  - jwt
+  - security
+  - user-management
+  - rbac
+
+capabilities:
+  - database:read
+  - database:write
+
+entrypoint: dist/index.js
+
+backend:
+  routes:
+    - path: /api/auth/register
+      method: POST
+      handler: registerHandler
+      requiredCapabilities:
+        - database:write
+      description: Register a new user account
+
+    - path: /api/auth/login
+      method: POST
+      handler: loginHandler
+      requiredCapabilities:
+        - database:read
+        - database:write
+      description: Authenticate user and issue access/refresh tokens
+
+    - path: /api/auth/refresh
+      method: POST
+      handler: refreshHandler
+      requiredCapabilities:
+        - database:read
+        - database:write
+      description: Refresh access token using refresh token
+
+    - path: /api/auth/logout
+      method: POST
+      handler: logoutHandler
+      requiredCapabilities:
+        - database:write
+      description: Revoke refresh token and logout user
+
+    - path: /api/auth/me
+      method: GET
+      handler: getMeHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get current authenticated user information
+
+database:
+  migrations: []
+
+hooks:
+  install: onInstall
+  activate: onActivate
+  deactivate: onDeactivate
+  uninstall: onUninstall
+  update: onUpdate

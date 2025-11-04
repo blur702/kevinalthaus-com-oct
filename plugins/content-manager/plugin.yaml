@@ -231,7 +231,6 @@ database:
   migrations:
     - 01-create-schema.sql
     - 02-create-content-table.sql
-    - 03-create-taxonomy-tables.sql
     - 04-create-media-table.sql
     - 05-create-file-types-table.sql
 
@@ -241,3 +240,6 @@ hooks:
   deactivate: onDeactivate
   uninstall: onUninstall
   update: onUpdate
+
+dependencies:
+  - taxonomy

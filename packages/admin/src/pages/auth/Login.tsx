@@ -91,6 +91,10 @@ const Login: React.FC = () => {
       // Cookie-based auth: tokens are set via httpOnly cookies by the server
       // Response contains user info; no client-side token storage needed
 
+      // Fetch CSRF token after successful login
+      const { fetchCSRFToken } = await import('../../lib/api');
+      await fetchCSRFToken();
+
       // Redirect to the page they tried to visit or to dashboard
       navigate(from, { replace: true });
     } catch (error) {

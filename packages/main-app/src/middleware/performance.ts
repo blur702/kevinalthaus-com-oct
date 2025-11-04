@@ -469,10 +469,11 @@ export const compressionMiddleware = compression({
 });
 
 // Rate limiting middleware (more restrictive for main app)
+// Disabled in test/development environments to allow E2E tests to run
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 export const rateLimitMiddleware = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per windowMs
+  max: process.env.NODE_ENV === 'test' || process.env.E2E_TESTING === 'true' ? 10000 : 500, // Higher limit for test environments
   message: {
     error: 'Too many requests',
     message: 'Please try again later',
@@ -480,8 +481,8 @@ export const rateLimitMiddleware = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for health checks
-  skip: (req: Request) => req.path === '/health',
+  // Skip rate limiting for health checks and in test environments
+  skip: (req: Request) => req.path === '/health' || process.env.E2E_TESTING === 'true',
 });
 
 // Request/Response timing middleware

@@ -71,7 +71,7 @@ A full-featured content management system plugin with rich text editing, media u
 ### Content Management
 
 **List Content**
-```
+```http
 GET /api/content
 Query Parameters:
   - status: draft|published|scheduled|archived
@@ -87,14 +87,14 @@ Response: { success: boolean, data: PaginatedResult<Content> }
 ```
 
 **Get Content**
-```
+```http
 GET /api/content/:id
 
 Response: { success: boolean, data: ContentWithRelations }
 ```
 
 **Create Content**
-```
+```http
 POST /api/content
 Body: {
   title: string (required)
@@ -115,7 +115,7 @@ Response: { success: boolean, data: Content }
 ```
 
 **Update Content**
-```
+```http
 PUT /api/content/:id
 Body: Partial<CreateContentInput> + { change_summary?: string }
 

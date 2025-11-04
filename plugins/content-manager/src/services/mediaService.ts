@@ -173,9 +173,34 @@ export class MediaService {
           .toFile(outputPath);
       }
 
-      // Replace original with processed
-      await fs.unlink(filePath);
-      await fs.rename(outputPath, filePath);
+      // Atomic replace: backup original, rename processed, cleanup backup
+      const backupPath = filePath + '.bak';
+      let backupCreated = false;
+      let swapCompleted = false;
+      try {
+        await fs.rename(filePath, backupPath);
+        backupCreated = true;
+        await fs.rename(outputPath, filePath);
+        swapCompleted = true;
+        await fs.unlink(backupPath);
+      } catch (error) {
+        // Only restore backup if swap did NOT complete but backup was created
+        if (backupCreated && !swapCompleted) {
+          try {
+            await fs.rename(backupPath, filePath);
+          } catch (restoreError) {
+            this.logger.error('Failed to restore backup', restoreError as Error);
+          }
+        }
+        // Cleanup processed file if it still exists
+        try {
+          await fs.access(outputPath);
+          await fs.unlink(outputPath);
+        } catch (cleanupError) {
+          // Ignore cleanup errors (file may not exist)
+        }
+        throw error;
+      }
 
       const finalMetadata = await sharp(filePath).metadata();
 
@@ -214,8 +239,19 @@ export class MediaService {
     const filename = `${timestamp}-${randomStr}.${extension}`;
     const storagePath = path.join(this.uploadDir, filename);
 
-    // Move file to final location
-    await fs.rename(file.path, storagePath);
+    // Move file to final location (handle cross-filesystem moves)
+    try {
+      await fs.rename(file.path, storagePath);
+    } catch (error) {
+      // Handle EXDEV error (cross-filesystem) by copy + delete
+      if ((error as NodeJS.ErrnoException).code === 'EXDEV') {
+        await fs.copyFile(file.path, storagePath);
+        await fs.unlink(file.path);
+      } else {
+        this.logger.error('Failed to move file', error as Error, { from: file.path, to: storagePath });
+        throw error;
+      }
+    }
 
     // Process image if it's an image
     let width = options?.width;

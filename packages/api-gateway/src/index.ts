@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import type {} from '@monorepo/shared/src/types/express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -8,6 +9,7 @@ import { createProxyMiddleware, Options } from 'http-proxy-middleware';
 import { randomBytes } from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { createLogger, LogLevel } from '@monorepo/shared';
 import {
   compressionMiddleware,
   rateLimitMiddleware,
@@ -19,6 +21,31 @@ import {
 import { requestIdMiddleware } from './middleware/requestId';
 
 const app = express();
+
+// Normalize LOG_LEVEL to valid enum value
+const normalizedLogLevel = (() => {
+  const rawLevel = (process.env.LOG_LEVEL || '').trim().toUpperCase();
+  const validLevels: Record<string, LogLevel> = {
+    DEBUG: LogLevel.DEBUG,
+    INFO: LogLevel.INFO,
+    WARN: LogLevel.WARN,
+    ERROR: LogLevel.ERROR,
+  };
+  return validLevels[rawLevel] || LogLevel.INFO;
+})();
+
+// Normalize LOG_FORMAT to 'json' or 'text'
+const normalizedLogFormat = (() => {
+  const rawFormat = (process.env.LOG_FORMAT || '').trim().toLowerCase();
+  return (rawFormat === 'json' || rawFormat === 'text') ? rawFormat : 'text';
+})();
+
+// Initialize structured logger
+const logger = createLogger({
+  level: normalizedLogLevel,
+  format: normalizedLogFormat,
+  service: 'api-gateway',
+});
 
 // Enforce JWT secret handling
 
@@ -50,11 +77,9 @@ if (!INTERNAL_GATEWAY_TOKEN) {
         INTERNAL_GATEWAY_TOKEN = generated;
       }
       process.env.INTERNAL_GATEWAY_TOKEN = INTERNAL_GATEWAY_TOKEN;
-      // eslint-disable-next-line no-console
-      console.warn('[Gateway] Using persistent INTERNAL_GATEWAY_TOKEN for development');
+      logger.warn('[Gateway] Using persistent INTERNAL_GATEWAY_TOKEN for development');
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('[Gateway] Failed to persist dev INTERNAL_GATEWAY_TOKEN; using ephemeral token');
+      logger.warn('[Gateway] Failed to persist dev INTERNAL_GATEWAY_TOKEN; using ephemeral token');
       INTERNAL_GATEWAY_TOKEN = randomBytes(32).toString('hex');
       process.env.INTERNAL_GATEWAY_TOKEN = INTERNAL_GATEWAY_TOKEN;
     }
@@ -74,6 +99,14 @@ const corsOrigins = process.env.CORS_ORIGIN
   : ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003'];
 
 const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
+
+// Security check: reject wildcard origins with credentials in production
+if (process.env.NODE_ENV === 'production' && corsOrigins.includes('*') && corsCredentials) {
+  throw new Error(
+    'Security Error: Wildcard CORS origin (*) cannot be used with credentials in production. ' +
+    'Set CORS_ORIGIN to an explicit allowlist of origins.'
+  );
+}
 
 // Performance and security middleware (order matters)
 app.use(requestIdMiddleware);
@@ -148,10 +181,11 @@ app.use(morgan('combined'));
 app.use(cacheMiddleware);
 
 // Stricter rate limit for auth endpoints
+// In development/test mode, use more permissive limits to allow automated testing
 // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: process.env.NODE_ENV === 'production' ? 10 : 1000,
   message: {
     error: 'Too many authentication attempts',
     message: 'Please try again later',
@@ -449,6 +483,18 @@ app.use(
   })
 );
 
+// Analytics routes (admin only, protected by JWT and RBAC in main-app)
+app.use(
+  '/api/analytics',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/analytics': '/api/analytics' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
 // (removed) Previous proxy to main-app for /api/plugins to avoid duplicate registrations
 
 app.use(
@@ -457,6 +503,18 @@ app.use(
   createProxy({
     target: MAIN_APP_URL,
     pathRewrite: { '^/api/settings': '/api/settings' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
+// Blog routes
+app.use(
+  '/api/blog',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/blog': '/api/blog' },
     includeForwardingHeaders: true,
     timeout: 30000
   })
@@ -484,14 +542,17 @@ app.use('*', (req, res) => {
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  console.error('[Gateway] Error:', {
-    error: err.message,
-    stack: err.stack,
-    url: req.url,
+  const statusCode = 500;
+
+  logger.error('Request error', err, {
+    requestId: req.id,
     method: req.method,
+    url: req.url,
+    statusCode,
+    stack: err.stack,
   });
 
-  res.status(500).json({
+  res.status(statusCode).json({
     error: 'Internal Server Error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
   });

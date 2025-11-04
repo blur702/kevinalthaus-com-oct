@@ -12,6 +12,7 @@ import {
   keepAliveMiddleware,
   cacheMiddleware,
 } from './middleware/performance';
+import { pageViewTrackingMiddleware } from './middleware/pageViewTracking';
 import { authRouter } from './auth';
 import { usersRouter } from './users';
 import { uploadsRouter } from './uploads';
@@ -22,7 +23,11 @@ import { pluginsRouter } from './routes/plugins';
 import { adminPluginsRouter } from './routes/adminPlugins';
 import { usersManagerRouter } from './routes/usersManager';
 import { dashboardRouter } from './routes/dashboard';
+import { analyticsRouter } from './routes/analytics';
+import settingsRouter from './routes/settings-merged';
 import { createLogger, LogLevel } from '@monorepo/shared';
+import { createBlogRouter } from './routes/blog';
+import { pool } from './db';
 import { asyncHandler } from './utils/asyncHandler';
 import { requestIdMiddleware } from './middleware/requestId';
 
@@ -42,9 +47,20 @@ if (!INTERNAL_GATEWAY_TOKEN && process.env.NODE_ENV !== 'development' && process
 
 // Middleware to verify requests come from the API gateway
 function verifyInternalToken(req: express.Request, res: express.Response, next: express.NextFunction): void {
-  // Skip verification in development/test if token not configured
-  if (!INTERNAL_GATEWAY_TOKEN && (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test')) {
+  // Skip verification in development/test environments (regardless of token configuration)
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
     next();
+    return;
+  }
+
+  // In production, require the internal gateway token
+  if (!INTERNAL_GATEWAY_TOKEN) {
+    // This shouldn't happen due to startup check, but handle it anyway
+    logger.error('INTERNAL_GATEWAY_TOKEN not configured in production');
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Service configuration error',
+    });
     return;
   }
 
@@ -219,6 +235,9 @@ app.use(cookieParser());
 // Cache middleware for GET requests
 app.use(cacheMiddleware);
 
+// Page view tracking middleware (after cache, before routes)
+app.use(pageViewTrackingMiddleware);
+
 // Verify internal token on all requests except health checks
 // Health checks need to be accessible for container orchestration
 app.use((req, res, next) => {
@@ -280,9 +299,13 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/users-manager', usersManagerRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/analytics', analyticsRouter);
+app.use('/api/settings', settingsRouter);
 app.use('/api/uploads', uploadsRouter);
 // pluginsRouter already has authMiddleware and requireRole(Role.ADMIN) applied at line 37 of routes/plugins.ts
 app.use('/api/plugins', pluginsRouter);
+// Blog plugin routes
+app.use('/api/blog', createBlogRouter(pool, logger));
 
 // Admin UI for plugin management
 pluginManager.init(app);

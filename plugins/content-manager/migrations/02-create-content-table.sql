@@ -21,11 +21,13 @@ CREATE TABLE IF NOT EXISTS plugin_content_manager.content (
   deleted_by UUID,
 
   -- Constraints
-  CONSTRAINT content_slug_unique UNIQUE (slug),
   CONSTRAINT content_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE RESTRICT,
   CONSTRAINT content_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL,
   CONSTRAINT content_deleted_by_fkey FOREIGN KEY (deleted_by) REFERENCES public.users(id) ON DELETE SET NULL
 );
+
+-- Partial unique index for slug that respects soft-deletes
+CREATE UNIQUE INDEX content_slug_unique_idx ON plugin_content_manager.content (slug) WHERE deleted_at IS NULL;
 
 -- Content version history table
 CREATE TABLE IF NOT EXISTS plugin_content_manager.content_versions (

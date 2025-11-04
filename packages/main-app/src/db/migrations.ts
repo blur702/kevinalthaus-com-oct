@@ -306,6 +306,54 @@ export async function runMigrations(): Promise<void> {
       `);
     });
 
+    await runMigration('11-create-page-views-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS page_views (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          url VARCHAR(2048) NOT NULL,
+          path VARCHAR(2048) NOT NULL,
+          user_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+          ip_address INET NULL,
+          user_agent TEXT NULL,
+          referrer VARCHAR(2048) NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Create indexes for efficient querying
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_page_views_path ON page_views(path);
+        CREATE INDEX IF NOT EXISTS idx_page_views_user_id ON page_views(user_id) WHERE user_id IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_page_views_url ON page_views(url);
+      `);
+    });
+
+    await runMigration('12-create-api-keys-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS api_keys (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name VARCHAR(255) NOT NULL,
+          key_prefix VARCHAR(16) NOT NULL,
+          key_hash VARCHAR(255) NOT NULL,
+          scopes JSONB NOT NULL DEFAULT '[]'::jsonb,
+          last_used_at TIMESTAMP NULL,
+          expires_at TIMESTAMP NULL,
+          revoked_at TIMESTAMP NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Create indexes for efficient querying
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+        CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
+        CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at) WHERE expires_at IS NOT NULL;
+      `);
+    });
+
     // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');
   } catch (error) {

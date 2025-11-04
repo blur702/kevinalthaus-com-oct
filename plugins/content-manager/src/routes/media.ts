@@ -18,8 +18,11 @@ export function createMediaRouter(pool: Pool, logger: PluginLogger): Router {
   // Initialize media service
   const mediaService = new MediaService(pool, logger);
 
-  // Initialize upload directory
-  void mediaService.init();
+  // Initialize upload directory (will be awaited in plugin activation)
+  // Note: Plugin system calls this synchronously, init must complete before routes are used
+  mediaService.init().catch((error: Error) => {
+    logger.error('Failed to initialize media service', error);
+  });
 
   // Configure multer for file uploads
   const storage = multer.diskStorage({

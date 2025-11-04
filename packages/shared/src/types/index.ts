@@ -1,6 +1,7 @@
 import { Role } from '../security/rbac';
 
-// Express type declarations are included via express.d.ts (ambient module)
+// Express type augmentations - import to ensure they're loaded
+import './express-types';
 
 // Re-export Role for convenience
 export { Role };

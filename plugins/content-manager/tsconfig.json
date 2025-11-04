@@ -19,8 +19,9 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/types/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "files": ["src/types/express.d.ts"],
   "references": [
     { "path": "../../packages/shared" }
   ]

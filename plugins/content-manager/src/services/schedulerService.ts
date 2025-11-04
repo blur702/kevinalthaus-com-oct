@@ -53,6 +53,7 @@ export class SchedulerService {
     if (this.task) {
       this.task.stop();
       this.task = null;
+      this.isRunning = false; // Reset flag when stopping
       this.logger.info('Scheduled publishing service stopped');
     }
   }
@@ -87,9 +88,21 @@ export class SchedulerService {
           items: result.rows.map(r => ({ id: r.id, title: r.title }))
         });
 
-        // Create audit log entries for each published item
+        // Create audit log entries in database for each published item
         for (const row of result.rows) {
-          this.logger.info(`Content published automatically: ${row.title} (${row.id})`);
+          try {
+            await this.pool.query(
+              `INSERT INTO plugin_content_manager.content_versions
+               (content_id, version_number, title, slug, body_html, excerpt, meta_description, meta_keywords, status, change_summary, created_by)
+               SELECT $1, COALESCE((SELECT MAX(version_number) FROM plugin_content_manager.content_versions WHERE content_id = $1), 0) + 1, title, slug, body_html, excerpt, meta_description, meta_keywords, status, $2, created_by
+               FROM plugin_content_manager.content
+               WHERE id = $1`,
+              [row.id, `Automatically published via scheduler at ${new Date().toISOString()}`]
+            );
+            this.logger.info(`Content published automatically: ${row.title} (${row.id})`);
+          } catch (auditError) {
+            this.logger.error(`Failed to create audit log for ${row.id}`, auditError as Error);
+          }
         }
       }
     } catch (error) {

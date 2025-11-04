@@ -137,7 +137,7 @@ const Dashboard: React.FC = () => {
             articles?: string;
             growth?: string;
           };
-        }>('/api/dashboard/stats', {
+        }>('/dashboard/stats', {
           signal: controller.signal,
         });
 

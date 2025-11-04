@@ -1,3 +1,8 @@
+// Load environment variables from root .env file first, before any other imports
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
 import app from './index';
 import { Server } from 'http';
 import { createLogger, LogLevel } from '@monorepo/shared';

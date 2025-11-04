@@ -74,6 +74,68 @@ export async function login(
 }
 
 /**
+ * Make an authenticated API request through the browser's fetch API
+ * This ensures cookies are automatically included via the browser context
+ *
+ * @param page - Playwright page object
+ * @param url - API URL (e.g., '/api/blog')
+ * @param options - Fetch options (method, body, headers, etc.)
+ * @returns Response object with ok, status, and json() method
+ */
+export async function apiRequest(
+  page: Page,
+  url: string,
+  options: {
+    method?: string;
+    body?: unknown;
+    headers?: Record<string, string>;
+  } = {}
+): Promise<{ ok: boolean; status: number; json: () => Promise<unknown>; data: unknown }> {
+  // Make the request through the browser using fetch()
+  // This automatically includes cookies from the browser context
+  const result = await page.evaluate(
+    async ({ url, method, body, headers }) => {
+      const response = await fetch(url, {
+        method: method || 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: 'include', // Ensure cookies are sent
+      });
+
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        data,
+      };
+    },
+    {
+      url,
+      method: options.method,
+      body: options.body,
+      headers: options.headers,
+    }
+  );
+
+  return {
+    ok: result.ok,
+    status: result.status,
+    data: result.data,
+    json: async () => result.data,
+  };
+}
+
+/**
  * Logout helper - performs logout
  *
  * @param page - Playwright page object

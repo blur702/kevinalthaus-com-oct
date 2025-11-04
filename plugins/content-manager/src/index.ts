@@ -123,7 +123,7 @@ export default class ContentManagerPlugin implements PluginLifecycleHooks {
       }
 
       // WARNING: Uncomment to drop schema and all data
-      // await this.pool.query('DROP SCHEMA IF NOT EXISTS plugin_content_manager CASCADE');
+      // await this.pool.query('DROP SCHEMA IF EXISTS plugin_content_manager CASCADE');
       // this.logger.warn('Schema and all data dropped');
 
       this.logger.warn('Content Manager Plugin uninstalled - data preserved');

@@ -16,11 +16,15 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // Listen on all network interfaces (IPv4 and IPv6)
     port: 3003,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3000', // API Gateway (exposed to host)
         changeOrigin: true,
+        secure: process.env.NODE_ENV === 'production' || process.env.VITE_PROXY_SECURE === 'true',
+        cookieDomainRewrite: 'localhost',
+        ws: true,
       },
     },
   },

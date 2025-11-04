@@ -5,24 +5,49 @@ import { query, transaction, type PoolClient } from '../db';
 import { hashPassword, verifyPassword, hashSHA256, defaultLogger, validateEmail } from '@monorepo/shared';
 import { Role } from '@monorepo/shared';
 import { asyncHandler } from '../utils/asyncHandler';
+import { settingsCacheService, type PasswordPolicy } from '../services/settingsCacheService';
 
 const router = Router();
 
 /**
- * Validates password strength
- * Requires: at least 8 characters, one uppercase, one lowercase, one digit, one special character
+ * Validates password strength based on system settings
+ * Falls back to secure defaults if settings are unavailable
  */
-function isValidPassword(password: string): boolean {
-  if (password.length < 8) {
+async function isValidPassword(password: string): Promise<boolean> {
+  // Get password policy from settings cache
+  const policy: PasswordPolicy = await settingsCacheService.getPasswordPolicy();
+
+  // Check minimum length
+  if (password.length < policy.minLength) {
     return false;
   }
 
-  const hasUpperCase = /[A-Z]/.test(password);
-  const hasLowerCase = /[a-z]/.test(password);
-  const hasDigit = /\d/.test(password);
-  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  // Check maximum length if specified
+  if (policy.maxLength && password.length > policy.maxLength) {
+    return false;
+  }
 
-  return hasUpperCase && hasLowerCase && hasDigit && hasSpecialChar;
+  // Check uppercase requirement
+  if (policy.requireUppercase && !/[A-Z]/.test(password)) {
+    return false;
+  }
+
+  // Check lowercase requirement
+  if (policy.requireLowercase && !/[a-z]/.test(password)) {
+    return false;
+  }
+
+  // Check numbers requirement
+  if (policy.requireNumbers && !/\d/.test(password)) {
+    return false;
+  }
+
+  // Check special characters requirement
+  if (policy.requireSpecial && !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return false;
+  }
+
+  return true;
 }
 
 // Secure JWT_SECRET handling - require real secret in production, generate random in development
@@ -99,10 +124,13 @@ const PASSWORD_HISTORY_LIMIT = (() => {
 
 // Helper function to configure cookie options
 // secure: true is required when sameSite=none per spec, or when running in production behind HTTPS
+// For development/testing, we allow secure=false even with sameSite=none to enable testing
 function getCookieOptions(
   maxAge: number
 ): { httpOnly: boolean; secure: boolean; sameSite: 'lax' | 'strict' | 'none'; maxAge: number } {
-  const isSecureRequired = COOKIE_SAMESITE === 'none' || process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
+  // In production, enforce secure cookies. In dev/test, allow insecure for testing
+  const isSecureRequired = isProduction && (COOKIE_SAMESITE === 'none' || isProduction);
 
   return {
     httpOnly: true,
@@ -114,7 +142,8 @@ function getCookieOptions(
 
 // Helper function for clearing cookies (no maxAge parameter)
 function getCookieClearOptions(): { httpOnly: boolean; secure: boolean; sameSite: 'lax' | 'strict' | 'none' } {
-  const isSecureRequired = COOKIE_SAMESITE === 'none' || process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isSecureRequired = isProduction && (COOKIE_SAMESITE === 'none' || isProduction);
 
   return {
     httpOnly: true,
@@ -172,9 +201,17 @@ function getClientIp(req: Request): string | undefined {
   return req.ip;
 }
 
-// Generate JWT token
-function generateAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET!, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
+// Generate JWT token with settings-based expiry
+async function generateAccessToken(payload: TokenPayload): Promise<string> {
+  const jwtConfig = await settingsCacheService.getJWTConfig();
+
+  const signOptions = {
+    expiresIn: jwtConfig.accessTokenExpiry as jwt.SignOptions['expiresIn'],
+    issuer: jwtConfig.issuer,
+    audience: jwtConfig.audience,
+  } as jwt.SignOptions;
+
+  return jwt.sign(payload, JWT_SECRET!, signOptions);
 }
 
 // Generate refresh token
@@ -300,10 +337,10 @@ router.post(
       }
 
       // Validate password strength
-      if (!isValidPassword(password)) {
+      if (!(await isValidPassword(password))) {
         res.status(400).json({
           error: 'Bad Request',
-          message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character',
+          message: 'Password must meet the configured password policy requirements',
         });
         return;
       }
@@ -361,7 +398,7 @@ router.post(
         role: user.role as Role,
       };
 
-      const accessToken = generateAccessToken(tokenPayload);
+      const accessToken = await generateAccessToken(tokenPayload);
       const refreshToken = generateRefreshToken();
 
       // Store refresh token with context binding (user agent, IP) for security
@@ -522,7 +559,7 @@ router.post(
         role: user.role as Role,
       };
 
-      const accessToken = generateAccessToken(tokenPayload);
+      const accessToken = await generateAccessToken(tokenPayload);
       const refreshToken = generateRefreshToken();
 
       // Store refresh token and update last_login in a transaction
@@ -683,7 +720,7 @@ router.post(
           role: user.role as Role,
         };
 
-        const accessToken = generateAccessToken(tokenPayload);
+        const accessToken = await generateAccessToken(tokenPayload);
 
         return {
           accessToken,
@@ -869,10 +906,10 @@ router.post(
       }
 
       // Validate password strength
-      if (!isValidPassword(newPassword)) {
+      if (!(await isValidPassword(newPassword))) {
         res.status(400).json({
           error: 'Bad Request',
-          message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character',
+          message: 'Password must meet the configured password policy requirements',
         });
         return;
       }
@@ -1116,6 +1153,12 @@ router.get('/me', authMiddleware, (req: AuthenticatedRequest, res: Response) => 
   res.json({
     user: req.user,
   });
+});
+
+// GET /api/auth/csrf-token - Get CSRF token for authenticated users
+router.get('/csrf-token', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { getCSRFToken } = await import('../middleware/csrf');
+  getCSRFToken(req, res);
 });
 
 // Auth middleware

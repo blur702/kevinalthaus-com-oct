@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Typography, Card, CardContent } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import { BlogManagement } from '../../../../plugins/blog/frontend';
 
 const Content: React.FC = () => (
   <Box>
@@ -9,17 +10,7 @@ const Content: React.FC = () => (
     <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
       Manage your website content, articles, and media.
     </Typography>
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Content Management System
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Content management features will be available here including article creation, media
-          uploads, and SEO optimization tools.
-        </Typography>
-      </CardContent>
-    </Card>
+    <BlogManagement />
   </Box>
 );
 

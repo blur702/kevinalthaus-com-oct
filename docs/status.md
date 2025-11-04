@@ -9,6 +9,10 @@
 - Health endpoints (health/live/ready) across services
 - Security headers with environment toggles
 - Environment-based CORS across services
+- **CORS hardening: Wildcard origins rejected with credentials in production**
+- **API Gateway structured logging with request IDs (replaced console.error)**
+- **Admin Vite proxy security: conditional secure flag based on environment**
+- **Upload error hygiene: path sanitization and quarantine cleanup**
 - Standardized port configuration (API 3000, Main 3001)
 - Automated PostgreSQL backups and retention policy
 - Refresh token storage (hashed) and rotation

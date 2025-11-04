@@ -1,0 +1,157 @@
+name: blog
+version: 1.0.0
+displayName: Blog Plugin
+description: Full-featured blog plugin with SEO optimization, WCAG AA accessibility, version history, scheduled publishing, and taxonomy integration
+author:
+  name: Kevin Althaus
+  email: contact@kevinalthaus.com
+license: MIT
+keywords:
+  - blog
+  - cms
+  - seo
+  - wcag
+  - accessibility
+  - publishing
+
+capabilities:
+  - database:read
+  - database:write
+  - api:call
+
+entrypoint: dist/index.js
+
+backend:
+  routes:
+    # Blog post management endpoints
+    - path: /api/blog
+      method: GET
+      handler: listBlogPostsHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: List blog posts with filtering (status, category, tag, search, pagination)
+
+    - path: /api/blog/:id
+      method: GET
+      handler: getBlogPostHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get single blog post with full details
+
+    - path: /api/blog
+      method: POST
+      handler: createBlogPostHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Create new blog post (Editor role required)
+
+    - path: /api/blog/:id
+      method: PUT
+      handler: updateBlogPostHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Update blog post (Editor for drafts, Admin for published)
+
+    - path: /api/blog/:id
+      method: DELETE
+      handler: deleteBlogPostHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Soft delete blog post (Admin only)
+
+    - path: /api/blog/:id/publish
+      method: POST
+      handler: publishBlogPostHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Publish blog post (Admin only)
+
+    - path: /api/blog/:id/unpublish
+      method: POST
+      handler: unpublishBlogPostHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Unpublish blog post (Admin only)
+
+    # Version history endpoints
+    - path: /api/blog/:id/versions
+      method: GET
+      handler: getVersionsHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get version history for blog post
+
+    - path: /api/blog/:id/restore/:version
+      method: POST
+      handler: restoreVersionHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Restore previous version (Admin only)
+
+    # Preview endpoints
+    - path: /api/blog/preview/:id
+      method: GET
+      handler: previewBlogPostHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Preview draft with token validation
+
+    - path: /api/blog/:id/preview-token
+      method: POST
+      handler: generatePreviewTokenHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Generate preview token (Editor/Admin)
+
+    # Public endpoints
+    - path: /api/blog/public
+      method: GET
+      handler: listPublicBlogPostsHandler
+      public: true
+      description: Public endpoint for published posts (no auth)
+
+    - path: /api/blog/public/:slug
+      method: GET
+      handler: getPublicBlogPostHandler
+      public: true
+      description: Public endpoint for single post by slug (no auth)
+
+database:
+  migrations:
+    - 01-create-schema.sql
+    - 02-create-blog-tables.sql
+    - 03-create-author-profiles.sql
+    - 04-create-seo-metadata.sql
+
+hooks:
+  install: onInstall
+  activate: onActivate
+  deactivate: onDeactivate
+  uninstall: onUninstall
+  update: onUpdate
+
+dependencies:
+  - taxonomy
+  - content-manager

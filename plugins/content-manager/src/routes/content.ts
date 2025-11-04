@@ -1,3 +1,5 @@
+/// <reference path="../types/express.d.ts" />
+
 /**
  * Content Management Routes
  * Handles CRUD operations for content with version history
