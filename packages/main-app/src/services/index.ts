@@ -6,3 +6,5 @@
 
 export * from './DatabaseService';
 export * from './AuthServiceImpl';
+export * from './HttpService';
+export * from './StorageService';

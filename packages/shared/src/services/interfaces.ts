@@ -537,6 +537,91 @@ export interface IStorageService extends IService {
 }
 
 // ============================================================================
+// File Storage Service Interface
+// ============================================================================
+
+/**
+ * Metadata about a file or directory
+ */
+export interface StorageMetadata {
+  size: number;
+  createdAt: Date;
+  modifiedAt: Date;
+  isDirectory: boolean;
+  mimeType?: string;
+}
+
+/**
+ * File storage service for managing files and directories
+ */
+export interface IFileStorageService extends IService {
+  /**
+   * Read file contents
+   */
+  readFile(filePath: string): Promise<Buffer>;
+
+  /**
+   * Write file contents
+   */
+  writeFile(filePath: string, data: Buffer | string): Promise<void>;
+
+  /**
+   * Delete a file
+   */
+  deleteFile(filePath: string): Promise<void>;
+
+  /**
+   * Check if file or directory exists
+   */
+  exists(filePath: string): Promise<boolean>;
+
+  /**
+   * Get file metadata
+   */
+  getMetadata(filePath: string): Promise<StorageMetadata>;
+
+  /**
+   * List files in directory
+   */
+  listFiles(dirPath: string): Promise<string[]>;
+
+  /**
+   * Create directory
+   */
+  createDirectory(dirPath: string): Promise<void>;
+
+  /**
+   * Delete directory
+   */
+  deleteDirectory(dirPath: string, recursive?: boolean): Promise<void>;
+
+  /**
+   * Move file
+   */
+  moveFile(sourcePath: string, destPath: string): Promise<void>;
+
+  /**
+   * Copy file
+   */
+  copyFile(sourcePath: string, destPath: string): Promise<void>;
+
+  /**
+   * Get public URL for file
+   */
+  getPublicUrl(filePath: string): string;
+
+  /**
+   * Create read stream for file
+   */
+  createReadStream(filePath: string): NodeJS.ReadableStream;
+
+  /**
+   * Create write stream for file
+   */
+  createWriteStream(filePath: string): NodeJS.WritableStream;
+}
+
+// ============================================================================
 // Logger Service Interface (already exists, formalize here)
 // ============================================================================
 
@@ -628,6 +713,6 @@ export interface IServiceCollection {
   database: IDatabaseService;
   editor: IEditorService;
   http: IHttpService;
-  storage: IStorageService;
+  storage: IFileStorageService;
   logger: ILoggerService;
 }

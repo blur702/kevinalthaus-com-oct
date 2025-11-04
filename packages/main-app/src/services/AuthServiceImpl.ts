@@ -11,6 +11,7 @@ import type {
   LoginResult,
   TokenPair,
   TokenPayload,
+  UserContext,
   IDatabaseService,
 } from '@monorepo/shared';
 import { Role, getCapabilitiesForRole } from '@monorepo/shared';
@@ -100,14 +101,14 @@ export class AuthServiceImpl extends AuthService {
     const passwordHash = await bcrypt.hash(data.password, 10);
 
     // Create user
-    const [user] = await knex('users')
+    const [user] = (await knex('users')
       .insert({
         email: data.email,
         username: data.username,
         password_hash: passwordHash,
         role: data.role || Role.VIEWER,
       })
-      .returning<User[]>('*');
+      .returning('*')) as User[];
 
     return {
       user: {
@@ -130,7 +131,7 @@ export class AuthServiceImpl extends AuthService {
     const user = await knex('users')
       .where({ email: data.identifier })
       .orWhere({ username: data.identifier })
-      .first<User>();
+      .first() as User;
 
     if (!user) {
       throw new Error('Invalid credentials');
@@ -180,10 +181,10 @@ export class AuthServiceImpl extends AuthService {
     const tokenHash = this.hashToken(data.refreshToken);
 
     // Find refresh token
-    const storedToken = await knex('refresh_tokens')
+    const storedToken = (await knex('refresh_tokens')
       .where({ token_hash: tokenHash })
       .where('expires_at', '>', knex.fn.now())
-      .first<RefreshToken>();
+      .first()) as RefreshToken;
 
     if (!storedToken) {
       throw new Error('Invalid or expired refresh token');
@@ -192,7 +193,7 @@ export class AuthServiceImpl extends AuthService {
     // Get user
     const user = await knex('users')
       .where({ id: storedToken.user_id })
-      .first<User>();
+      .first() as User;
 
     if (!user) {
       throw new Error('User not found');
@@ -209,7 +210,7 @@ export class AuthServiceImpl extends AuthService {
     const knex = this.dbService.getKnex();
 
     // Check if user exists
-    const user = await knex('users').where({ email }).first<User>();
+    const user = await knex('users').where({ email }).first() as User;
     if (!user) {
       // Don't reveal if user exists for security
       throw new Error('If an account exists with this email, a reset link will be sent');
@@ -235,10 +236,10 @@ export class AuthServiceImpl extends AuthService {
     const tokenHash = this.hashToken(data.token);
 
     // Find valid reset token
-    const resetToken = await knex('password_reset_tokens')
+    const resetToken = (await knex('password_reset_tokens')
       .where({ token_hash: tokenHash })
       .where('expires_at', '>', knex.fn.now())
-      .first<{ user_id: string }>();
+      .first()) as { user_id: string };
 
     if (!resetToken) {
       throw new Error('Invalid or expired reset token');
@@ -265,7 +266,7 @@ export class AuthServiceImpl extends AuthService {
     const knex = this.dbService.getKnex();
 
     // Get user
-    const user = await knex('users').where({ id: data.userId }).first<User>();
+    const user = await knex('users').where({ id: data.userId }).first() as User;
     if (!user) {
       throw new Error('User not found');
     }
@@ -298,9 +299,9 @@ export class AuthServiceImpl extends AuthService {
         email: user.email,
         username: user.username,
         role: user.role,
-      } as object,
+      },
       this.jwtSecret,
-      { expiresIn: this.accessTokenExpiry }
+      { expiresIn: this.accessTokenExpiry } as jwt.SignOptions
     );
 
     // Generate refresh token
@@ -327,13 +328,16 @@ export class AuthServiceImpl extends AuthService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  protected payloadToUserContext(payload: TokenPayload) {
+  protected payloadToUserContext(payload: TokenPayload): UserContext {
     return {
       id: payload.userId,
       email: payload.email,
       username: payload.username,
       role: payload.role,
       capabilities: getCapabilitiesForRole(payload.role),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      userId: payload.userId,
     };
   }
 }
