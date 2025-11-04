@@ -23,9 +23,6 @@
   "author": "Kevin Althaus <contact@kevinalthaus.com>",
   "license": "MIT",
   "dependencies": {
-    "@blocknote/core": "^0.41.1",
-    "@blocknote/mantine": "^0.41.1",
-    "@blocknote/react": "^0.41.1",
     "@monorepo/content-manager": "*",
     "@monorepo/shared": "*",
     "@monorepo/taxonomy": "*",

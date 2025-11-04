@@ -5,7 +5,6 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
 import { adminTheme } from './theme';
-import '@blocknote/react/style.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

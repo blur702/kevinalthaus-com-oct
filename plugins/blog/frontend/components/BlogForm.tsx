@@ -253,15 +253,6 @@ export const BlogForm: React.FC<BlogFormProps> = ({
             required
             minHeight={500}
           />
-          {/* Hidden textarea to support automated tests and fallback editing */}
-          <textarea
-            name="body_html"
-            value={formData.body_html}
-            onChange={(e) => setFormData(prev => ({ ...prev, body_html: e.target.value }))}
-            style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }}
-            aria-hidden="true"
-            data-testid="body_html"
-          />
         </Grid>
 
         <Grid item xs={12}>

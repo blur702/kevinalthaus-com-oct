@@ -46,7 +46,8 @@ export default defineConfig({
   // Shared settings for all projects
   use: {
     // Base URL for all tests (prefer IPv4 localhost to avoid ::1 binding issues)
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3003',
+    // Note: Admin panel runs on port 3008 in current dev setup
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3008',
 
     // Capture screenshot on failure
     screenshot: 'only-on-failure',

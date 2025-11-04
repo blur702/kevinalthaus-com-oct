@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { login, TEST_CREDENTIALS } from './utils/auth';
+import { login, logout, TEST_CREDENTIALS } from './utils/auth';
 
 test('Complete blog post creation workflow', async ({ page }) => {
   // Enable console logging
@@ -116,6 +116,40 @@ test('Complete blog post creation workflow', async ({ page }) => {
   // Take final screenshot
   await page.screenshot({ path: 'test-results/final-success.png', fullPage: true });
 
+  // Step 9: Logout
+  console.log('Step 9: Logging out...');
+  try {
+    await logout(page);
+    console.log('✓ Logged out successfully');
+  } catch (error) {
+    console.log('⚠ Logout helper failed, trying alternative method...');
+    // Fallback: Look for any logout-related button or link
+    const logoutSelectors = [
+      'button:has-text("Logout")',
+      'a:has-text("Logout")',
+      '[data-testid="logout"]',
+      'text=/logout/i',
+    ];
+
+    for (const selector of logoutSelectors) {
+      try {
+        await page.click(selector, { timeout: 2000 });
+        await page.waitForURL('/login', { timeout: 5000 });
+        console.log('✓ Logged out using fallback method');
+        break;
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  // Verify we're on the login page
+  const loginButton = page.locator('button[type="submit"]');
+  await expect(loginButton).toBeVisible({ timeout: 5000 });
+
   console.log('\n=== TEST COMPLETE ===');
+  console.log('✓ Login completed');
+  console.log('✓ Blog post created');
+  console.log('✓ Logout completed');
   console.log('All steps passed successfully!');
 });
