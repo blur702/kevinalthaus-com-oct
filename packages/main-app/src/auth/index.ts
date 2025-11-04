@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { query, transaction, type PoolClient } from '../db';
 import { hashPassword, verifyPassword, hashSHA256, defaultLogger, validateEmail } from '@monorepo/shared';
 import { Role } from '@monorepo/shared';
+import type { TokenPayload as SharedTokenPayload } from '@monorepo/shared';
 import { asyncHandler } from '../utils/asyncHandler';
 import { settingsCacheService, type PasswordPolicy } from '../services/settingsCacheService';
 
@@ -182,10 +183,8 @@ function parseDurationToMs(input: string, fallbackMs: number): number {
 // Dummy hash for timing attack prevention - valid bcrypt hash of 'dummy-password'
 const DUMMY_PASSWORD_HASH = '$2b$10$rLsUhbUd.4I7BaZ1uNLZWu3dkcUPfVM.orLNsF3ykAD9zYMehtFue';
 
-interface TokenPayload {
-  userId: string;
-  email: string;
-  role: Role;
+interface TokenPayload extends SharedTokenPayload {
+  // Local extension if needed
 }
 
 // Note: AuthenticatedRequest now uses the global Express.Request user type

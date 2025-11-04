@@ -6,16 +6,12 @@
 import { Router, Request } from 'express';
 import type { Pool } from 'pg';
 import type { PluginLogger } from '@monorepo/shared';
+import { getUserId } from '@monorepo/shared';
 import slugify from 'slugify';
 import { authMiddleware } from '../auth';
 
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
-}
+// Use global Request type which already includes user
+type AuthRequest = Request;
 
 export function createBlogRouter(pool: Pool, logger: PluginLogger): Router {
   const router = Router();
@@ -153,7 +149,7 @@ export function createBlogRouter(pool: Pool, logger: PluginLogger): Router {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   router.post('/', authMiddleware, async (req, res): Promise<void> => {
     try {
-      const userId = (req as AuthRequest).user?.userId;
+      const userId = getUserId((req as AuthRequest).user);
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' });
         return;
@@ -228,7 +224,7 @@ export function createBlogRouter(pool: Pool, logger: PluginLogger): Router {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   router.put('/:id', authMiddleware, async (req, res): Promise<void> => {
     try {
-      const userId = (req as AuthRequest).user?.userId;
+      const userId = getUserId((req as AuthRequest).user);
       const userRole = (req as AuthRequest).user?.role;
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -371,7 +367,7 @@ export function createBlogRouter(pool: Pool, logger: PluginLogger): Router {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   router.delete('/:id', authMiddleware, async (req, res): Promise<void> => {
     try {
-      const userId = (req as AuthRequest).user?.userId;
+      const userId = getUserId((req as AuthRequest).user);
       const userRole = (req as AuthRequest).user?.role;
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -419,7 +415,7 @@ export function createBlogRouter(pool: Pool, logger: PluginLogger): Router {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   router.post('/:id/publish', authMiddleware, async (req, res): Promise<void> => {
     try {
-      const userId = (req as AuthRequest).user?.userId;
+      const userId = getUserId((req as AuthRequest).user);
       const userRole = (req as AuthRequest).user?.role;
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' });
@@ -482,7 +478,7 @@ export function createBlogRouter(pool: Pool, logger: PluginLogger): Router {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   router.post('/:id/unpublish', authMiddleware, async (req, res): Promise<void> => {
     try {
-      const userId = (req as AuthRequest).user?.userId;
+      const userId = getUserId((req as AuthRequest).user);
       const userRole = (req as AuthRequest).user?.role;
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' });

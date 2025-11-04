@@ -5,6 +5,7 @@ export * from './plugin';
 export * from './theme';
 export * from './database';
 export * from './utils';
+export * from './utils/user-helpers';
 export * from './middleware/requestId';
 
 // Export Services
