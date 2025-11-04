@@ -2,6 +2,7 @@ import { PluginManifest } from './manifest';
 import { PluginStatus } from '../constants';
 import type { Pool } from 'pg';
 import type { Application } from 'express';
+import type { IServiceCollection } from '../services/interfaces';
 
 export interface PluginLifecycleContext {
   pluginId: string;
@@ -22,6 +23,34 @@ export interface PluginExecutionContext extends PluginLifecycleContext {
   logger: PluginLogger;
   api: PluginAPI;
   storage: PluginStorage;
+  /**
+   * Service collection - Access to all application services
+   *
+   * Provides access to:
+   * - auth: Authentication and authorization service
+   * - database: Database service with Knex query builder
+   * - editor: WYSIWYG editor service
+   * - http: HTTP client service for external API calls
+   * - storage: File storage service
+   * - logger: Structured logging service
+   *
+   * Use services for common operations instead of direct database or API access:
+   * ```typescript
+   * // Use auth service for authentication
+   * const user = await context.services.auth.getCurrentUser(req);
+   * if (context.services.auth.hasRole(user, Role.ADMIN)) {
+   *   // ...
+   * }
+   *
+   * // Use database service with Knex query builder
+   * const knex = context.services.database.getKnex('plugin_myschema');
+   * const posts = await knex('posts').select('*').where({ status: 'published' });
+   *
+   * // Use HTTP service for external API calls
+   * const response = await context.services.http.get('https://api.example.com/data');
+   * ```
+   */
+  services: IServiceCollection;
   /**
    * Database connection pool - Available only for backend/server-side plugins
    *
