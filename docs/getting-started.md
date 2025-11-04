@@ -18,9 +18,11 @@ docker compose up -d
 
 Access points (development):
 - API Gateway: [http://localhost:3000](http://localhost:3000)
-- Frontend: [http://localhost:3002](http://localhost:3002)
-- Admin: [http://localhost:3003](http://localhost:3003)
+- Frontend: [http://localhost:3006](http://localhost:3006) (auto-resolves from 3002 if ports in use)
+- Admin: [http://localhost:3008](http://localhost:3008) (auto-resolves from 3003 if ports in use)
 - Main App health: [http://localhost:3001/health](http://localhost:3001/health) (internal)
+
+**Note:** Ports auto-increment if already in use. Check console output for actual ports.
 
 ## Quick Start (Dev mode without Docker)
 
@@ -40,10 +42,18 @@ npm run build
 npm run lint
 npm run format
 
-# Tests
-npm test                          # all (when available)
-cd packages/main-app && npm test  # package specific
+# E2E Tests (Playwright)
+npx playwright test                        # run all tests
+npx playwright test --headed               # run with browser UI
+npx playwright test blog-creation          # run specific test
+npx playwright show-report                 # view last report
+
+# Unit Tests
+npm test                                   # all (when available)
+cd packages/main-app && npm test           # package specific
 ```
+
+See `docs/testing.md` for comprehensive testing guide.
 
 ## Script Helper
 
