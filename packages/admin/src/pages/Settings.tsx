@@ -226,7 +226,8 @@ const Settings: React.FC = () => {
         setLoadingSite(false);
       }
     }
-  }, [loadingSite, showSnackbar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSnackbar]);
 
   const loadSecuritySettings = useCallback(async () => {
     // Prevent concurrent loads
@@ -264,7 +265,8 @@ const Settings: React.FC = () => {
         setLoadingSecurity(false);
       }
     }
-  }, [loadingSecurity, showSnackbar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSnackbar]);
 
   const loadEmailSettings = useCallback(async () => {
     // Prevent concurrent loads
@@ -302,7 +304,8 @@ const Settings: React.FC = () => {
         setLoadingEmail(false);
       }
     }
-  }, [loadingEmail, showSnackbar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSnackbar]);
 
   const loadApiKeys = useCallback(async () => {
     // Prevent concurrent loads
@@ -340,7 +343,8 @@ const Settings: React.FC = () => {
         setLoadingApiKeys(false);
       }
     }
-  }, [loadingApiKeys, showSnackbar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSnackbar]);
 
   // Load settings on mount and tab change
   useEffect(() => {
@@ -368,7 +372,8 @@ const Settings: React.FC = () => {
       emailSettingsAbortController.current?.abort();
       apiKeysAbortController.current?.abort();
     };
-  }, [activeTab, loadSiteSettings, loadSecuritySettings, loadEmailSettings, loadApiKeys]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });

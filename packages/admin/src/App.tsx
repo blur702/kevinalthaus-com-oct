@@ -38,6 +38,7 @@ import Taxonomy from './pages/Taxonomy.tsx';
 
 // Import auth components and pages
 import ProtectedRoute from './components/ProtectedRoute.tsx';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 import Login from './pages/auth/Login.tsx';
 import Register from './pages/auth/Register.tsx';
 import ResetPassword from './pages/auth/ResetPassword.tsx';
@@ -224,7 +225,14 @@ const App: React.FC = () => {
           { path: '/content', element: <Content /> },
           { path: '/taxonomy', element: <Taxonomy /> },
           { path: '/analytics', element: <Analytics /> },
-          { path: '/settings', element: <Settings /> },
+          {
+            path: '/settings',
+            element: (
+              <ErrorBoundary>
+                <Settings />
+              </ErrorBoundary>
+            ),
+          },
         ].map((route) => (
           <Route
             key={route.path}
