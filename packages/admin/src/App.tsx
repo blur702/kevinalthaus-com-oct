@@ -25,6 +25,7 @@ import {
   Article as ArticleIcon,
   Logout as LogoutIcon,
   Label as LabelIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
@@ -35,6 +36,7 @@ import Content from './pages/Content.tsx';
 import Analytics from './pages/Analytics.tsx';
 import Settings from './pages/Settings.tsx';
 import Taxonomy from './pages/Taxonomy.tsx';
+import EditorTest from './pages/EditorTest.tsx';
 
 // Import auth components and pages
 import ProtectedRoute from './components/ProtectedRoute.tsx';
@@ -78,6 +80,7 @@ const navItems: NavItem[] = [
   { label: 'Taxonomy', path: '/taxonomy', icon: <LabelIcon /> },
   { label: 'Analytics', path: '/analytics', icon: <AnalyticsIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
+  { label: 'Editor Test', path: '/editor-test', icon: <EditIcon /> },
 ];
 
 interface ProtectedLayoutProps {
@@ -233,6 +236,7 @@ const App: React.FC = () => {
               </ErrorBoundary>
             ),
           },
+          { path: '/editor-test', element: <EditorTest /> },
         ].map((route) => (
           <Route
             key={route.path}
