@@ -51,7 +51,7 @@ test.describe('Blog Workflow Verification', () => {
     await page.waitForSelector('input[name="title"]', { timeout: 10000 });
     console.log('✓ Title field found');
 
-    await page.waitForSelector('textarea[name="body_html"]', { timeout: 5000 });
+    await page.waitForSelector('div[contenteditable="true"]', { timeout: 10000 });
     console.log('✓ Content editor found');
 
     // Verify we can interact with the form
@@ -60,7 +60,7 @@ test.describe('Blog Workflow Verification', () => {
     await expect(titleInput).toBeEditable();
     console.log('✓ Title field is editable');
 
-    const contentEditor = page.locator('textarea[name="body_html"]');
+    const contentEditor = page.locator('div[contenteditable="true"]').first();
     await expect(contentEditor).toBeVisible();
     await expect(contentEditor).toBeEditable();
     console.log('✓ Content editor is editable');
@@ -73,6 +73,8 @@ test.describe('Blog Workflow Verification', () => {
     await titleInput.fill(testTitle);
     console.log(`✓ Title filled: ${testTitle}`);
 
+    await contentEditor.click();
+    await page.waitForTimeout(300);
     await contentEditor.fill(testContent);
     console.log('✓ Content filled');
 
@@ -125,8 +127,11 @@ test.describe('Blog Workflow Verification', () => {
     await page.locator('input[name="title"]').fill(testData.title);
     console.log('✓ Title field works');
 
-    // Fill content
-    await page.locator('textarea[name="body_html"]').fill(testData.content);
+    // Fill content (rich text editor)
+    const editor = page.locator('div[contenteditable="true"]').first();
+    await editor.click();
+    await page.waitForTimeout(300);
+    await editor.fill(testData.content);
     console.log('✓ Content field works');
 
     // Fill excerpt if visible
@@ -139,7 +144,9 @@ test.describe('Blog Workflow Verification', () => {
 
     // Verify values were set
     await expect(page.locator('input[name="title"]')).toHaveValue(testData.title);
-    await expect(page.locator('textarea[name="body_html"]')).toHaveValue(testData.content);
+    // Note: contenteditable divs use textContent, not value
+    const editorText = await editor.textContent();
+    expect(editorText).toContain('This is comprehensive test content');
     console.log('✓ All form values verified');
 
     console.log('\n✅ FORM FUNCTIONALITY VERIFIED!');

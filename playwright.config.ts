@@ -113,7 +113,7 @@ export default defineConfig({
     : {
         // Start backend in background, then build+preview admin on 127.0.0.1:3003
         command:
-          "(CORS_ORIGIN=http://localhost:3003 npm run --workspace @monorepo/main-app dev &) && VITE_API_URL=http://localhost:3001/api npm run --workspace @monorepo/admin build && VITE_API_URL=http://localhost:3001/api npm run --workspace @monorepo/admin preview -- --host localhost --port 3003",
+          "(CORS_ORIGIN=http://localhost:3003 E2E_TESTING=true npm run --workspace @monorepo/main-app dev &) && VITE_API_URL=http://localhost:3001/api npm run --workspace @monorepo/admin build && VITE_API_URL=http://localhost:3001/api npm run --workspace @monorepo/admin preview -- --host localhost --port 3003",
         url: 'http://localhost:3003/login',
         reuseExistingServer: true,
         timeout: 300000,
