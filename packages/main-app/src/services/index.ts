@@ -7,5 +7,7 @@
 export * from './DatabaseService';
 export * from './AuthServiceImpl';
 export * from './BlogService';
+export * from './EditorService';
 export * from './HttpService';
 export * from './StorageService';
+export * from './TaxonomyService';

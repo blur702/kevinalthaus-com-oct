@@ -24,6 +24,7 @@ import {
   Analytics as AnalyticsIcon,
   Article as ArticleIcon,
   Logout as LogoutIcon,
+  Label as LabelIcon,
 } from '@mui/icons-material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
@@ -33,6 +34,7 @@ import Users from './pages/Users.tsx';
 import Content from './pages/Content.tsx';
 import Analytics from './pages/Analytics.tsx';
 import Settings from './pages/Settings.tsx';
+import Taxonomy from './pages/Taxonomy.tsx';
 
 // Import auth components and pages
 import ProtectedRoute from './components/ProtectedRoute.tsx';
@@ -72,6 +74,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
   { label: 'Users', path: '/users', icon: <PeopleIcon /> },
   { label: 'Content', path: '/content', icon: <ArticleIcon /> },
+  { label: 'Taxonomy', path: '/taxonomy', icon: <LabelIcon /> },
   { label: 'Analytics', path: '/analytics', icon: <AnalyticsIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
 ];
@@ -219,6 +222,7 @@ const App: React.FC = () => {
           { path: '/', element: <Dashboard /> },
           { path: '/users', element: <Users /> },
           { path: '/content', element: <Content /> },
+          { path: '/taxonomy', element: <Taxonomy /> },
           { path: '/analytics', element: <Analytics /> },
           { path: '/settings', element: <Settings /> },
         ].map((route) => (

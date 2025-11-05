@@ -27,6 +27,7 @@ import {
   Schedule as ScheduleIcon,
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
+import { RichTextEditor, TaxonomyField } from '@monorepo/shared';
 import type { BlogPost, BlogPostFormData } from '../types';
 
 // Use the same API base URL as the admin app
@@ -57,6 +58,8 @@ export const BlogForm: React.FC<BlogFormProps> = ({
   const [keywordInput, setKeywordInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
     if (editPost) {
@@ -85,6 +88,42 @@ export const BlogForm: React.FC<BlogFormProps> = ({
         status: editPost.status || 'draft',
         publish_at: editPost.publish_at,
       });
+
+      // Load existing taxonomy terms
+      const loadTerms = async () => {
+        try {
+          const csrfMatch = document.cookie.match(/csrf-token=([^;]+)/);
+          const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+          if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+          }
+
+          const response = await fetch(`${API_BASE}/taxonomy/entities/blog_post/${editPost.id}/terms`, {
+            credentials: 'include',
+            headers,
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const terms = data.terms || [];
+
+            // Separate categories and tags based on vocabulary
+            const categoryTerms = terms.filter((t: any) => t.vocabulary_id && t.vocabulary_id.includes('categor'));
+            const tagTerms = terms.filter((t: any) => t.vocabulary_id && !t.vocabulary_id.includes('categor'));
+
+            setCategories(categoryTerms.map((t: any) => t.id));
+            setTags(tagTerms.map((t: any) => t.id));
+          }
+        } catch (err) {
+          console.error('Failed to load taxonomy terms:', err);
+        }
+      };
+
+      loadTerms();
     } else {
       setFormData({
         title: '',
@@ -96,6 +135,8 @@ export const BlogForm: React.FC<BlogFormProps> = ({
         allow_comments: true,
         status: 'draft',
       });
+      setCategories([]);
+      setTags([]);
     }
     setError(null);
   }, [editPost]);
@@ -187,6 +228,38 @@ export const BlogForm: React.FC<BlogFormProps> = ({
         throw new Error(errorData.error || 'Failed to save blog post');
       }
 
+      // Get the blog post ID from response
+      const savedPost = await response.json();
+      const postId = savedPost.id;
+
+      // Save taxonomy associations
+      if (postId) {
+        // Clear existing terms first
+        await fetch(`${API_BASE}/taxonomy/entities/blog_post/${postId}/terms`, {
+          method: 'DELETE',
+          credentials: 'include',
+          headers,
+        });
+
+        // Assign category terms
+        for (const categoryId of categories) {
+          await fetch(`${API_BASE}/taxonomy/entities/blog_post/${postId}/terms/${categoryId}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers,
+          });
+        }
+
+        // Assign tag terms
+        for (const tagId of tags) {
+          await fetch(`${API_BASE}/taxonomy/entities/blog_post/${postId}/terms/${tagId}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers,
+          });
+        }
+      }
+
       onSave();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -244,17 +317,18 @@ export const BlogForm: React.FC<BlogFormProps> = ({
         </Grid>
 
         <Grid item xs={12}>
-          <TextField
-            name="body_html"
-            label="Content"
-            fullWidth
-            required
-            multiline
-            rows={20}
-            value={formData.body_html}
-            onChange={handleInputChange('body_html')}
-            placeholder="Enter blog post content (HTML supported)"
-          />
+          <Box>
+            <Typography variant="subtitle2" gutterBottom sx={{ mb: 1 }}>
+              Content *
+            </Typography>
+            <RichTextEditor
+              value={formData.body_html}
+              onChange={(html) => setFormData({ ...formData, body_html: html })}
+              placeholder="Start writing your blog post..."
+              minHeight={300}
+              maxHeight={600}
+            />
+          </Box>
         </Grid>
 
         <Grid item xs={12}>
@@ -267,6 +341,26 @@ export const BlogForm: React.FC<BlogFormProps> = ({
             value={formData.excerpt || ''}
             onChange={handleInputChange('excerpt')}
             placeholder="Brief summary of the blog post"
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={6}>
+          <TaxonomyField
+            vocabularyMachineName="categories"
+            label="Categories"
+            value={categories}
+            onChange={(value) => setCategories(Array.isArray(value) ? value : [value])}
+            helperText="Select one or more categories for this post"
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={6}>
+          <TaxonomyField
+            vocabularyMachineName="tags"
+            label="Tags"
+            value={tags}
+            onChange={(value) => setTags(Array.isArray(value) ? value : [value])}
+            helperText="Add relevant tags to help readers find this post"
           />
         </Grid>
 

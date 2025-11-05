@@ -508,6 +508,18 @@ app.use(
   })
 );
 
+// Taxonomy routes (vocabularies and terms management)
+app.use(
+  '/api/taxonomy',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/taxonomy': '/api/taxonomy' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
 // Blog routes
 app.use(
   '/api/blog',

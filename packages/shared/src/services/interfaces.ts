@@ -839,6 +839,138 @@ export interface IBlogService extends IService {
 }
 
 // ============================================================================
+// Taxonomy Service Interface
+// ============================================================================
+
+/**
+ * Vocabulary entity
+ */
+export interface Vocabulary {
+  id: string;
+  name: string;
+  machine_name: string;
+  description?: string;
+  hierarchy_depth: number;
+  allow_multiple: boolean;
+  required: boolean;
+  weight: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Term entity
+ */
+export interface Term {
+  id: string;
+  vocabulary_id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  parent_id?: string;
+  weight: number;
+  meta_data?: Record<string, unknown>;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Entity-Term association
+ */
+export interface EntityTerm {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  term_id: string;
+  created_at: Date;
+}
+
+/**
+ * Data for creating a vocabulary
+ */
+export interface CreateVocabularyData {
+  name: string;
+  machine_name: string;
+  description?: string;
+  hierarchy_depth?: number;
+  allow_multiple?: boolean;
+  required?: boolean;
+  weight?: number;
+}
+
+/**
+ * Data for updating a vocabulary
+ */
+export interface UpdateVocabularyData {
+  name?: string;
+  description?: string;
+  hierarchy_depth?: number;
+  allow_multiple?: boolean;
+  required?: boolean;
+  weight?: number;
+}
+
+/**
+ * Data for creating a term
+ */
+export interface CreateTermData {
+  vocabulary_id: string;
+  name: string;
+  slug?: string;
+  description?: string;
+  parent_id?: string;
+  weight?: number;
+  meta_data?: Record<string, unknown>;
+}
+
+/**
+ * Data for updating a term
+ */
+export interface UpdateTermData {
+  name?: string;
+  slug?: string;
+  description?: string;
+  parent_id?: string;
+  weight?: number;
+  meta_data?: Record<string, unknown>;
+}
+
+/**
+ * Taxonomy Service Interface
+ * Manages vocabularies and terms similar to Drupal's taxonomy system
+ */
+export interface ITaxonomyService extends IService {
+  // Vocabulary management
+  createVocabulary(data: CreateVocabularyData): Promise<Vocabulary>;
+  getVocabulary(id: string): Promise<Vocabulary | null>;
+  getVocabularyByMachineName(machineName: string): Promise<Vocabulary | null>;
+  getAllVocabularies(): Promise<Vocabulary[]>;
+  updateVocabulary(id: string, data: UpdateVocabularyData): Promise<Vocabulary>;
+  deleteVocabulary(id: string): Promise<void>;
+
+  // Term management
+  createTerm(data: CreateTermData): Promise<Term>;
+  getTerm(id: string): Promise<Term | null>;
+  getTermBySlug(vocabularyId: string, slug: string): Promise<Term | null>;
+  getTermsByVocabulary(vocabularyId: string): Promise<Term[]>;
+  getTermChildren(parentId: string): Promise<Term[]>;
+  updateTerm(id: string, data: UpdateTermData): Promise<Term>;
+  deleteTerm(id: string): Promise<void>;
+
+  // Entity-Term associations
+  assignTermToEntity(entityType: string, entityId: string, termId: string): Promise<EntityTerm>;
+  removeTermFromEntity(entityType: string, entityId: string, termId: string): Promise<void>;
+  getEntityTerms(entityType: string, entityId: string): Promise<Term[]>;
+  getEntitiesByTerm(entityType: string, termId: string): Promise<string[]>;
+  clearEntityTerms(entityType: string, entityId: string, vocabularyId?: string): Promise<void>;
+
+  // Utility methods
+  buildTermHierarchy(vocabularyId: string): Promise<Term[]>;
+  searchTerms(vocabularyId: string, query: string): Promise<Term[]>;
+  validateEntityTerms(entityType: string, termIds: string[]): Promise<boolean>;
+}
+
+// ============================================================================
 // Service Collection (for PluginExecutionContext)
 // ============================================================================
 
@@ -853,4 +985,5 @@ export interface IServiceCollection {
   http: IHttpService;
   storage: IFileStorageService;
   logger: ILoggerService;
+  taxonomy: ITaxonomyService;
 }

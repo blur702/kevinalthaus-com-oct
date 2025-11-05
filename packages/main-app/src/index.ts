@@ -25,6 +25,8 @@ import { usersManagerRouter } from './routes/usersManager';
 import { dashboardRouter } from './routes/dashboard';
 import { analyticsRouter } from './routes/analytics';
 import settingsRouter from './routes/settings-merged';
+import { editorRouter } from './routes/editor';
+import { taxonomyRouter } from './routes/taxonomy';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { createBlogRouter } from './routes/blog';
 import { pool } from './db';
@@ -302,6 +304,8 @@ app.use('/api/users-manager', usersManagerRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/editor', editorRouter);
+app.use('/api/taxonomy', taxonomyRouter);
 app.use('/api/uploads', uploadsRouter);
 // pluginsRouter already has authMiddleware and requireRole(Role.ADMIN) applied at line 37 of routes/plugins.ts
 app.use('/api/plugins', pluginsRouter);

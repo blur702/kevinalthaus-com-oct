@@ -13,6 +13,8 @@ import { initializeRedisRateLimiter, closeRedisRateLimiter } from './middleware/
 import { secretsService } from './services/secretsService';
 import { settingsCacheService } from './services/settingsCacheService';
 import { BlogService } from './services/BlogService';
+import { EditorService } from './services/EditorService';
+import { TaxonomyService } from './services/TaxonomyService';
 
 function getLogLevel(): LogLevel {
   const envLevel = process.env.LOG_LEVEL;
@@ -62,6 +64,12 @@ let isShuttingDown = false; // Idempotency guard for graceful shutdown
 // Initialize Blog Service
 export const blogService = new BlogService(pool);
 
+// Initialize Editor Service
+export const editorService = new EditorService();
+
+// Initialize Taxonomy Service
+export const taxonomyService = new TaxonomyService(pool);
+
 // Initialize services (Vault, Redis, Email, Settings Cache, Blog)
 async function initializeServices(): Promise<void> {
   try {
@@ -98,6 +106,24 @@ async function initializeServices(): Promise<void> {
       logger.info('Blog service initialized');
     } catch (error) {
       logger.warn(`Blog service initialization failed: ${(error as Error).message}`);
+      // Don't exit - service will handle errors gracefully
+    }
+
+    // Initialize editor service
+    try {
+      await editorService.initialize();
+      logger.info('Editor service initialized');
+    } catch (error) {
+      logger.warn(`Editor service initialization failed: ${(error as Error).message}`);
+      // Don't exit - service will handle errors gracefully
+    }
+
+    // Initialize taxonomy service
+    try {
+      await taxonomyService.initialize();
+      logger.info('Taxonomy service initialized');
+    } catch (error) {
+      logger.warn(`Taxonomy service initialization failed: ${(error as Error).message}`);
       // Don't exit - service will handle errors gracefully
     }
 

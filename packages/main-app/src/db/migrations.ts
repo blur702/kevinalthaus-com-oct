@@ -354,6 +354,74 @@ export async function runMigrations(): Promise<void> {
       `);
     });
 
+    await runMigration('13-create-vocabularies-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS vocabularies (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name VARCHAR(255) NOT NULL,
+          machine_name VARCHAR(255) UNIQUE NOT NULL,
+          description TEXT,
+          hierarchy_depth INTEGER NOT NULL DEFAULT 0,
+          allow_multiple BOOLEAN NOT NULL DEFAULT true,
+          required BOOLEAN NOT NULL DEFAULT false,
+          weight INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Create indexes for efficient querying
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_vocabularies_machine_name ON vocabularies(machine_name);
+        CREATE INDEX IF NOT EXISTS idx_vocabularies_weight ON vocabularies(weight);
+      `);
+    });
+
+    await runMigration('14-create-terms-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS terms (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          vocabulary_id UUID NOT NULL REFERENCES vocabularies(id) ON DELETE CASCADE,
+          name VARCHAR(255) NOT NULL,
+          slug VARCHAR(255) NOT NULL,
+          description TEXT,
+          parent_id UUID NULL REFERENCES terms(id) ON DELETE CASCADE,
+          weight INTEGER NOT NULL DEFAULT 0,
+          meta_data JSONB DEFAULT '{}'::jsonb,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT unique_vocabulary_slug UNIQUE (vocabulary_id, slug)
+        )
+      `);
+
+      // Create indexes for efficient querying
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_terms_vocabulary_id ON terms(vocabulary_id);
+        CREATE INDEX IF NOT EXISTS idx_terms_slug ON terms(slug);
+        CREATE INDEX IF NOT EXISTS idx_terms_parent_id ON terms(parent_id) WHERE parent_id IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_terms_weight ON terms(weight);
+      `);
+    });
+
+    await runMigration('15-create-entity-terms-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS entity_terms (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          entity_type VARCHAR(100) NOT NULL,
+          entity_id VARCHAR(255) NOT NULL,
+          term_id UUID NOT NULL REFERENCES terms(id) ON DELETE CASCADE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT unique_entity_term UNIQUE (entity_type, entity_id, term_id)
+        )
+      `);
+
+      // Create indexes for efficient querying
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_entity_terms_entity ON entity_terms(entity_type, entity_id);
+        CREATE INDEX IF NOT EXISTS idx_entity_terms_term_id ON entity_terms(term_id);
+      `);
+    });
+
     // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');
   } catch (error) {

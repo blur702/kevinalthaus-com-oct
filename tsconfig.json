@@ -22,9 +22,6 @@
   "references": [
     {
       "path": "./packages/shared"
-    },
-    {
-      "path": "./plugins/authentication"
     }
   ],
   "files": []
