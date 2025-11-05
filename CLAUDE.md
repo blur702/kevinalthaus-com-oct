@@ -22,7 +22,9 @@ npm install                    # Install all workspace dependencies
 npm run build                  # Build all packages (TypeScript compilation)
 
 # Development servers
+npm run dev:clean              # Clean ports and start all services (RECOMMENDED)
 npm run dev                    # Start all services in parallel (via Lerna)
+npm run ports:cleanup          # Kill processes using app ports (3000-3004, 8000)
 cd packages/main-app && npm run dev    # Start single service
 ./scripts/web -on              # Start full stack including Docker services
 
@@ -255,12 +257,24 @@ Ensure Postgres is running: `docker compose up -d postgres`
 Check logs: `docker compose logs postgres`
 
 ### Port already in use
-Use `./scripts/web -off` to stop all services, or manually:
+
+**Recommended Solution:**
+```bash
+# Kill all processes using app ports (3000-3004, 8000)
+npm run ports:cleanup
+
+# Then start with clean ports
+npm run dev:clean
+```
+
+**Manual alternatives:**
 ```bash
 docker compose down
 # Kill any lingering Node processes
 pkill -f "node.*3000|3001|3002|3003"
 ```
+
+**Details:** See `scripts/README-PORT-MANAGEMENT.md` for comprehensive port management documentation.
 
 ### Linting errors after git pull
 ```bash
