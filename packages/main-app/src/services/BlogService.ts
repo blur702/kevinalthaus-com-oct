@@ -87,11 +87,13 @@ export class BlogService implements IBlogService {
     page?: number;
     limit?: number;
     status?: string;
+    authorId?: string;
   }): Promise<BlogPostList> {
     const page = options.page || 1;
     const limit = options.limit || 10;
     const offset = (page - 1) * limit;
     const status = options.status;
+    const authorId = options.authorId;
 
     let query = `
       SELECT bp.*,
@@ -109,18 +111,35 @@ export class BlogService implements IBlogService {
       query += ` AND bp.status = $${params.length}`;
     }
 
+    if (authorId) {
+      params.push(authorId);
+      query += ` AND bp.author_id = $${params.length}`;
+    }
+
     query += ` ORDER BY bp.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
 
     const result = await this.pool.query<BlogPost>(query, params);
 
-    const countQuery = `
+    // Build count query with same filters
+    let countQuery = `
       SELECT COUNT(*) as total
       FROM plugin_blog.blog_posts
       WHERE deleted_at IS NULL
-      ${status ? `AND status = $1` : ''}
     `;
-    const countResult = await this.pool.query(countQuery, status ? [status] : []);
+    const countParams: (string | number)[] = [];
+
+    if (status) {
+      countParams.push(status);
+      countQuery += ` AND status = $${countParams.length}`;
+    }
+
+    if (authorId) {
+      countParams.push(authorId);
+      countQuery += ` AND author_id = $${countParams.length}`;
+    }
+
+    const countResult = await this.pool.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].total as string, 10);
 
     return {

@@ -25,13 +25,32 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       const page = parseInt(String(req.query.page), 10) || 1;
       const limit = parseInt(String(req.query.limit), 10) || 10;
       const status = req.query.status as string | undefined;
+      const authorId = req.query.author_id as string | undefined;
 
-      const result = await blogService.listPosts({ page, limit, status });
+      const result = await blogService.listPosts({ page, limit, status, authorId });
 
       res.json(result);
     } catch (error) {
       logger.error('Error listing blog posts', error as Error);
       res.status(500).json({ error: 'Failed to list blog posts' });
+    }
+  });
+
+  // List blog posts by specific user
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  router.get('/by-user/:userId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { userId } = req.params;
+      const page = parseInt(String(req.query.page), 10) || 1;
+      const limit = parseInt(String(req.query.limit), 10) || 10;
+      const status = req.query.status as string | undefined;
+
+      const result = await blogService.listPosts({ page, limit, status, authorId: userId });
+
+      res.json(result);
+    } catch (error) {
+      logger.error('Error listing user blog posts', error as Error);
+      res.status(500).json({ error: 'Failed to list user blog posts' });
     }
   });
 
