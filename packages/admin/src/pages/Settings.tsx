@@ -166,16 +166,22 @@ const Settings: React.FC = () => {
   const emailSettingsAbortController = useRef<AbortController | null>(null);
   const apiKeysAbortController = useRef<AbortController | null>(null);
 
+  // Loading state refs (synchronous checks to prevent race conditions)
+  const loadingSiteRef = useRef(false);
+  const loadingSecurityRef = useRef(false);
+  const loadingEmailRef = useRef(false);
+  const loadingApiKeysRef = useRef(false);
+
   // Cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;  // Reset to true on mount
+
     return () => {
       isMountedRef.current = false;
 
-      // Cancel all in-flight requests
-      siteSettingsAbortController.current?.abort();
-      securitySettingsAbortController.current?.abort();
-      emailSettingsAbortController.current?.abort();
-      apiKeysAbortController.current?.abort();
+      // DON'T abort requests on unmount - let them complete naturally
+      // The isMountedRef check in callbacks prevents state updates after unmount
+      // Aborting here causes issues with React StrictMode double-mounting
     };
   }, []);
 
@@ -191,18 +197,17 @@ const Settings: React.FC = () => {
   };
 
   const loadSiteSettings = useCallback(async () => {
-    // Prevent concurrent loads
-    if (loadingSite) {
+    // Prevent concurrent loads using ref (synchronous check)
+    if (loadingSiteRef.current) {
       return;
     }
 
-    // Cancel previous request if still running
-    siteSettingsAbortController.current?.abort();
+    // Mark as loading immediately
+    loadingSiteRef.current = true;
+    setLoadingSite(true);
 
     // Create new AbortController
     siteSettingsAbortController.current = new AbortController();
-
-    setLoadingSite(true);
 
     try {
       const data = await getSiteSettings(siteSettingsAbortController.current.signal);
@@ -214,7 +219,6 @@ const Settings: React.FC = () => {
     } catch (error) {
       // Don't set error if request was aborted
       if (axios.isCancel(error)) {
-        console.log('Site settings request canceled');
         return;
       }
 
@@ -223,6 +227,7 @@ const Settings: React.FC = () => {
       }
     } finally {
       if (isMountedRef.current) {
+        loadingSiteRef.current = false;
         setLoadingSite(false);
       }
     }
@@ -348,29 +353,25 @@ const Settings: React.FC = () => {
 
   // Load settings on mount and tab change
   useEffect(() => {
-    // Cancel all in-flight requests when tab changes
-    siteSettingsAbortController.current?.abort();
-    securitySettingsAbortController.current?.abort();
-    emailSettingsAbortController.current?.abort();
-    apiKeysAbortController.current?.abort();
+    // Track which tab this effect is for
+    const currentTab = activeTab;
 
     // Load data for active tab
-    if (activeTab === 0) {
+    if (currentTab === 0) {
       loadSiteSettings();
-    } else if (activeTab === 1) {
+    } else if (currentTab === 1) {
       loadSecuritySettings();
-    } else if (activeTab === 2) {
+    } else if (currentTab === 2) {
       loadEmailSettings();
-    } else if (activeTab === 3) {
+    } else if (currentTab === 3) {
       loadApiKeys();
     }
 
-    // Cleanup function - cancel requests if tab changes before load completes
+    // Cleanup function - NO ABORT needed here
+    // The loadingSiteRef guard prevents concurrent requests
+    // Aborting here causes "request canceled" errors during re-renders
     return () => {
-      siteSettingsAbortController.current?.abort();
-      securitySettingsAbortController.current?.abort();
-      emailSettingsAbortController.current?.abort();
-      apiKeysAbortController.current?.abort();
+      // No cleanup needed - let requests complete naturally
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);

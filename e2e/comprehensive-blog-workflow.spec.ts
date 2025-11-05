@@ -187,8 +187,8 @@ test.describe('Comprehensive Blog Workflow', () => {
     // Navigate to settings
     await page.goto(`${ADMIN_URL}/settings`);
 
-    // Wait for page to load (should NOT show infinite spinner)
-    await page.waitForLoadState('networkidle');
+    // Wait for tabs to appear (page has loaded)
+    await page.waitForSelector('[role="tab"]', { timeout: 10000 });
 
     // Check for error indicators
     const hasError = await page.locator('text=/error|failed/i').count() > 0;
