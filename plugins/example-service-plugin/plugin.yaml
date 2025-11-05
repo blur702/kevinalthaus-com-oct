@@ -1,0 +1,24 @@
+name: example-service-plugin
+version: 1.0.0
+description: Example plugin demonstrating service-based architecture (NO direct DB access)
+author: System
+license: MIT
+
+capabilities:
+  - blog:read
+  - blog:write
+  - editor:use
+  - taxonomy:read
+
+services:
+  required:
+    - blog
+    - editor
+    - taxonomy
+
+entrypoint: dist/index.js
+
+hooks:
+  onInstall: scripts/install.js
+  onActivate: scripts/activate.js
+  onDeactivate: scripts/deactivate.js

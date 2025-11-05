@@ -3,7 +3,7 @@
  * Provides vocabulary and term management similar to Drupal's taxonomy system
  */
 
-import { Pool, PoolClient } from 'pg';
+import { Pool } from 'pg';
 import type {
   ITaxonomyService,
   Vocabulary,
@@ -393,7 +393,7 @@ export class TaxonomyService implements ITaxonomyService {
     return result.rows;
   }
 
-  async validateEntityTerms(entityType: string, termIds: string[]): Promise<boolean> {
+  async validateEntityTerms(_entityType: string, termIds: string[]): Promise<boolean> {
     if (termIds.length === 0) {
       return true;
     }

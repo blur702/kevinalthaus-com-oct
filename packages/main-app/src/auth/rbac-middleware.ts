@@ -10,7 +10,20 @@ function ensureAuthenticated(req: AuthenticatedRequest, res: Response): { userId
     });
     return null;
   }
-  return req.user;
+
+  // Extract userId and role from user object (handles different user object shapes)
+  const userId = req.user.userId || req.user.id;
+  const role = req.user.role;
+
+  if (!userId || !role) {
+    res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Invalid user context',
+    });
+    return null;
+  }
+
+  return { userId, role };
 }
 
 export function requireRole(...roles: Role[]) {

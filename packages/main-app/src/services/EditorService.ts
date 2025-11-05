@@ -168,7 +168,7 @@ export class EditorService implements IEditorService {
 
     // Remove tags not in allowlist
     const tagPattern = /<(\/?)([\w-]+)([^>]*)>/g;
-    sanitized = sanitized.replace(tagPattern, (match, closing, tagName, attrs) => {
+    sanitized = sanitized.replace(tagPattern, (_match, closing, tagName, attrs) => {
       const tag = tagName.toLowerCase();
 
       if (!allowedTags.includes(tag)) {
@@ -233,8 +233,8 @@ export class EditorService implements IEditorService {
    * Note: This is a placeholder implementation
    */
   async uploadImage(
-    file: File | Buffer,
-    metadata?: ImageMetadata
+    _file: File | Buffer,
+    _metadata?: ImageMetadata
   ): Promise<ImageResult> {
     // Placeholder implementation
     // In a real implementation, this would:

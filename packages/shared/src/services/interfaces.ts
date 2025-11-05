@@ -792,6 +792,7 @@ export interface IBlogService extends IService {
     page?: number;
     limit?: number;
     status?: string;
+    authorId?: string;
   }): Promise<BlogPostList>;
 
   /**

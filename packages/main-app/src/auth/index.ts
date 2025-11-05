@@ -202,7 +202,9 @@ function getClientIp(req: Request): string | undefined {
 }
 
 // Generate JWT token with settings-based expiry
-async function generateAccessToken(payload: TokenPayload): Promise<string> {
+async function generateAccessToken(
+  payload: Omit<TokenPayload, 'iat' | 'exp'>
+): Promise<string> {
   const jwtConfig = await settingsCacheService.getJWTConfig();
 
   const signOptions = {
@@ -392,9 +394,10 @@ router.post(
       const user = result.rows[0];
 
       // Generate tokens
-      const tokenPayload: TokenPayload = {
+      const tokenPayload: Omit<TokenPayload, 'iat' | 'exp'> = {
         userId: user.id,
         email: user.email,
+        username: user.username,
         role: user.role as Role,
       };
 
@@ -553,9 +556,10 @@ router.post(
       }
 
       // Generate tokens
-      const tokenPayload: TokenPayload = {
+      const tokenPayload: Omit<TokenPayload, 'iat' | 'exp'> = {
         userId: user.id,
         email: user.email,
+        username: user.username,
         role: user.role as Role,
       };
 
@@ -714,9 +718,10 @@ router.post(
         );
 
         // Generate new access token
-        const tokenPayload: TokenPayload = {
+        const tokenPayload: Omit<TokenPayload, 'iat' | 'exp'> = {
           userId: user.id,
           email: user.email,
+          username: user.username,
           role: user.role as Role,
         };
 

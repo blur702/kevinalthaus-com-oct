@@ -217,7 +217,7 @@ router.get('/site', async (_req: AuthenticatedRequest, res: Response): Promise<v
 router.put('/site', csrfProtection, settingsRateLimit, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { site_name, site_description, site_url, timezone, language } = req.body as SiteSettings;
-    const userId = req.user!.userId;
+    const userId = req.user!.userId!;
 
     // Validation
     if (site_name && (typeof site_name !== 'string' || site_name.length > 100)) {
@@ -246,11 +246,11 @@ router.put('/site', csrfProtection, settingsRateLimit, async (req: Authenticated
     }
 
     // Update settings
-    if (site_name !== undefined) await updateSetting('site_name', stripAllHTML(site_name), userId);
-    if (site_description !== undefined) await updateSetting('site_description', stripAllHTML(site_description), userId);
-    if (site_url !== undefined) await updateSetting('site_url', site_url, userId);
-    if (timezone !== undefined) await updateSetting('timezone', timezone, userId);
-    if (language !== undefined) await updateSetting('language', language, userId);
+    if (site_name !== undefined) await updateSetting('site_name', stripAllHTML(site_name!), userId);
+    if (site_description !== undefined) await updateSetting('site_description', stripAllHTML(site_description!), userId);
+    if (site_url !== undefined) await updateSetting('site_url', site_url!, userId);
+    if (timezone !== undefined) await updateSetting('timezone', timezone!, userId);
+    if (language !== undefined) await updateSetting('language', language!, userId);
 
     await logAudit(userId, 'UPDATE', 'settings', 'site', { site_name, site_description, site_url, timezone, language }, req);
 
@@ -295,7 +295,7 @@ router.get('/security', async (_req: AuthenticatedRequest, res: Response): Promi
 router.put('/security', csrfProtection, settingsRateLimit, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { password_policy, jwt_config, session_config, login_security } = req.body;
-    const userId = req.user!.userId;
+    const userId = req.user!.userId!;
 
     // Validation for password policy
     if (password_policy) {
@@ -356,7 +356,7 @@ router.get('/email', async (_req: AuthenticatedRequest, res: Response): Promise<
 router.put('/email', csrfProtection, settingsRateLimit, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { brevo_api_key, smtp_from_email, smtp_from_name } = req.body as EmailSettings;
-    const userId = req.user!.userId;
+    const userId = req.user!.userId!;
 
     // Validation
     if (smtp_from_email && !validateEmail(smtp_from_email)) {
@@ -384,8 +384,8 @@ router.put('/email', csrfProtection, settingsRateLimit, async (req: Authenticate
     }
 
     // Update other email settings
-    if (smtp_from_email !== undefined) await updateSetting('email.smtp_from_email', smtp_from_email, userId);
-    if (smtp_from_name !== undefined) await updateSetting('email.smtp_from_name', stripAllHTML(smtp_from_name), userId);
+    if (smtp_from_email !== undefined) await updateSetting('email.smtp_from_email', smtp_from_email!, userId);
+    if (smtp_from_name !== undefined) await updateSetting('email.smtp_from_name', stripAllHTML(smtp_from_name!), userId);
 
     await logAudit(userId, 'UPDATE', 'settings', 'email', { brevo_configured: !!brevo_api_key, smtp_from_email, smtp_from_name }, req);
 
@@ -403,7 +403,7 @@ router.put('/email', csrfProtection, settingsRateLimit, async (req: Authenticate
 router.post('/email/test', csrfProtection, emailRateLimit, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { recipient_email } = req.body;
-    const userId = req.user!.userId;
+    const userId = req.user!.userId!;
 
     if (!recipient_email || !validateEmail(recipient_email)) {
       res.status(400).json({ error: 'Valid recipient_email is required' });
@@ -442,7 +442,7 @@ router.post('/email/test', csrfProtection, emailRateLimit, async (req: Authentic
 
 router.get('/api-keys', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.user!.userId!;
 
     const result = await query<ApiKey>(
       `SELECT id, user_id, name, key_prefix, scopes, last_used_at, expires_at, created_at
@@ -465,7 +465,7 @@ router.get('/api-keys', async (req: AuthenticatedRequest, res: Response): Promis
 router.post('/api-keys', csrfProtection, apiKeyCreationRateLimit, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { name, scopes, expires_in_days } = req.body;
-    const userId = req.user!.userId;
+    const userId = req.user!.userId!;
 
     // Validation
     if (!name || typeof name !== 'string' || name.length > 100) {
@@ -529,7 +529,7 @@ router.post('/api-keys', csrfProtection, apiKeyCreationRateLimit, async (req: Au
 router.delete('/api-keys/:id', csrfProtection, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const userId = req.user!.userId;
+    const userId = req.user!.userId!;
 
     await query(
       'DELETE FROM api_keys WHERE id = $1 AND user_id = $2',
@@ -554,7 +554,7 @@ router.delete('/api-keys/:id', csrfProtection, async (req: AuthenticatedRequest,
 
 router.post('/cache/reload', csrfProtection, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.user!.userId!;
 
     await settingsCacheService.refreshCache();
 

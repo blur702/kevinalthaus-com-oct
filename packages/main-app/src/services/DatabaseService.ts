@@ -61,7 +61,8 @@ class Repository<T extends Record<string, unknown>> implements IRepository<T> {
 
   async create(data: Partial<T>): Promise<T> {
     const [result] = await this.knexInstance<T>(this.tableName)
-      .insert(data as unknown as T)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert(data as any)
       .returning('*');
     return result as unknown as T;
   }
@@ -69,7 +70,8 @@ class Repository<T extends Record<string, unknown>> implements IRepository<T> {
   async update(id: string | number, data: Partial<T>): Promise<T> {
     const [result] = await this.knexInstance<T>(this.tableName)
       .where({ id } as unknown as Partial<T>)
-      .update(data as unknown as Partial<T>)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(data as any)
       .returning('*');
     return result as unknown as T;
   }
@@ -185,7 +187,8 @@ export class DatabaseService implements IDatabaseService {
     }
   }
 
-  getKnex(schema?: string): Knex {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getKnex(schema?: string): Knex | any {
     if (!this.initialized || !this.knexInstance) {
       throw new Error('DatabaseService not initialized');
     }
@@ -209,19 +212,20 @@ export class DatabaseService implements IDatabaseService {
 
   async transaction<T>(
     callback: (trx: Knex.Transaction) => Promise<T>,
-    schema?: string
+    _schema?: string
   ): Promise<T> {
     if (!this.initialized || !this.knexInstance) {
       throw new Error('DatabaseService not initialized');
     }
 
-    const knexToUse = schema ? this.knexInstance.withSchema(schema) : this.knexInstance;
-    return knexToUse.transaction(callback);
+    // Always use the base knexInstance for transactions, as withSchema returns a QueryBuilder
+    return this.knexInstance.transaction(callback);
   }
 
   getRepository<T>(schema: string, table: string): IRepository<T> {
     const knexWithSchema = this.getKnex(schema);
-    return new Repository<T>(knexWithSchema, table) as unknown as IRepository<T>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new Repository<T & Record<string, unknown>>(knexWithSchema, table) as any;
   }
 
   async createSchema(schemaName: string): Promise<void> {

@@ -73,7 +73,8 @@ interface EmailResponse {
 }
 
 class EmailService {
-  private apiInstance: brevo.TransactionalEmailsApi | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private apiInstance: any | null = null;
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
   private readonly defaultFrom: EmailRecipient;
@@ -134,7 +135,7 @@ class EmailService {
           logger.info('Loaded Brevo API key from database');
         }
       } catch (dbError) {
-        logger.warn('Failed to load Brevo API key from database, trying Vault', dbError as Error);
+        logger.warn('Failed to load Brevo API key from database, trying Vault', { error: (dbError as Error).message });
       }
 
       // Fall back to Vault if not in database
@@ -161,20 +162,21 @@ class EmailService {
       // Configure Brevo API client
       // The Brevo SDK will use the API key from environment or config
       // We'll pass it directly when making API calls
-      this.apiInstance = new brevo.TransactionalEmailsApi();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.apiInstance = new (brevo as any).TransactionalEmailsApi();
 
       // Set API key on the instance
-      // @ts-expect-error - Brevo SDK type definitions may vary
       if (this.apiInstance.apiClient) {
-        // @ts-expect-error - Brevo SDK type definitions may vary
-        const apiKeyAuth = this.apiInstance.apiClient.authentications['api-key'];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const apiKeyAuth = (this.apiInstance.apiClient.authentications as any)['api-key'];
         if (apiKeyAuth) {
           apiKeyAuth.apiKey = apiKey;
         }
       }
 
       // Verify connection by getting account info
-      const accountApi = new brevo.AccountApi();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const accountApi = new (brevo as any).AccountApi();
       await accountApi.getAccount();
 
       this.isInitialized = true;
@@ -205,7 +207,8 @@ class EmailService {
       this._validateEmailOptions(options);
 
       // Prepare email data
-      const sendSmtpEmail = new brevo.SendSmtpEmail();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sendSmtpEmail = new (brevo as any).SendSmtpEmail();
 
       // Set recipients
       if (Array.isArray(options.to)) {
@@ -310,7 +313,8 @@ class EmailService {
       this._validateTemplateOptions(options);
 
       // Prepare email data
-      const sendSmtpEmail = new brevo.SendSmtpEmail();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sendSmtpEmail = new (brevo as any).SendSmtpEmail();
 
       // Set recipients
       if (Array.isArray(options.to)) {
@@ -516,19 +520,20 @@ From: ${this.defaultFrom.name} <${this.defaultFrom.email}>
 
     try {
       // Test the new API key by initializing a temp instance
-      const testInstance = new brevo.TransactionalEmailsApi();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const testInstance = new (brevo as any).TransactionalEmailsApi();
 
-      // @ts-expect-error - Brevo SDK type definitions may vary
       if (testInstance.apiClient) {
-        // @ts-expect-error - Brevo SDK type definitions may vary
-        const apiKeyAuth = testInstance.apiClient.authentications['api-key'];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const apiKeyAuth = (testInstance.apiClient.authentications as any)['api-key'];
         if (apiKeyAuth) {
           apiKeyAuth.apiKey = newApiKey;
         }
       }
 
       // Verify the key works
-      const accountApi = new brevo.AccountApi();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const accountApi = new (brevo as any).AccountApi();
       await accountApi.getAccount();
 
       // If verification succeeded, reload the configuration
