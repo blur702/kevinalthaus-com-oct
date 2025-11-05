@@ -30,6 +30,7 @@ import { createBlogRouter } from './routes/blog';
 import { pool } from './db';
 import { asyncHandler } from './utils/asyncHandler';
 import { requestIdMiddleware } from './middleware/requestId';
+import { BlogService } from './services/BlogService';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -305,7 +306,8 @@ app.use('/api/uploads', uploadsRouter);
 // pluginsRouter already has authMiddleware and requireRole(Role.ADMIN) applied at line 37 of routes/plugins.ts
 app.use('/api/plugins', pluginsRouter);
 // Blog plugin routes
-app.use('/api/blog', createBlogRouter(pool, logger));
+const blogService = new BlogService(pool);
+app.use('/api/blog', createBlogRouter(blogService, logger));
 
 // Admin UI for plugin management
 pluginManager.init(app);

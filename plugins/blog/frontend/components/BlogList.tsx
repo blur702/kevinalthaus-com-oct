@@ -333,7 +333,12 @@ export const BlogList: React.FC<BlogListProps> = ({ onCreateNew, onEdit }) => {
         </CardContent>
       </Card>
 
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        keepMounted={false}
+      >
         <MenuItem
           onClick={async () => {
             if (selectedPost) {

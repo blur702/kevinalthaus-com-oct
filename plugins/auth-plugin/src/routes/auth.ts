@@ -243,12 +243,13 @@ export function createAuthRouter(pool: Pool): Router {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   router.get('/me', authenticateToken, async (req: Request, res: Response): Promise<void> => {
     try {
-      if (!req.user) {
+      if (!req.user || !req.user.id) {
         res.status(401).json({ error: 'Authentication required' });
         return;
       }
 
-      const user = await userQueries.findUserById(req.user.id);
+      const userId = req.user.id; // Type guard - we know id exists here
+      const user = await userQueries.findUserById(userId);
       if (!user) {
         res.status(404).json({ error: 'User not found' });
         return;

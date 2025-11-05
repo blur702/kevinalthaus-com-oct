@@ -702,6 +702,143 @@ export interface IServiceContainer {
 }
 
 // ============================================================================
+// Blog Service Interface
+// ============================================================================
+
+/**
+ * Blog post data for creation
+ */
+export interface CreateBlogPostData {
+  title: string;
+  slug?: string;
+  body_html: string;
+  excerpt?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+  reading_time_minutes?: number;
+  allow_comments?: boolean;
+  featured_image_id?: string;
+  status?: 'draft' | 'published' | 'scheduled';
+  publish_at?: string;
+}
+
+/**
+ * Blog post data for updates
+ */
+export interface UpdateBlogPostData {
+  title?: string;
+  slug?: string;
+  body_html?: string;
+  excerpt?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+  reading_time_minutes?: number;
+  allow_comments?: boolean;
+  featured_image_id?: string;
+  status?: 'draft' | 'published' | 'scheduled';
+  publish_at?: string;
+}
+
+/**
+ * Blog post from database
+ */
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  body_html: string;
+  excerpt?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+  author_id: string;
+  author_email?: string;
+  author_display_name?: string;
+  author_bio?: string;
+  author_avatar_url?: string;
+  reading_time_minutes?: number;
+  allow_comments: boolean;
+  featured_image_id?: string;
+  status: string;
+  published_at?: Date;
+  publish_at?: Date;
+  created_at: Date;
+  updated_at: Date;
+  deleted_at?: Date;
+  created_by: string;
+  updated_by?: string;
+  deleted_by?: string;
+}
+
+/**
+ * Paginated blog post list
+ */
+export interface BlogPostList {
+  posts: BlogPost[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+/**
+ * Blog Service Interface
+ * Manages blog posts and related operations
+ */
+export interface IBlogService extends IService {
+  /**
+   * List all blog posts with pagination and optional filtering
+   */
+  listPosts(options: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<BlogPostList>;
+
+  /**
+   * List published blog posts (public endpoint)
+   */
+  listPublishedPosts(options: {
+    page?: number;
+    limit?: number;
+  }): Promise<BlogPostList>;
+
+  /**
+   * Get a single blog post by ID
+   */
+  getPostById(id: string): Promise<BlogPost | null>;
+
+  /**
+   * Create a new blog post
+   */
+  createPost(data: CreateBlogPostData, userId: string): Promise<BlogPost>;
+
+  /**
+   * Update an existing blog post
+   */
+  updatePost(id: string, data: UpdateBlogPostData, userId: string): Promise<BlogPost | null>;
+
+  /**
+   * Delete a blog post (soft delete)
+   */
+  deletePost(id: string, userId: string): Promise<boolean>;
+
+  /**
+   * Publish a blog post
+   */
+  publishPost(id: string, userId: string): Promise<BlogPost | null>;
+
+  /**
+   * Unpublish a blog post
+   */
+  unpublishPost(id: string, userId: string): Promise<BlogPost | null>;
+
+  /**
+   * Check if slug exists
+   */
+  slugExists(slug: string, excludeId?: string): Promise<boolean>;
+}
+
+// ============================================================================
 // Service Collection (for PluginExecutionContext)
 // ============================================================================
 
@@ -710,6 +847,7 @@ export interface IServiceContainer {
  */
 export interface IServiceCollection {
   auth: IAuthService;
+  blog: IBlogService;
   database: IDatabaseService;
   editor: IEditorService;
   http: IHttpService;

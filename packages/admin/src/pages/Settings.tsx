@@ -116,6 +116,7 @@ const Settings: React.FC = () => {
   });
 
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({
+    email_provider: 'brevo',
     smtp_host: '',
     smtp_port: 587,
     smtp_secure: false,
@@ -123,6 +124,10 @@ const Settings: React.FC = () => {
     smtp_from_email: '',
     smtp_from_name: '',
     smtp_password: '',
+    brevo_api_key: '',
+    brevo_api_key_configured: false,
+    brevo_from_email: '',
+    brevo_from_name: '',
   });
 
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -415,16 +420,28 @@ const Settings: React.FC = () => {
   const validateEmailSettings = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!emailSettings.smtp_host) {
-      newErrors.smtp_host = 'SMTP host is required';
-    }
+    const provider = emailSettings.email_provider || 'brevo';
 
-    if (emailSettings.smtp_port < 1 || emailSettings.smtp_port > 65535) {
-      newErrors.smtp_port = 'SMTP port must be between 1 and 65535';
-    }
+    if (provider === 'smtp') {
+      // SMTP validation
+      if (!emailSettings.smtp_host) {
+        newErrors.smtp_host = 'SMTP host is required';
+      }
 
-    if (emailSettings.smtp_from_email && !isValidEmail(emailSettings.smtp_from_email)) {
-      newErrors.smtp_from_email = 'From email must be a valid email address';
+      if (emailSettings.smtp_port < 1 || emailSettings.smtp_port > 65535) {
+        newErrors.smtp_port = 'SMTP port must be between 1 and 65535';
+      }
+
+      if (emailSettings.smtp_from_email && !isValidEmail(emailSettings.smtp_from_email)) {
+        newErrors.smtp_from_email = 'From email must be a valid email address';
+      }
+    } else if (provider === 'brevo') {
+      // Brevo validation
+      if (emailSettings.brevo_from_email && !isValidEmail(emailSettings.brevo_from_email)) {
+        newErrors.brevo_from_email = 'From email must be a valid email address';
+      }
+
+      // API key is optional for validation - user might just be updating from email/name
     }
 
     setErrors(newErrors);
@@ -483,7 +500,8 @@ const Settings: React.FC = () => {
     setSavingSettings(true);
     try {
       const updated = await updateEmailSettings(emailSettings);
-      setEmailSettings({ ...updated, smtp_password: '' }); // Clear password field after save
+      // Clear sensitive fields after save
+      setEmailSettings({ ...updated, smtp_password: '', brevo_api_key: '' });
       showSnackbar('Email settings saved successfully', 'success');
       setErrors({});
     } catch (error) {
@@ -810,92 +828,192 @@ const Settings: React.FC = () => {
                   Email Settings
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Configure SMTP settings for sending emails
+                  Configure email provider settings for sending emails
                 </Typography>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <TextField
-                    label="SMTP Host"
-                    fullWidth
-                    value={emailSettings.smtp_host}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, smtp_host: e.target.value })}
-                    error={!!errors.smtp_host}
-                    helperText={errors.smtp_host || 'SMTP server hostname'}
-                    required
-                  />
-
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <TextField
-                      label="SMTP Port"
-                      type="number"
-                      value={emailSettings.smtp_port}
-                      onChange={(e) => setEmailSettings({ ...emailSettings, smtp_port: parseIntSafe(e.target.value, 587) })}
-                      error={!!errors.smtp_port}
-                      helperText={errors.smtp_port || 'Port number (e.g., 587)'}
-                      InputProps={{ inputProps: { min: 1, max: 65535 } }}
-                      sx={{ flex: 1 }}
-                    />
-
-                    <FormControl sx={{ flex: 1, mt: 1 }}>
+                  {/* Email Provider Selection */}
+                  <FormControl fullWidth>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Email Provider
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
                       <FormControlLabel
                         control={
                           <Switch
-                            checked={emailSettings.smtp_secure}
-                            onChange={(e) => setEmailSettings({ ...emailSettings, smtp_secure: e.target.checked })}
+                            checked={(emailSettings.email_provider || 'brevo') === 'brevo'}
+                            onChange={(e) => setEmailSettings({
+                              ...emailSettings,
+                              email_provider: e.target.checked ? 'brevo' : 'smtp'
+                            })}
                           />
                         }
-                        label="Use SSL/TLS"
+                        label={(emailSettings.email_provider || 'brevo') === 'brevo' ? 'Brevo (Recommended)' : 'SMTP'}
                       />
-                    </FormControl>
-                  </Box>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {(emailSettings.email_provider || 'brevo') === 'brevo'
+                        ? 'Using Brevo transactional email service'
+                        : 'Using custom SMTP server'}
+                    </Typography>
+                  </FormControl>
 
-                  <TextField
-                    label="SMTP User"
-                    fullWidth
-                    value={emailSettings.smtp_user}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, smtp_user: e.target.value })}
-                    helperText="SMTP authentication username"
-                  />
+                  {/* Brevo Settings */}
+                  {(emailSettings.email_provider || 'brevo') === 'brevo' && (
+                    <>
+                      <Alert severity="info" sx={{ mt: 1 }}>
+                        Brevo provides reliable transactional email delivery. Get your API key from{' '}
+                        <a href="https://app.brevo.com" target="_blank" rel="noopener noreferrer">
+                          app.brevo.com
+                        </a>
+                      </Alert>
 
-                  <TextField
-                    label="SMTP Password"
-                    fullWidth
-                    type={showPassword ? 'text' : 'password'}
-                    value={emailSettings.smtp_password}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, smtp_password: e.target.value })}
-                    helperText="Leave blank to keep existing password"
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            aria-label="toggle password visibility"
-                            onClick={() => setShowPassword(!showPassword)}
-                            edge="end"
-                          >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
+                      <TextField
+                        label="Brevo API Key"
+                        fullWidth
+                        type={showPassword ? 'text' : 'password'}
+                        value={emailSettings.brevo_api_key || ''}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, brevo_api_key: e.target.value })}
+                        helperText={
+                          emailSettings.brevo_api_key_configured
+                            ? 'API key is configured. Leave blank to keep existing key, or enter new key to update.'
+                            : 'Enter your Brevo API key'
+                        }
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                aria-label="toggle api key visibility"
+                                onClick={() => setShowPassword(!showPassword)}
+                                edge="end"
+                              >
+                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
 
-                  <TextField
-                    label="From Email"
-                    fullWidth
-                    value={emailSettings.smtp_from_email}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, smtp_from_email: e.target.value })}
-                    error={!!errors.smtp_from_email}
-                    helperText={errors.smtp_from_email || 'Email address to send from'}
-                    placeholder="noreply@example.com"
-                  />
+                      {emailSettings.brevo_api_key_configured && (
+                        <Chip
+                          label="API Key Configured"
+                          color="success"
+                          size="small"
+                          sx={{ alignSelf: 'flex-start' }}
+                        />
+                      )}
 
-                  <TextField
-                    label="From Name"
-                    fullWidth
-                    value={emailSettings.smtp_from_name}
-                    onChange={(e) => setEmailSettings({ ...emailSettings, smtp_from_name: e.target.value })}
-                    helperText="Display name for outgoing emails"
-                  />
+                      <TextField
+                        label="From Email"
+                        fullWidth
+                        value={emailSettings.brevo_from_email || ''}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, brevo_from_email: e.target.value })}
+                        error={!!errors.brevo_from_email}
+                        helperText={errors.brevo_from_email || 'Email address to send from'}
+                        placeholder="noreply@example.com"
+                      />
+
+                      <TextField
+                        label="From Name"
+                        fullWidth
+                        value={emailSettings.brevo_from_name || ''}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, brevo_from_name: e.target.value })}
+                        helperText="Display name for outgoing emails"
+                      />
+                    </>
+                  )}
+
+                  {/* SMTP Settings */}
+                  {emailSettings.email_provider === 'smtp' && (
+                    <>
+                      <Alert severity="warning" sx={{ mt: 1 }}>
+                        SMTP configuration requires valid server credentials. Brevo is recommended for most users.
+                      </Alert>
+
+                      <TextField
+                        label="SMTP Host"
+                        fullWidth
+                        value={emailSettings.smtp_host}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, smtp_host: e.target.value })}
+                        error={!!errors.smtp_host}
+                        helperText={errors.smtp_host || 'SMTP server hostname'}
+                        required
+                      />
+
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <TextField
+                          label="SMTP Port"
+                          type="number"
+                          value={emailSettings.smtp_port}
+                          onChange={(e) => setEmailSettings({ ...emailSettings, smtp_port: parseIntSafe(e.target.value, 587) })}
+                          error={!!errors.smtp_port}
+                          helperText={errors.smtp_port || 'Port number (e.g., 587)'}
+                          InputProps={{ inputProps: { min: 1, max: 65535 } }}
+                          sx={{ flex: 1 }}
+                        />
+
+                        <FormControl sx={{ flex: 1, mt: 1 }}>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={emailSettings.smtp_secure}
+                                onChange={(e) => setEmailSettings({ ...emailSettings, smtp_secure: e.target.checked })}
+                              />
+                            }
+                            label="Use SSL/TLS"
+                          />
+                        </FormControl>
+                      </Box>
+
+                      <TextField
+                        label="SMTP User"
+                        fullWidth
+                        value={emailSettings.smtp_user}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, smtp_user: e.target.value })}
+                        helperText="SMTP authentication username"
+                      />
+
+                      <TextField
+                        label="SMTP Password"
+                        fullWidth
+                        type={showPassword ? 'text' : 'password'}
+                        value={emailSettings.smtp_password}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, smtp_password: e.target.value })}
+                        helperText="Leave blank to keep existing password"
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                aria-label="toggle password visibility"
+                                onClick={() => setShowPassword(!showPassword)}
+                                edge="end"
+                              >
+                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+
+                      <TextField
+                        label="From Email"
+                        fullWidth
+                        value={emailSettings.smtp_from_email}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, smtp_from_email: e.target.value })}
+                        error={!!errors.smtp_from_email}
+                        helperText={errors.smtp_from_email || 'Email address to send from'}
+                        placeholder="noreply@example.com"
+                      />
+
+                      <TextField
+                        label="From Name"
+                        fullWidth
+                        value={emailSettings.smtp_from_name}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, smtp_from_name: e.target.value })}
+                        helperText="Display name for outgoing emails"
+                      />
+                    </>
+                  )}
 
                   <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                     <Button

@@ -6,12 +6,13 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 import app from './index';
 import { Server } from 'http';
 import { runMigrations } from './db/migrations';
-import { closePool } from './db';
+import { pool, closePool } from './db';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { ensureUploadDirectory } from './middleware/upload';
 import { initializeRedisRateLimiter, closeRedisRateLimiter } from './middleware/rateLimitRedis';
 import { secretsService } from './services/secretsService';
 import { settingsCacheService } from './services/settingsCacheService';
+import { BlogService } from './services/BlogService';
 
 function getLogLevel(): LogLevel {
   const envLevel = process.env.LOG_LEVEL;
@@ -58,7 +59,10 @@ const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 let server: Server | undefined;
 let isShuttingDown = false; // Idempotency guard for graceful shutdown
 
-// Initialize services (Vault, Redis, Email, Settings Cache)
+// Initialize Blog Service
+export const blogService = new BlogService(pool);
+
+// Initialize services (Vault, Redis, Email, Settings Cache, Blog)
 async function initializeServices(): Promise<void> {
   try {
     logger.info('Initializing services...');
@@ -86,6 +90,15 @@ async function initializeServices(): Promise<void> {
     } catch (error) {
       logger.warn(`Settings cache initialization failed - will use defaults: ${(error as Error).message}`);
       // Don't exit - service will use secure defaults
+    }
+
+    // Initialize blog service
+    try {
+      await blogService.initialize();
+      logger.info('Blog service initialized');
+    } catch (error) {
+      logger.warn(`Blog service initialization failed: ${(error as Error).message}`);
+      // Don't exit - service will handle errors gracefully
     }
 
     logger.info('All services initialized successfully');

@@ -5,6 +5,7 @@ import { requireRole } from '../auth/rbac-middleware';
 import { Role } from '@monorepo/shared';
 import { createLogger, LogLevel, validateEmail, validateURL, hashSHA256 } from '@monorepo/shared';
 import { randomBytes } from 'crypto';
+import { emailService } from '../services/emailService';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -47,6 +48,10 @@ interface EmailSettings {
   smtp_password?: string;
   smtp_from_email?: string;
   smtp_from_name?: string;
+  brevo_api_key?: string;
+  brevo_from_email?: string;
+  brevo_from_name?: string;
+  email_provider?: 'smtp' | 'brevo';
 }
 
 interface ApiKey {
@@ -379,25 +384,38 @@ router.get(
   async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const keys = [
+        'email_provider',
         'smtp_host',
         'smtp_port',
         'smtp_secure',
         'smtp_user',
         'smtp_from_email',
         'smtp_from_name',
+        'brevo_from_email',
+        'brevo_from_name',
       ];
       const settings = await getSettings(keys);
 
-      const response: Omit<EmailSettings, 'smtp_password'> = {
+      const response: Omit<EmailSettings, 'smtp_password' | 'brevo_api_key'> = {
+        email_provider: (settings.email_provider as 'smtp' | 'brevo') || 'brevo',
         smtp_host: (settings.smtp_host as string) || '',
         smtp_port: (settings.smtp_port as number) || 587,
         smtp_secure: (settings.smtp_secure as boolean) ?? false,
         smtp_user: (settings.smtp_user as string) || '',
         smtp_from_email: (settings.smtp_from_email as string) || '',
         smtp_from_name: (settings.smtp_from_name as string) || '',
+        brevo_from_email: (settings.brevo_from_email as string) || '',
+        brevo_from_name: (settings.brevo_from_name as string) || '',
       };
 
-      // Note: smtp_password is intentionally excluded for security
+      // Note: smtp_password and brevo_api_key are intentionally excluded for security
+      // Check if Brevo API key is configured (without exposing it)
+      const brevoKeyResult = await query<{ value: string }>(
+        'SELECT value FROM system_settings WHERE key = $1',
+        ['brevo_api_key']
+      );
+      (response as { brevo_api_key_configured?: boolean }).brevo_api_key_configured = brevoKeyResult.rows.length > 0;
+
       res.json(response);
     } catch (error) {
       logger.error('Error fetching email settings', error as Error, {});
@@ -413,6 +431,7 @@ router.put(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const {
+        email_provider,
         smtp_host,
         smtp_port,
         smtp_secure,
@@ -420,6 +439,9 @@ router.put(
         smtp_password,
         smtp_from_email,
         smtp_from_name,
+        brevo_api_key,
+        brevo_from_email,
+        brevo_from_name,
       } = req.body as EmailSettings;
 
       // Validation
@@ -462,6 +484,29 @@ router.put(
         return;
       }
 
+      // Brevo validation
+      if (email_provider !== undefined && email_provider !== 'smtp' && email_provider !== 'brevo') {
+        res.status(400).json({ error: 'Email provider must be either "smtp" or "brevo"' });
+        return;
+      }
+
+      if (brevo_api_key !== undefined && typeof brevo_api_key !== 'string') {
+        res.status(400).json({ error: 'Brevo API key must be a string' });
+        return;
+      }
+
+      if (brevo_from_email !== undefined) {
+        if (typeof brevo_from_email !== 'string' || (brevo_from_email && !validateEmail(brevo_from_email))) {
+          res.status(400).json({ error: 'Brevo from email must be a valid email address' });
+          return;
+        }
+      }
+
+      if (brevo_from_name !== undefined && typeof brevo_from_name !== 'string') {
+        res.status(400).json({ error: 'Brevo from name must be a string' });
+        return;
+      }
+
       // Update settings
       const userId = req.user?.userId;
       if (!userId) {
@@ -471,17 +516,27 @@ router.put(
 
       await transaction(async (client) => {
         const updates = [
+          { key: 'email_provider', value: email_provider },
           { key: 'smtp_host', value: smtp_host },
           { key: 'smtp_port', value: smtp_port },
           { key: 'smtp_secure', value: smtp_secure },
           { key: 'smtp_user', value: smtp_user },
           { key: 'smtp_from_email', value: smtp_from_email },
           { key: 'smtp_from_name', value: smtp_from_name },
+          { key: 'brevo_from_email', value: brevo_from_email },
+          { key: 'brevo_from_name', value: brevo_from_name },
         ];
 
         // Hash password if provided
         if (smtp_password !== undefined && smtp_password !== '') {
           updates.push({ key: 'smtp_password', value: hashSHA256(smtp_password) });
+        }
+
+        // Store Brevo API key if provided
+        // Note: Unlike passwords, API keys must be stored retrievably since they're needed for API calls
+        // Security is enforced through admin-only access and database encryption at rest
+        if (brevo_api_key !== undefined && brevo_api_key !== '') {
+          updates.push({ key: 'brevo_api_key', value: brevo_api_key });
         }
 
         for (const update of updates) {
@@ -499,25 +554,49 @@ router.put(
         }
       });
 
-      // Fetch and return updated settings (excluding password)
+      // Fetch and return updated settings (excluding password and API key)
       const keys = [
+        'email_provider',
         'smtp_host',
         'smtp_port',
         'smtp_secure',
         'smtp_user',
         'smtp_from_email',
         'smtp_from_name',
+        'brevo_from_email',
+        'brevo_from_name',
       ];
       const settings = await getSettings(keys);
 
-      const response: Omit<EmailSettings, 'smtp_password'> = {
+      const response: Omit<EmailSettings, 'smtp_password' | 'brevo_api_key'> = {
+        email_provider: (settings.email_provider as 'smtp' | 'brevo') || 'brevo',
         smtp_host: (settings.smtp_host as string) || '',
         smtp_port: (settings.smtp_port as number) || 587,
         smtp_secure: (settings.smtp_secure as boolean) ?? false,
         smtp_user: (settings.smtp_user as string) || '',
         smtp_from_email: (settings.smtp_from_email as string) || '',
         smtp_from_name: (settings.smtp_from_name as string) || '',
+        brevo_from_email: (settings.brevo_from_email as string) || '',
+        brevo_from_name: (settings.brevo_from_name as string) || '',
       };
+
+      // Check if Brevo API key is configured (without exposing it)
+      const brevoKeyResult = await query<{ value: string }>(
+        'SELECT value FROM system_settings WHERE key = $1',
+        ['brevo_api_key']
+      );
+      (response as { brevo_api_key_configured?: boolean }).brevo_api_key_configured = brevoKeyResult.rows.length > 0;
+
+      // Reload email service if API key was updated
+      if (brevo_api_key !== undefined && brevo_api_key !== '') {
+        try {
+          await emailService.reloadConfiguration();
+          logger.info('Email service reloaded with new API key', { userId });
+        } catch (reloadError) {
+          logger.error('Failed to reload email service after API key update', reloadError as Error, { userId });
+          // Don't fail the whole request, just warn
+        }
+      }
 
       logger.info('Email settings updated', { userId });
       res.json(response);
@@ -540,40 +619,83 @@ router.post(
         return;
       }
 
-      const keys = [
-        'smtp_host',
-        'smtp_port',
-        'smtp_secure',
-        'smtp_user',
-        'smtp_password',
-        'smtp_from_email',
-        'smtp_from_name',
-      ];
-      const settings = await getSettings(keys);
+      // Get user email for sending test
+      const userResult = await query<{ email: string }>(
+        'SELECT email FROM users WHERE id = $1',
+        [userId]
+      );
 
-      const smtp_host = settings.smtp_host as string;
-      const smtp_from_email = settings.smtp_from_email as string;
+      if (userResult.rows.length === 0) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
 
-      if (!smtp_host || !smtp_from_email) {
+      const userEmail = userResult.rows[0].email;
+
+      // Get email provider and settings
+      const settings = await getSettings(['email_provider', 'brevo_from_email', 'brevo_from_name']);
+      const emailProvider = (settings.email_provider as string) || 'brevo';
+
+      if (emailProvider !== 'brevo') {
         res.status(400).json({
           success: false,
-          message: 'Email settings are not configured. Please configure SMTP host and from email first.'
+          message: 'Only Brevo email provider is currently supported for testing.'
         });
         return;
       }
 
-      // For now, simulate sending an email
-      // In a real implementation, you would use nodemailer here
-      logger.info('Test email would be sent with settings', {
-        smtp_host,
-        smtp_from_email,
-        userId
-      });
+      // Check if Brevo is configured
+      const brevoKeyResult = await query<{ value: string }>(
+        'SELECT value FROM system_settings WHERE key = $1',
+        ['brevo_api_key']
+      );
 
-      res.json({
-        success: true,
-        message: 'Test email simulation successful. Email configuration appears valid.'
-      });
+      if (brevoKeyResult.rows.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Brevo API key is not configured. Please configure it first.'
+        });
+        return;
+      }
+
+      // Send test email using EmailService
+      try {
+        const fromEmail = (settings.brevo_from_email as string) || 'noreply@kevinalthaus.com';
+        const fromName = (settings.brevo_from_name as string) || 'Kevin Althaus';
+
+        await emailService.sendEmail({
+          to: { email: userEmail },
+          from: { email: fromEmail, name: fromName },
+          subject: 'Test Email from Kevin Althaus',
+          htmlContent: `
+            <h1>Test Email</h1>
+            <p>This is a test email sent from your Kevin Althaus application.</p>
+            <p>If you're receiving this, your email configuration is working correctly!</p>
+            <p><strong>Email Provider:</strong> Brevo</p>
+            <p><strong>Sent to:</strong> ${userEmail}</p>
+            <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+          `,
+          textContent: `Test Email\n\nThis is a test email sent from your Kevin Althaus application.\nIf you're receiving this, your email configuration is working correctly!\n\nEmail Provider: Brevo\nSent to: ${userEmail}\nTimestamp: ${new Date().toISOString()}`,
+          tags: ['test-email']
+        });
+
+        logger.info('Test email sent successfully', {
+          userId,
+          recipient: userEmail,
+          provider: 'brevo'
+        });
+
+        res.json({
+          success: true,
+          message: `Test email sent successfully to ${userEmail}. Please check your inbox.`
+        });
+      } catch (emailError) {
+        logger.error('Failed to send test email', emailError as Error, { userId });
+        res.status(500).json({
+          success: false,
+          message: `Failed to send test email: ${(emailError as Error).message}`
+        });
+      }
     } catch (error) {
       logger.error('Error testing email settings', error as Error, {});
       res.status(500).json({

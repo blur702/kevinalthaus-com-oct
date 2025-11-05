@@ -28,7 +28,6 @@ import {
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import type { BlogPost, BlogPostFormData } from '../types';
-import { RichTextEditor } from '@monorepo/shared';
 
 // Use the same API base URL as the admin app
 const API_BASE: string = (import.meta as any).env?.VITE_API_URL || '/api';
@@ -245,13 +244,16 @@ export const BlogForm: React.FC<BlogFormProps> = ({
         </Grid>
 
         <Grid item xs={12}>
-          <RichTextEditor
-            value={formData.body_html}
-            onChange={(html) => setFormData(prev => ({ ...prev, body_html: html }))}
+          <TextField
+            name="body_html"
             label="Content"
-            placeholder="Start typing or use '/' for commands..."
+            fullWidth
             required
-            minHeight={500}
+            multiline
+            rows={20}
+            value={formData.body_html}
+            onChange={handleInputChange('body_html')}
+            placeholder="Enter blog post content (HTML supported)"
           />
         </Grid>
 

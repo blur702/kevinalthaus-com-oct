@@ -44,11 +44,13 @@ export default class BlogPlugin implements PluginLifecycleHooks {
 
     try {
       // Register API routes
-      if (context.app) {
-        const blogRouter = createBlogRouter(this.pool, this.logger);
+      if (context.app && context.services?.blog) {
+        const blogRouter = createBlogRouter(context.services.blog, this.logger);
         context.app.use('/api/blog', blogRouter);
 
         this.logger.info('Routes registered successfully');
+      } else {
+        throw new Error('BlogService not available in context');
       }
 
       this.logger.info('Blog Plugin activated successfully');

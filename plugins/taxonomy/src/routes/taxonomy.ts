@@ -1,5 +1,3 @@
-/// <reference path="../types/express.d.ts" />
-
 /**
  * Taxonomy API Routes
  * Provides RESTful API for category and tag management

@@ -15,6 +15,7 @@
 import * as brevo from '@getbrevo/brevo';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { secretsService } from './secretsService';
+import { query } from '../db';
 
 const logger = createLogger({
   level: LogLevel.INFO,
@@ -117,14 +118,44 @@ class EmailService {
     try {
       logger.info('Initializing Brevo email service');
 
-      // Retrieve API key from Vault (with fallback to env var in development)
-      const apiKey = await secretsService.retrieveSecret(
-        this.vaultPath,
-        'BREVO_API_KEY'
-      );
+      let apiKey: string | null = null;
+
+      // Try to load API key from database first
+      try {
+        const result = await query<{ value: string }>(
+          'SELECT value FROM system_settings WHERE key = $1',
+          ['brevo_api_key']
+        );
+
+        if (result.rows.length > 0) {
+          const value = result.rows[0].value;
+          // The value is stored as JSONB, so it might be a string wrapped in quotes
+          apiKey = typeof value === 'string' ? value : String(value);
+          logger.info('Loaded Brevo API key from database');
+        }
+      } catch (dbError) {
+        logger.warn('Failed to load Brevo API key from database, trying Vault', dbError as Error);
+      }
+
+      // Fall back to Vault if not in database
+      if (!apiKey) {
+        apiKey = await secretsService.retrieveSecret(
+          this.vaultPath,
+          'BREVO_API_KEY'
+        );
+        if (apiKey) {
+          logger.info('Loaded Brevo API key from Vault');
+        }
+      }
+
+      // Final fallback to environment variable (development only)
+      if (!apiKey && process.env.BREVO_API_KEY) {
+        apiKey = process.env.BREVO_API_KEY;
+        logger.info('Loaded Brevo API key from environment variable');
+      }
 
       if (!apiKey) {
-        throw new Error('Brevo API key not found in Vault or environment');
+        throw new Error('Brevo API key not found in database, Vault, or environment');
       }
 
       // Configure Brevo API client
@@ -458,6 +489,57 @@ From: ${this.defaultFrom.name} <${this.defaultFrom.email}>
   private _isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  }
+
+  /**
+   * Reload email configuration from database
+   * Useful after updating settings via API
+   */
+  async reloadConfiguration(): Promise<void> {
+    logger.info('Reloading email service configuration');
+
+    // Reset initialization state to force reload
+    this.isInitialized = false;
+    this.apiInstance = null;
+
+    // Reinitialize with new configuration
+    await this.initialize();
+
+    logger.info('Email service configuration reloaded');
+  }
+
+  /**
+   * Update API key at runtime (called after admin updates it in UI)
+   */
+  async updateApiKey(newApiKey: string): Promise<void> {
+    logger.info('Updating Brevo API key');
+
+    try {
+      // Test the new API key by initializing a temp instance
+      const testInstance = new brevo.TransactionalEmailsApi();
+
+      // @ts-expect-error - Brevo SDK type definitions may vary
+      if (testInstance.apiClient) {
+        // @ts-expect-error - Brevo SDK type definitions may vary
+        const apiKeyAuth = testInstance.apiClient.authentications['api-key'];
+        if (apiKeyAuth) {
+          apiKeyAuth.apiKey = newApiKey;
+        }
+      }
+
+      // Verify the key works
+      const accountApi = new brevo.AccountApi();
+      await accountApi.getAccount();
+
+      // If verification succeeded, reload the configuration
+      await this.reloadConfiguration();
+
+      logger.info('Brevo API key updated successfully');
+    } catch (error) {
+      const errorMessage = `Failed to update Brevo API key: ${(error as Error).message}`;
+      logger.error(errorMessage, error as Error);
+      throw new Error(errorMessage);
+    }
   }
 
   /**

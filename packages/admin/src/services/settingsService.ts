@@ -26,6 +26,7 @@ export interface SecuritySettings {
 }
 
 export interface EmailSettings {
+  email_provider?: 'smtp' | 'brevo';
   smtp_host: string;
   smtp_port: number;
   smtp_secure: boolean;
@@ -33,6 +34,10 @@ export interface EmailSettings {
   smtp_from_email: string;
   smtp_from_name: string;
   smtp_password?: string; // Optional for updates
+  brevo_api_key?: string; // Optional for updates
+  brevo_api_key_configured?: boolean; // Read-only, indicates if key is set
+  brevo_from_email?: string;
+  brevo_from_name?: string;
 }
 
 export interface ApiKey {
