@@ -50,6 +50,7 @@ class PluginManager {
     blog?: IBlogService;
     editor?: unknown;
     taxonomy?: unknown;
+    email?: unknown;
   } = {};
 
   constructor() {
@@ -67,6 +68,8 @@ class PluginManager {
     blog?: IBlogService;
     editor?: unknown;
     taxonomy?: unknown;
+    email?: unknown;
+    storage?: unknown;
   }): void {
     this.services = services;
     console.log('[PluginManager] Services injected:', Object.keys(services));
@@ -113,6 +116,7 @@ class PluginManager {
         blog: this.services.blog || null,
         editor: this.services.editor || null,
         taxonomy: this.services.taxonomy || null,
+        email: this.services.email || null,
       },
       logger,
       config: context.config || {},
@@ -152,6 +156,7 @@ class PluginManager {
         blog: this.services.blog || null,
         editor: this.services.editor || null,
         taxonomy: this.services.taxonomy || null,
+        email: this.services.email || null,
       },
       logger,
       config: {},

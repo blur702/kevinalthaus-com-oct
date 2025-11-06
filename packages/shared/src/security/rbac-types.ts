@@ -33,4 +33,14 @@ export enum Capability {
   CONTENT_EDIT = 'content:edit',
   CONTENT_DELETE = 'content:delete',
   CONTENT_VIEW = 'content:view',
+
+  // Email management
+  EMAIL_SEND = 'email:send',
+
+  // File management
+  FILE_UPLOAD = 'file:upload',
+  FILE_DOWNLOAD = 'file:download',
+  FILE_DELETE = 'file:delete',
+  FILE_VIEW = 'file:view',
+  FILE_MANAGE_TYPES = 'file:manage_types', // Admin only - manage allowed file types
 }

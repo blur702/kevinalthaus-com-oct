@@ -422,6 +422,55 @@ export async function runMigrations(): Promise<void> {
       `);
     });
 
+    await runMigration('16-create-file-shares-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS file_shares (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          file_id UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+          share_token VARCHAR(64) UNIQUE NOT NULL,
+          created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          expires_at TIMESTAMP,
+          max_downloads INTEGER,
+          download_count INTEGER DEFAULT 0 CHECK (download_count >= 0),
+          password_hash VARCHAR(255),
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          last_accessed_at TIMESTAMP
+        )
+      `);
+
+      // Create indexes for efficient querying
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_file_shares_file_id ON file_shares(file_id);
+        CREATE INDEX IF NOT EXISTS idx_file_shares_share_token ON file_shares(share_token);
+        CREATE INDEX IF NOT EXISTS idx_file_shares_created_by ON file_shares(created_by);
+        CREATE INDEX IF NOT EXISTS idx_file_shares_expires_at ON file_shares(expires_at) WHERE expires_at IS NOT NULL;
+      `);
+    });
+
+    await runMigration('17-create-file-versions-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS file_versions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          file_id UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+          version_number INTEGER NOT NULL,
+          storage_path VARCHAR(500) NOT NULL,
+          file_size BIGINT NOT NULL,
+          mime_type VARCHAR(100) NOT NULL,
+          checksum VARCHAR(64),
+          created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT unique_file_version UNIQUE (file_id, version_number)
+        )
+      `);
+
+      // Create indexes for efficient querying
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_file_versions_file_id ON file_versions(file_id);
+        CREATE INDEX IF NOT EXISTS idx_file_versions_created_at ON file_versions(created_at);
+      `);
+    });
+
     // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');
   } catch (error) {

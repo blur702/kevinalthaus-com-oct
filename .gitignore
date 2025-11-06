@@ -111,3 +111,10 @@ lint-output.txt
 lint-final.txt
 cookies.txt
 NUL
+
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+cookies.txt

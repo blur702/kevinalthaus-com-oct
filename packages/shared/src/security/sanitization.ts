@@ -69,10 +69,48 @@ export function sanitizePluginDescription(description: string): string {
 }
 
 export function sanitizeFilename(filename: string): string {
-  return filename
-    .replace(/[^a-zA-Z0-9._-]/g, '_')
-    .replace(/\.{2,}/g, '.')
-    .substring(0, 255);
+  // Separate name and extension
+  const lastDotIndex = filename.lastIndexOf('.');
+  const name = lastDotIndex !== -1 ? filename.substring(0, lastDotIndex) : filename;
+  const ext = lastDotIndex !== -1 ? filename.substring(lastDotIndex) : '';
+
+  // Make URL-friendly:
+  // 1. Convert to lowercase for consistency
+  // 2. Replace spaces with hyphens
+  // 3. Remove special characters (keep only alphanumeric, hyphens, underscores)
+  // 4. Replace multiple consecutive separators with single hyphen
+  // 5. Remove leading/trailing separators
+  const sanitizedName = name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/[^a-z0-9_-]/g, '') // Remove special characters
+    .replace(/[-_]{2,}/g, '-') // Replace multiple separators with single hyphen
+    .replace(/^[-_]+|[-_]+$/g, ''); // Remove leading/trailing separators
+
+  // Sanitize extension (preserve dots, lowercase)
+  const sanitizedExt = ext
+    .toLowerCase()
+    .replace(/\.{2,}/g, '.'); // Replace multiple dots with single dot
+
+  // Ensure the extension is preserved by calculating max name length
+  const maxNameLength = 255 - sanitizedExt.length;
+
+  // If extension is too long or name would be <=0, fall back
+  if (maxNameLength <= 0) {
+    // Extension itself is too long, truncate it and use fallback name
+    const truncatedExt = sanitizedExt.substring(0, 254); // Save 1 char for name
+    return 'f' + truncatedExt; // Minimal name + truncated extension
+  }
+
+  // Truncate name to fit within limit while preserving full extension
+  const truncatedName = sanitizedName.substring(0, maxNameLength);
+
+  // If name is empty after sanitization and truncation, use fallback
+  const finalName = truncatedName || 'file';
+
+  // Combine name and extension (guaranteed <=255 chars)
+  return finalName + sanitizedExt;
 }
 
 export function sanitizePathComponent(component: string): string {

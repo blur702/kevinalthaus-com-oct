@@ -15,6 +15,7 @@ import { settingsCacheService } from './services/settingsCacheService';
 import { BlogService } from './services/BlogService';
 import { EditorService } from './services/EditorService';
 import { TaxonomyService } from './services/TaxonomyService';
+import { StorageService } from './services/StorageService';
 
 function getLogLevel(): LogLevel {
   const envLevel = process.env.LOG_LEVEL;
@@ -70,7 +71,10 @@ export const editorService = new EditorService();
 // Initialize Taxonomy Service
 export const taxonomyService = new TaxonomyService(pool);
 
-// Initialize services (Vault, Redis, Email, Settings Cache, Blog)
+// Initialize Storage Service
+export const storageService = new StorageService('./storage', pool);
+
+// Initialize services (Vault, Redis, Email, Settings Cache, Blog, Storage)
 async function initializeServices(): Promise<void> {
   try {
     logger.info('Initializing services...');
@@ -124,6 +128,15 @@ async function initializeServices(): Promise<void> {
       logger.info('Taxonomy service initialized');
     } catch (error) {
       logger.warn(`Taxonomy service initialization failed: ${(error as Error).message}`);
+      // Don't exit - service will handle errors gracefully
+    }
+
+    // Initialize storage service
+    try {
+      await storageService.initialize();
+      logger.info('Storage service initialized');
+    } catch (error) {
+      logger.warn(`Storage service initialization failed: ${(error as Error).message}`);
       // Don't exit - service will handle errors gracefully
     }
 

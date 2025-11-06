@@ -2,6 +2,35 @@ import { test, expect } from '@playwright/test';
 
 const API_URL = process.env.API_URL || 'http://localhost:3000';
 
+interface HealthResponse {
+  status: string;
+  service: string;
+  timestamp: string;
+  version: string;
+  uptime: number;
+  checks: {
+    mainApp: string;
+    pythonService: string;
+  };
+}
+
+interface LiveResponse {
+  status: string;
+}
+
+interface ReadyResponse {
+  status: string;
+  dependencies?: {
+    mainApp: string;
+  };
+}
+
+interface RootResponse {
+  message: string;
+  version: string;
+  environment: string;
+}
+
 test.describe('Health Check Endpoints', () => {
   test.describe('GET /health', () => {
     test('should return healthy status when all services are up', async ({ request }) => {
@@ -9,7 +38,7 @@ test.describe('Health Check Endpoints', () => {
 
       expect(response.status()).toBe(200);
 
-      const data = await response.json();
+      const data = await response.json() as HealthResponse;
       expect(data).toHaveProperty('status');
       expect(data).toHaveProperty('service', 'api-gateway');
       expect(data).toHaveProperty('timestamp');
@@ -33,7 +62,7 @@ test.describe('Health Check Endpoints', () => {
       // This test assumes services might be down - we check for proper response format
       const response = await request.get(`${API_URL}/health`);
 
-      const data = await response.json();
+      const data = await response.json() as HealthResponse;
 
       // Status should be either healthy or degraded
       expect(['healthy', 'degraded']).toContain(data.status);
@@ -48,7 +77,7 @@ test.describe('Health Check Endpoints', () => {
 
     test('should include all required fields in response', async ({ request }) => {
       const response = await request.get(`${API_URL}/health`);
-      const data = await response.json();
+      const data = await response.json() as HealthResponse;
 
       // Required fields
       const requiredFields = ['status', 'service', 'timestamp', 'version', 'uptime', 'checks'];
@@ -67,7 +96,7 @@ test.describe('Health Check Endpoints', () => {
 
       expect(response.status()).toBe(200);
 
-      const data = await response.json();
+      const data = await response.json() as LiveResponse;
       expect(data).toHaveProperty('status', 'alive');
     });
 
@@ -85,7 +114,7 @@ test.describe('Health Check Endpoints', () => {
     test('should return ready status when dependencies are healthy', async ({ request }) => {
       const response = await request.get(`${API_URL}/health/ready`);
 
-      const data = await response.json();
+      const data = await response.json() as ReadyResponse;
 
       // Status should be either ready or not ready
       expect(['ready', 'not ready']).toContain(data.status);
@@ -101,11 +130,11 @@ test.describe('Health Check Endpoints', () => {
 
     test('should check main-app dependency', async ({ request }) => {
       const response = await request.get(`${API_URL}/health/ready`);
-      const data = await response.json();
+      const data = await response.json() as ReadyResponse;
 
       expect(data).toHaveProperty('dependencies');
       expect(data.dependencies).toHaveProperty('mainApp');
-      expect(['healthy', 'unhealthy']).toContain(data.dependencies.mainApp);
+      expect(['healthy', 'unhealthy']).toContain(data.dependencies?.mainApp);
     });
   });
 
@@ -115,7 +144,7 @@ test.describe('Health Check Endpoints', () => {
 
       expect(response.status()).toBe(200);
 
-      const data = await response.json();
+      const data = await response.json() as RootResponse;
       expect(data).toHaveProperty('message', 'Kevin Althaus API Gateway');
       expect(data).toHaveProperty('version', '1.0.0');
       expect(data).toHaveProperty('environment');

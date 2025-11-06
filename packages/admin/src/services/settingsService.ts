@@ -126,8 +126,8 @@ export async function testEmailSettings(): Promise<TestEmailResponse> {
  * Get list of API keys
  */
 export async function getApiKeys(signal?: AbortSignal): Promise<ApiKey[]> {
-  const response = await api.get<ApiKey[]>(`${BASE_URL}/api-keys`, { signal });
-  return response.data;
+  const response = await api.get<{ api_keys: ApiKey[] }>(`${BASE_URL}/api-keys`, { signal });
+  return response.data.api_keys;
 }
 
 /**

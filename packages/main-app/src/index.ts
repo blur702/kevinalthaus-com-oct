@@ -33,6 +33,11 @@ import { pool } from './db';
 import { asyncHandler } from './utils/asyncHandler';
 import { requestIdMiddleware } from './middleware/requestId';
 import { BlogService } from './services/BlogService';
+import { emailService } from './services/emailService';
+import { storageService } from './server';
+import { createAdminFileRoutes } from './routes/admin-files';
+import { createPluginFileRoutes } from './routes/plugin-files';
+import { createPublicShareRoutes } from './routes/public-shares';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -312,6 +317,20 @@ app.use('/api/plugins', pluginsRouter);
 // Blog plugin routes
 const blogService = new BlogService(pool);
 app.use('/api/blog', createBlogRouter(blogService, logger));
+
+// File management routes (storageService imported from server.ts)
+app.use('/admin/files', createAdminFileRoutes(storageService, pool));
+app.use('/api/plugins', createPluginFileRoutes(storageService));
+
+// Public file sharing routes (no authentication required)
+app.use('/share', createPublicShareRoutes(storageService, pool));
+
+// Inject services into plugin manager for plugin execution contexts
+pluginManager.setServices({
+  blog: blogService,
+  email: emailService,
+  storage: storageService,
+});
 
 // Admin UI for plugin management
 pluginManager.init(app);

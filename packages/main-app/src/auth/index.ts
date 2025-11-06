@@ -395,6 +395,7 @@ router.post(
 
       // Generate tokens
       const tokenPayload: Omit<TokenPayload, 'iat' | 'exp'> = {
+        id: user.id,
         userId: user.id,
         email: user.email,
         username: user.username,
@@ -557,6 +558,7 @@ router.post(
 
       // Generate tokens
       const tokenPayload: Omit<TokenPayload, 'iat' | 'exp'> = {
+        id: user.id,
         userId: user.id,
         email: user.email,
         username: user.username,
@@ -719,6 +721,7 @@ router.post(
 
         // Generate new access token
         const tokenPayload: Omit<TokenPayload, 'iat' | 'exp'> = {
+          id: user.id,
           userId: user.id,
           email: user.email,
           username: user.username,

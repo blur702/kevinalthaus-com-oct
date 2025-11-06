@@ -160,7 +160,7 @@ export interface TokenPayload {
   role: Role;
   iat: number;
   exp: number;
-  id?: string; // Optional alias for compatibility with User/UserContext
+  id: string; // Required alias for compatibility with User/UserContext (same as userId)
 }
 
 /**
@@ -552,6 +552,96 @@ export interface StorageMetadata {
 }
 
 /**
+ * File upload result
+ */
+export interface FileUploadResult {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  fileExtension: string;
+  fileSize: number;
+  storagePath: string;
+  url: string;
+  width?: number;
+  height?: number;
+  thumbnailUrl?: string;
+}
+
+/**
+ * Image processing options for uploads
+ */
+export interface ImageProcessingOptions {
+  generateThumbnail?: boolean;
+  thumbnailWidth?: number;
+  thumbnailHeight?: number;
+  optimize?: boolean;
+  quality?: number;
+}
+
+/**
+ * File metadata from database
+ */
+export interface FileMetadata {
+  id: string;
+  pluginId: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  fileExtension: string;
+  fileSize: number;
+  storagePath: string;
+  storageProvider: string;
+  width?: number;
+  height?: number;
+  duration?: number;
+  altText?: string;
+  caption?: string;
+  tags?: string[];
+  uploadedBy: string;
+  createdAt: Date;
+  deletedAt?: Date;
+  deletedBy?: string;
+}
+
+/**
+ * File list query options
+ */
+export interface FileListOptions {
+  pluginId?: string;
+  mimeType?: string;
+  tags?: string[];
+  limit?: number;
+  offset?: number;
+  orderBy?: 'created_at' | 'filename' | 'file_size';
+  orderDirection?: 'asc' | 'desc';
+  includeDeleted?: boolean;
+}
+
+/**
+ * File list result
+ */
+export interface FileListResult {
+  files: FileMetadata[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * Allowed file type configuration
+ */
+export interface AllowedFileType {
+  id: string;
+  mimeType: string;
+  fileExtension: string;
+  category: 'image' | 'video' | 'audio' | 'document' | 'archive' | 'other';
+  description?: string;
+  maxFileSize?: number;
+  isEnabled: boolean;
+}
+
+/**
  * File storage service for managing files and directories
  */
 export interface IFileStorageService extends IService {
@@ -619,6 +709,98 @@ export interface IFileStorageService extends IService {
    * Create write stream for file
    */
   createWriteStream(filePath: string): NodeJS.WritableStream;
+
+  // ========================================================================
+  // Plugin-aware file operations (for shared file upload service)
+  // ========================================================================
+
+  /**
+   * Upload file for a plugin with validation and metadata tracking
+   * @param pluginId - Plugin identifier
+   * @param file - File buffer and metadata
+   * @param userId - User uploading the file
+   * @param options - Optional image processing
+   * @returns Upload result with file metadata
+   */
+  uploadFile(
+    pluginId: string,
+    file: {
+      buffer: Buffer;
+      originalname: string;
+      mimetype: string;
+      size: number;
+    },
+    userId: string,
+    options?: ImageProcessingOptions
+  ): Promise<FileUploadResult>;
+
+  /**
+   * Get file metadata by ID
+   * @param fileId - File UUID
+   * @param pluginId - Optional plugin ID for authorization
+   * @returns File metadata or null
+   */
+  getFile(fileId: string, pluginId?: string): Promise<FileMetadata | null>;
+
+  /**
+   * List files with filters
+   * @param options - Query options
+   * @returns Paginated file list
+   */
+  listFiles(options: FileListOptions): Promise<FileListResult>;
+
+  /**
+   * Delete file (soft delete)
+   * @param fileId - File UUID
+   * @param userId - User deleting the file
+   * @param pluginId - Optional plugin ID for authorization
+   */
+  deleteFile(fileId: string, userId: string, pluginId?: string): Promise<void>;
+
+  /**
+   * Permanently delete file from storage and database
+   * @param fileId - File UUID
+   * @param userId - User performing hard delete (requires admin)
+   */
+  hardDeleteFile(fileId: string, userId: string): Promise<void>;
+
+  /**
+   * Validate file type against allowed_file_types table
+   * @param mimeType - MIME type to validate
+   * @param fileExtension - File extension to validate
+   * @returns True if allowed, false otherwise
+   */
+  validateFileType(mimeType: string, fileExtension: string): Promise<boolean>;
+
+  /**
+   * Get public URL for file
+   * @param fileId - File UUID
+   * @returns Public URL
+   */
+  getFileUrl(fileId: string): Promise<string>;
+
+  /**
+   * Get allowed file types
+   * @param category - Optional category filter
+   * @returns List of allowed file types
+   */
+  getAllowedFileTypes(category?: string): Promise<AllowedFileType[]>;
+
+  /**
+   * Update file metadata
+   * @param fileId - File UUID
+   * @param metadata - Metadata to update
+   * @param userId - User updating metadata
+   */
+  updateFileMetadata(
+    fileId: string,
+    metadata: {
+      altText?: string;
+      caption?: string;
+      tags?: string[];
+    },
+    userId: string
+  ): Promise<FileMetadata>;
 }
 
 // ============================================================================
@@ -972,6 +1154,79 @@ export interface ITaxonomyService extends IService {
 }
 
 // ============================================================================
+// Email Service Interface
+// ============================================================================
+
+/**
+ * Email recipient
+ */
+export interface EmailRecipient {
+  email: string;
+  name?: string;
+}
+
+/**
+ * Email attachment
+ */
+export interface EmailAttachment {
+  name: string;
+  content: string; // Base64 encoded
+  contentType?: string;
+}
+
+/**
+ * Email sending options
+ */
+export interface EmailOptions {
+  to: EmailRecipient | EmailRecipient[];
+  from?: EmailRecipient;
+  replyTo?: EmailRecipient;
+  cc?: EmailRecipient[];
+  bcc?: EmailRecipient[];
+  subject: string;
+  htmlContent?: string;
+  textContent?: string;
+  attachments?: EmailAttachment[];
+  headers?: Record<string, string>;
+  tags?: string[];
+}
+
+/**
+ * Email sending response
+ */
+export interface EmailResponse {
+  messageId: string;
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Email Service Interface
+ * Provides email sending functionality via Brevo (formerly Sendinblue)
+ */
+export interface IEmailService extends IService {
+  /**
+   * Send a transactional email
+   * @param options - Email options including recipients, subject, content
+   * @returns Email response with message ID
+   */
+  sendEmail(options: EmailOptions): Promise<EmailResponse>;
+
+  /**
+   * Send a test email to verify configuration
+   * @param to - Recipient email address
+   * @returns Email response with message ID
+   */
+  sendTestEmail(to: string): Promise<EmailResponse>;
+
+  /**
+   * Check if email service is configured and ready to send
+   * @returns True if configured, false otherwise
+   */
+  isConfigured(): boolean;
+}
+
+// ============================================================================
 // Service Collection (for PluginExecutionContext)
 // ============================================================================
 
@@ -983,6 +1238,7 @@ export interface IServiceCollection {
   blog: IBlogService;
   database: IDatabaseService;
   editor: IEditorService;
+  email: IEmailService;
   http: IHttpService;
   storage: IFileStorageService;
   logger: ILoggerService;

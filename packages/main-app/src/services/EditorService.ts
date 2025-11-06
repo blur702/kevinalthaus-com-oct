@@ -1,7 +1,18 @@
 /**
- * EditorService
- * Provides WYSIWYG editor functionality including content transformation,
- * validation, sanitization, and image handling.
+ * Editor Service Implementation
+ *
+ * Provides rich text editing functionality with HTML conversion, sanitization,
+ * and validation. Built without external WYSIWYG libraries for maximum control
+ * and customization.
+ *
+ * Features:
+ * - HTML to Editor Content conversion
+ * - Editor Content to HTML serialization
+ * - Content sanitization (XSS prevention)
+ * - Content validation
+ * - Plain text extraction
+ * - Word and character counting
+ * - Image upload handling
  */
 
 import type {
@@ -13,20 +24,72 @@ import type {
   ImageMetadata,
   ImageResult,
 } from '@monorepo/shared';
-import { stripAllHTML } from '@monorepo/shared';
+import { JSDOM } from 'jsdom';
 
+/**
+ * Editor Service
+ * Manages rich text editor content with security and validation
+ */
 export class EditorService implements IEditorService {
   public readonly name = 'editor';
   private initialized = false;
 
-  constructor() {
-    // No dependencies needed for basic implementation
-  }
+  // Allowed HTML tags and their allowed attributes
+  private readonly ALLOWED_TAGS = new Set([
+    'p',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'ul',
+    'ol',
+    'li',
+    'strong',
+    'em',
+    'u',
+    'strike',
+    'code',
+    'pre',
+    'a',
+    'img',
+    'br',
+    'hr',
+  ]);
+
+  private readonly ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
+    a: new Set(['href', 'title', 'target', 'rel']),
+    img: new Set(['src', 'alt', 'title', 'width', 'height']),
+  };
+
+  // Node types supported by the editor
+  private readonly NODE_TYPES = new Set([
+    'doc',
+    'paragraph',
+    'heading',
+    'blockquote',
+    'bulletList',
+    'orderedList',
+    'listItem',
+    'codeBlock',
+    'horizontalRule',
+    'hardBreak',
+    'text',
+    'image',
+  ]);
+
+  // Mark types (inline formatting)
+  private readonly MARK_TYPES = new Set(['bold', 'italic', 'underline', 'strike', 'code', 'link']);
 
   async initialize(): Promise<void> {
     if (this.initialized) {
       throw new Error('EditorService is already initialized');
     }
+
+    // No external dependencies to initialize
+    // This service is purely functional and stateless
 
     this.initialized = true;
     console.log('[EditorService] ✓ Initialized');
@@ -44,22 +107,11 @@ export class EditorService implements IEditorService {
     if (!this.initialized) {
       return { healthy: false, message: 'Service not initialized' };
     }
-
-    try {
-      // Test basic functionality
-      const testContent = this.createEmpty();
-      this.toHTML(testContent);
-      return { healthy: true };
-    } catch (error) {
-      return {
-        healthy: false,
-        message: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
+    return { healthy: true };
   }
 
   /**
-   * Convert EditorContent to HTML string
+   * Convert editor content to HTML
    */
   toHTML(content: EditorContent): string {
     if (!content || !content.content) {
@@ -70,15 +122,22 @@ export class EditorService implements IEditorService {
   }
 
   /**
-   * Convert HTML string to EditorContent structure
+   * Parse HTML into editor content structure
    */
   fromHTML(html: string): EditorContent {
     if (!html || html.trim() === '') {
       return this.createEmpty();
     }
 
-    // Parse HTML into nodes
-    const nodes = this.parseHTMLToNodes(html);
+    // Sanitize HTML first
+    const sanitizedHTML = this.sanitize(html);
+
+    // Parse HTML using jsdom (Node.js compatible)
+    const dom = new JSDOM(sanitizedHTML);
+    const doc = dom.window.document;
+
+    // Convert DOM nodes to editor nodes
+    const nodes = this.domNodesToEditorNodes(Array.from(doc.body.childNodes));
 
     return {
       type: 'doc',
@@ -88,30 +147,28 @@ export class EditorService implements IEditorService {
   }
 
   /**
-   * Validate editor content structure
+   * Validate editor content
    */
   validate(content: EditorContent): ValidationResult {
     const errors: string[] = [];
 
-    if (!content) {
-      errors.push('Content is null or undefined');
+    // Validate root structure
+    if (!content || typeof content !== 'object') {
+      errors.push('Content must be an object');
       return { valid: false, errors };
     }
 
     if (content.type !== 'doc') {
-      errors.push(`Invalid root type: ${content.type}, expected 'doc'`);
+      errors.push('Root node must be of type "doc"');
     }
 
     if (!Array.isArray(content.content)) {
-      errors.push('Content.content must be an array');
+      errors.push('Content must have a "content" array');
       return { valid: false, errors };
     }
 
-    // Validate each node
-    for (let i = 0; i < content.content.length; i++) {
-      const nodeErrors = this.validateNode(content.content[i], `content[${i}]`);
-      errors.push(...nodeErrors);
-    }
+    // Validate nodes recursively
+    this.validateNodes(content.content, errors);
 
     return {
       valid: errors.length === 0,
@@ -120,78 +177,26 @@ export class EditorService implements IEditorService {
   }
 
   /**
-   * Sanitize HTML content to remove malicious tags/attributes
+   * Sanitize HTML content to prevent XSS attacks
    */
   sanitize(html: string): string {
     if (!html) {
       return '';
     }
 
-    // Basic sanitization - allow safe tags only
-    const allowedTags = [
-      'p',
-      'br',
-      'strong',
-      'em',
-      'u',
-      's',
-      'a',
-      'ul',
-      'ol',
-      'li',
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-      'blockquote',
-      'code',
-      'pre',
-      'img',
-      'div',
-      'span',
-    ];
+    // Parse HTML using jsdom - this already parses the HTML safely
+    const dom = new JSDOM(html);
+    const doc = dom.window.document;
 
-    const allowedAttrs: Record<string, string[]> = {
-      a: ['href', 'title', 'target', 'rel'],
-      img: ['src', 'alt', 'title', 'width', 'height'],
-      '*': ['class', 'id'],
-    };
+    // Use the parsed DOM's body directly instead of re-parsing with innerHTML
+    // This avoids double-parsing and prevents XSS during innerHTML assignment
+    const root = doc.body || doc.documentElement;
 
-    // Simple regex-based sanitization
-    // Remove script tags and event handlers
-    let sanitized = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-      .replace(/javascript:/gi, '');
+    // Walk through all nodes and sanitize
+    this.sanitizeNode(root);
 
-    // Remove tags not in allowlist
-    const tagPattern = /<(\/?)([\w-]+)([^>]*)>/g;
-    sanitized = sanitized.replace(tagPattern, (_match, closing, tagName, attrs) => {
-      const tag = tagName.toLowerCase();
-
-      if (!allowedTags.includes(tag)) {
-        return '';
-      }
-
-      // Sanitize attributes
-      const allowedForTag = allowedAttrs[tag] || allowedAttrs['*'] || [];
-      const attrPattern = /([\w-]+)\s*=\s*["']([^"']*)["']/g;
-      let sanitizedAttrs = '';
-      let attrMatch;
-
-      while ((attrMatch = attrPattern.exec(attrs)) !== null) {
-        const [, attrName, attrValue] = attrMatch;
-        if (allowedForTag.includes(attrName.toLowerCase())) {
-          sanitizedAttrs += ` ${attrName}="${this.escapeAttr(attrValue)}"`;
-        }
-      }
-
-      return `<${closing}${tag}${sanitizedAttrs}>`;
-    });
-
-    return sanitized;
+    // Return the sanitized HTML from the DOM
+    return root.innerHTML;
   }
 
   /**
@@ -210,40 +215,31 @@ export class EditorService implements IEditorService {
    */
   getWordCount(content: EditorContent): number {
     const text = this.toPlainText(content);
-    if (!text.trim()) {
+    if (!text || text.trim() === '') {
       return 0;
     }
 
     // Split by whitespace and filter empty strings
-    const words = text.trim().split(/\s+/).filter(Boolean);
+    const words = text.trim().split(/\s+/).filter((word) => word.length > 0);
     return words.length;
   }
 
   /**
-   * Get character count from editor content (excluding whitespace)
+   * Get character count from editor content
    */
   getCharacterCount(content: EditorContent): number {
     const text = this.toPlainText(content);
-    // Remove all whitespace for character count
-    return text.replace(/\s/g, '').length;
+    return text.length;
   }
 
   /**
-   * Handle image upload and return image details
-   * Note: This is a placeholder implementation
+   * Handle image upload
+   * Note: This is a placeholder that should integrate with the upload service
    */
-  async uploadImage(
-    _file: File | Buffer,
-    _metadata?: ImageMetadata
-  ): Promise<ImageResult> {
-    // Placeholder implementation
-    // In a real implementation, this would:
-    // 1. Validate the image
-    // 2. Upload to storage (S3, local filesystem, etc.)
-    // 3. Generate thumbnail
-    // 4. Return the URL and metadata
-
-    throw new Error('Image upload not yet implemented - will be added with storage integration');
+  async uploadImage(_file: File | Buffer, _metadata?: ImageMetadata): Promise<ImageResult> {
+    // TODO: Integrate with existing upload service
+    // For now, throw error to indicate implementation needed
+    throw new Error('Image upload not yet implemented - integrate with upload service');
   }
 
   /**
@@ -267,14 +263,14 @@ export class EditorService implements IEditorService {
   // ============================================================================
 
   /**
-   * Convert array of nodes to HTML
+   * Convert editor nodes to HTML string
    */
   private nodesToHTML(nodes: EditorNode[]): string {
     return nodes.map((node) => this.nodeToHTML(node)).join('');
   }
 
   /**
-   * Convert single node to HTML
+   * Convert single editor node to HTML
    */
   private nodeToHTML(node: EditorNode): string {
     switch (node.type) {
@@ -299,170 +295,416 @@ export class EditorService implements IEditorService {
         return `<li>${node.content ? this.nodesToHTML(node.content) : ''}</li>`;
 
       case 'codeBlock':
-        return `<pre><code>${node.content ? this.nodesToPlainText(node.content) : ''}</code></pre>`;
+        return `<pre><code>${node.content ? this.nodesToHTML(node.content) : ''}</code></pre>`;
+
+      case 'horizontalRule':
+        return '<hr>';
 
       case 'hardBreak':
         return '<br>';
 
       case 'image': {
-        const src = node.attrs?.src as string;
+        const src = (node.attrs?.src as string) || '';
         const alt = (node.attrs?.alt as string) || '';
-        const title = (node.attrs?.title as string) || '';
-        return `<img src="${this.escapeAttr(src)}" alt="${this.escapeAttr(alt)}" title="${this.escapeAttr(title)}">`;
+        const title = node.attrs?.title ? ` title="${this.escapeHTML(node.attrs.title as string)}"` : '';
+        return `<img src="${this.escapeHTML(src)}" alt="${this.escapeHTML(alt)}"${title}>`;
       }
 
       case 'text': {
         let html = this.escapeHTML(node.text || '');
-        // Apply marks
-        if (node.marks) {
+
+        // Apply marks (inline formatting)
+        if (node.marks && node.marks.length > 0) {
           node.marks.forEach((mark) => {
             html = this.applyMark(html, mark);
           });
         }
+
         return html;
       }
 
       default:
-        // Unknown node type - return content if available
-        return node.content ? this.nodesToHTML(node.content) : '';
+        console.warn(`Unknown node type: ${node.type}`);
+        return '';
     }
   }
 
   /**
-   * Convert nodes to plain text
+   * Apply mark (inline formatting) to text
+   */
+  private applyMark(text: string, mark: EditorMark): string {
+    switch (mark.type) {
+      case 'bold':
+        return `<strong>${text}</strong>`;
+      case 'italic':
+        return `<em>${text}</em>`;
+      case 'underline':
+        return `<u>${text}</u>`;
+      case 'strike':
+        return `<strike>${text}</strike>`;
+      case 'code':
+        return `<code>${text}</code>`;
+      case 'link': {
+        const href = (mark.attrs?.href as string) || '';
+        const title = mark.attrs?.title ? ` title="${this.escapeHTML(mark.attrs.title as string)}"` : '';
+        return `<a href="${this.escapeHTML(href)}"${title}>${text}</a>`;
+      }
+      default:
+        return text;
+    }
+  }
+
+  /**
+   * Convert DOM nodes to editor nodes
+   */
+  private domNodesToEditorNodes(domNodes: Node[]): EditorNode[] {
+    const nodes: EditorNode[] = [];
+
+    for (const domNode of domNodes) {
+      const editorNode = this.domNodeToEditorNode(domNode);
+      if (editorNode) {
+        nodes.push(editorNode);
+      }
+    }
+
+    return nodes;
+  }
+
+  /**
+   * Convert single DOM node to editor node
+   */
+  private domNodeToEditorNode(domNode: Node): EditorNode | null {
+    // Text node
+    if (domNode.nodeType === Node.TEXT_NODE) {
+      const text = domNode.textContent || '';
+      if (text.trim() === '') {
+        return null;
+      }
+      return {
+        type: 'text',
+        text,
+      };
+    }
+
+    // Element node
+    if (domNode.nodeType === Node.ELEMENT_NODE) {
+      const element = domNode as Element;
+      const tagName = element.tagName.toLowerCase();
+
+      switch (tagName) {
+        case 'p':
+          return {
+            type: 'paragraph',
+            content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
+          };
+
+        case 'h1':
+        case 'h2':
+        case 'h3':
+        case 'h4':
+        case 'h5':
+        case 'h6':
+          return {
+            type: 'heading',
+            attrs: { level: parseInt(tagName[1], 10) },
+            content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
+          };
+
+        case 'blockquote':
+          return {
+            type: 'blockquote',
+            content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
+          };
+
+        case 'ul':
+          return {
+            type: 'bulletList',
+            content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
+          };
+
+        case 'ol':
+          return {
+            type: 'orderedList',
+            content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
+          };
+
+        case 'li':
+          return {
+            type: 'listItem',
+            content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
+          };
+
+        case 'pre': {
+          const code = element.querySelector('code');
+          return {
+            type: 'codeBlock',
+            content: code
+              ? this.domNodesToEditorNodes(Array.from(code.childNodes))
+              : this.domNodesToEditorNodes(Array.from(element.childNodes)),
+          };
+        }
+
+        case 'hr':
+          return {
+            type: 'horizontalRule',
+          };
+
+        case 'br':
+          return {
+            type: 'hardBreak',
+          };
+
+        case 'img':
+          return {
+            type: 'image',
+            attrs: {
+              src: element.getAttribute('src') || '',
+              alt: element.getAttribute('alt') || '',
+              title: element.getAttribute('title') || undefined,
+            },
+          };
+
+        // Inline formatting - convert to marks
+        case 'strong':
+        case 'b':
+        case 'em':
+        case 'i':
+        case 'u':
+        case 'strike':
+        case 'code':
+        case 'a': {
+          const childNodes = this.domNodesToEditorNodes(Array.from(element.childNodes));
+          return this.wrapNodesWithMark(childNodes, tagName, element);
+        }
+
+        default:
+          // Unsupported tag - extract children
+          return {
+            type: 'paragraph',
+            content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
+          };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Wrap editor nodes with a mark (inline formatting)
+   */
+  private wrapNodesWithMark(
+    nodes: EditorNode[],
+    tagName: string,
+    element: Element
+  ): EditorNode | null {
+    let markType: string;
+
+    switch (tagName) {
+      case 'strong':
+      case 'b':
+        markType = 'bold';
+        break;
+      case 'em':
+      case 'i':
+        markType = 'italic';
+        break;
+      case 'u':
+        markType = 'underline';
+        break;
+      case 'strike':
+        markType = 'strike';
+        break;
+      case 'code':
+        markType = 'code';
+        break;
+      case 'a':
+        markType = 'link';
+        break;
+      default:
+        return null;
+    }
+
+    const mark: EditorMark = {
+      type: markType,
+    };
+
+    if (markType === 'link') {
+      mark.attrs = {
+        href: element.getAttribute('href') || '',
+        title: element.getAttribute('title') || undefined,
+      };
+    }
+
+    // Apply mark to all text nodes
+    for (const node of nodes) {
+      if (node.type === 'text') {
+        if (!node.marks) {
+          node.marks = [];
+        }
+        node.marks.push(mark);
+      }
+    }
+
+    // If single text node, return it; otherwise wrap in paragraph
+    if (nodes.length === 1 && nodes[0].type === 'text') {
+      return nodes[0];
+    }
+
+    return {
+      type: 'paragraph',
+      content: nodes,
+    };
+  }
+
+  /**
+   * Recursively sanitize DOM node
+   */
+  private sanitizeNode(node: Node): void {
+    const doc = node.ownerDocument;
+    if (!doc) {
+      return;
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
+
+    const element = node as Element;
+    const tagName = element.tagName.toLowerCase();
+
+    // Remove disallowed tags
+    if (!this.ALLOWED_TAGS.has(tagName)) {
+      // Replace with text content
+      const textNode = doc.createTextNode(element.textContent || '');
+      element.parentNode?.replaceChild(textNode, element);
+      return;
+    }
+
+    // Remove disallowed attributes
+    const allowedAttrs = this.ALLOWED_ATTRIBUTES[tagName];
+    if (allowedAttrs) {
+      const attrs = Array.from(element.attributes);
+      for (const attr of attrs) {
+        if (!allowedAttrs.has(attr.name)) {
+          element.removeAttribute(attr.name);
+        }
+      }
+    } else {
+      // Remove all attributes if none are allowed
+      const attrs = Array.from(element.attributes);
+      for (const attr of attrs) {
+        element.removeAttribute(attr.name);
+      }
+    }
+
+    // Sanitize href and src attributes for security
+    if (tagName === 'a') {
+      const href = element.getAttribute('href');
+      if (href && !this.isSafeURL(href)) {
+        element.removeAttribute('href');
+      }
+    }
+
+    if (tagName === 'img') {
+      const src = element.getAttribute('src');
+      if (src && !this.isSafeURL(src)) {
+        element.removeAttribute('src');
+      }
+    }
+
+    // Recursively sanitize children
+    Array.from(element.childNodes).forEach((child) => {
+      this.sanitizeNode(child);
+    });
+  }
+
+  /**
+   * Check if URL is safe (not javascript:, data:, etc.)
+   */
+  private isSafeURL(url: string): boolean {
+    const trimmed = url.trim().toLowerCase();
+    const dangerous = ['javascript:', 'data:', 'vbscript:', 'file:', 'about:'];
+    return !dangerous.some((prefix) => trimmed.startsWith(prefix));
+  }
+
+  /**
+   * Validate nodes recursively
+   */
+  private validateNodes(nodes: EditorNode[], errors: string[]): void {
+    for (const node of nodes) {
+      // Validate node type
+      if (!this.NODE_TYPES.has(node.type)) {
+        errors.push(`Invalid node type: ${node.type}`);
+      }
+
+      // Validate marks
+      if (node.marks) {
+        for (const mark of node.marks) {
+          if (!this.MARK_TYPES.has(mark.type)) {
+            errors.push(`Invalid mark type: ${mark.type}`);
+          }
+        }
+      }
+
+      // Recursively validate children
+      if (node.content && Array.isArray(node.content)) {
+        this.validateNodes(node.content, errors);
+      }
+    }
+  }
+
+  /**
+   * Extract plain text from nodes
    */
   private nodesToPlainText(nodes: EditorNode[]): string {
     return nodes.map((node) => this.nodeToPlainText(node)).join('');
   }
 
   /**
-   * Convert single node to plain text
+   * Extract plain text from single node
    */
   private nodeToPlainText(node: EditorNode): string {
-    if (node.type === 'text') {
-      return node.text || '';
-    }
+    switch (node.type) {
+      case 'text':
+        return node.text || '';
 
-    if (node.type === 'hardBreak') {
-      return '\n';
-    }
+      case 'paragraph':
+      case 'heading':
+      case 'blockquote':
+      case 'listItem':
+        return (node.content ? this.nodesToPlainText(node.content) : '') + '\n';
 
-    if (node.content) {
-      return this.nodesToPlainText(node.content);
-    }
+      case 'bulletList':
+      case 'orderedList':
+        return (node.content ? this.nodesToPlainText(node.content) : '') + '\n';
 
-    return '';
-  }
+      case 'codeBlock':
+        return (node.content ? this.nodesToPlainText(node.content) : '') + '\n\n';
 
-  /**
-   * Apply mark (formatting) to HTML
-   */
-  private applyMark(html: string, mark: EditorMark): string {
-    switch (mark.type) {
-      case 'bold':
-      case 'strong':
-        return `<strong>${html}</strong>`;
+      case 'hardBreak':
+        return '\n';
 
-      case 'italic':
-      case 'em':
-        return `<em>${html}</em>`;
-
-      case 'underline':
-        return `<u>${html}</u>`;
-
-      case 'strike':
-        return `<s>${html}</s>`;
-
-      case 'code':
-        return `<code>${html}</code>`;
-
-      case 'link': {
-        const href = (mark.attrs?.href as string) || '';
-        const title = (mark.attrs?.title as string) || '';
-        return `<a href="${this.escapeAttr(href)}" title="${this.escapeAttr(title)}">${html}</a>`;
-      }
+      case 'horizontalRule':
+        return '\n---\n';
 
       default:
-        return html;
+        return node.content ? this.nodesToPlainText(node.content) : '';
     }
-  }
-
-  /**
-   * Parse HTML to EditorNode array
-   */
-  private parseHTMLToNodes(html: string): EditorNode[] {
-    // Simple HTML parsing - create paragraph nodes for each block
-    // This is a basic implementation; a real one would use a proper HTML parser
-
-    const sanitized = this.sanitize(html);
-    const lines = sanitized.split(/\n+/).filter(Boolean);
-
-    if (lines.length === 0) {
-      return [{ type: 'paragraph', content: [] }];
-    }
-
-    return lines.map((line) => ({
-      type: 'paragraph',
-      content: [
-        {
-          type: 'text',
-          text: stripAllHTML(line),
-        },
-      ],
-    }));
-  }
-
-  /**
-   * Validate a single node
-   */
-  private validateNode(node: EditorNode, path: string): string[] {
-    const errors: string[] = [];
-
-    if (!node.type) {
-      errors.push(`${path}: Missing node type`);
-    }
-
-    if (node.content && !Array.isArray(node.content)) {
-      errors.push(`${path}: content must be an array`);
-    }
-
-    if (node.marks && !Array.isArray(node.marks)) {
-      errors.push(`${path}: marks must be an array`);
-    }
-
-    // Validate child nodes recursively
-    if (node.content) {
-      node.content.forEach((child, index) => {
-        const childErrors = this.validateNode(child, `${path}.content[${index}]`);
-        errors.push(...childErrors);
-      });
-    }
-
-    return errors;
   }
 
   /**
    * Escape HTML special characters
    */
   private escapeHTML(text: string): string {
-    const escapeMap: Record<string, string> = {
+    const map: Record<string, string> = {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
-      "'": '&#39;',
+      "'": '&#x27;',
+      '/': '&#x2F;',
     };
 
-    return text.replace(/[&<>"']/g, (char) => escapeMap[char] || char);
-  }
-
-  /**
-   * Escape HTML attribute values
-   */
-  private escapeAttr(value: string): string {
-    if (!value) {
-      return '';
-    }
-    return this.escapeHTML(value);
+    return text.replace(/[&<>"'/]/g, (char) => map[char]);
   }
 }

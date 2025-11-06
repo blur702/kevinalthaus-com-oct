@@ -5,7 +5,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 import app from './index';
 import { Server } from 'http';
-import { createLogger, LogLevel } from '@monorepo/shared';
+import { createLogger, LogLevel, ensurePortAvailable } from '@monorepo/shared';
 
 // Validate and extract log level from environment
 function getLogLevel(): LogLevel {
@@ -44,14 +44,38 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
 }
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
-const server: Server = app
-  .listen(PORT, () => {
-    logger.info(`API Gateway server running on port ${PORT}`);
-  })
-  .on('error', (err: Error) => {
-    logger.error('Failed to start API Gateway', err);
+// Ensure port is available before starting server
+let server: Server;
+
+async function startServer(): Promise<void> {
+  try {
+    // Check and kill any existing process on this port
+    await ensurePortAvailable({
+      port: PORT,
+      serviceName: 'API Gateway',
+      killExisting: true,
+    });
+
+    server = app
+      .listen(PORT, () => {
+        logger.info(`API Gateway server running on port ${PORT}`);
+      })
+      .on('error', (err: Error) => {
+        logger.error('Failed to start API Gateway', err);
+        process.exit(1);
+      });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to ensure port availability', err);
     process.exit(1);
-  });
+  }
+}
+
+// Start the server
+startServer().catch((err) => {
+  logger.error('Unhandled error during server startup', err);
+  process.exit(1);
+});
 
 function gracefulShutdown(signal: string): void {
   logger.info(`Received ${signal}. Shutting down API Gateway...`);

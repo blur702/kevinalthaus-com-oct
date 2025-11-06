@@ -26,6 +26,7 @@ import {
   Logout as LogoutIcon,
   Label as LabelIcon,
   Edit as EditIcon,
+  FolderOpen as FilesIcon,
 } from '@mui/icons-material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
@@ -37,6 +38,7 @@ import Analytics from './pages/Analytics.tsx';
 import Settings from './pages/Settings.tsx';
 import Taxonomy from './pages/Taxonomy.tsx';
 import EditorTest from './pages/EditorTest.tsx';
+import Files from './pages/Files.tsx';
 
 // Import auth components and pages
 import ProtectedRoute from './components/ProtectedRoute.tsx';
@@ -78,6 +80,7 @@ const navItems: NavItem[] = [
   { label: 'Users', path: '/users', icon: <PeopleIcon /> },
   { label: 'Content', path: '/content', icon: <ArticleIcon /> },
   { label: 'Taxonomy', path: '/taxonomy', icon: <LabelIcon /> },
+  { label: 'Files', path: '/files', icon: <FilesIcon /> },
   { label: 'Analytics', path: '/analytics', icon: <AnalyticsIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
   { label: 'Editor Test', path: '/editor-test', icon: <EditIcon /> },
@@ -227,6 +230,7 @@ const App: React.FC = () => {
           { path: '/users', element: <Users /> },
           { path: '/content', element: <Content /> },
           { path: '/taxonomy', element: <Taxonomy /> },
+          { path: '/files', element: <Files /> },
           { path: '/analytics', element: <Analytics /> },
           {
             path: '/settings',
