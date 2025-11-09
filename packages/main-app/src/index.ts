@@ -30,6 +30,7 @@ import { editorRouter } from './routes/editor';
 import { taxonomyRouter } from './routes/taxonomy';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { createBlogRouter } from './routes/blog';
+import { createPageBuilderRouter } from '../../../plugins/page-builder/src/routes/index';
 import { pool } from './db';
 import { asyncHandler } from './utils/asyncHandler';
 import { requestIdMiddleware } from './middleware/requestId';
@@ -336,6 +337,10 @@ app.use('/api/plugins', pluginsRouter);
 // Blog plugin routes
 const blogService = new BlogService(pool);
 app.use('/api/blog', createBlogRouter(blogService, logger));
+
+// Page Builder plugin routes
+const pageBuilderApiRouter = createPageBuilderRouter(pool, logger);
+app.use('/api/page-builder', pageBuilderApiRouter);
 
 // File management routes (storageService imported from server.ts)
 app.use('/admin/files', createAdminFileRoutes(storageService, pool));
