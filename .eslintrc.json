@@ -11,7 +11,6 @@
       "./packages/*/tsconfig.test.json",
       "./packages/*/tsconfig.node.json",
       "./plugins/*/tsconfig.json",
-      "./tests/tsconfig.json",
       "./scripts/tsconfig.json"
     ]
   },

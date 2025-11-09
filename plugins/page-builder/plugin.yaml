@@ -1,0 +1,251 @@
+name: page-builder
+version: 1.0.0
+displayName: Page Builder
+description: Production block-based editor with drag-drop, responsive grids, extensible widgets, templates, reusable blocks, version history, and WCAG AA compliance
+
+author:
+  name: Kevin Althaus
+  email: contact@kevinalthaus.com
+
+license: MIT
+
+keywords:
+  - page-builder
+  - cms
+  - drag-drop
+  - responsive
+  - grid
+  - widgets
+  - blocks
+  - wysiwyg
+  - accessibility
+  - seo
+
+capabilities:
+  - database:read
+  - database:write
+  - api:call
+
+entrypoint: dist/index.js
+
+backend:
+  routes:
+    # Page Management
+    - path: /api/page-builder/pages
+      method: GET
+      handler: listPagesHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: List all pages with pagination and filtering
+
+    - path: /api/page-builder/pages/:id
+      method: GET
+      handler: getPageHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get a specific page by ID
+
+    - path: /api/page-builder/pages
+      method: POST
+      handler: createPageHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Create a new page
+
+    - path: /api/page-builder/pages/:id
+      method: PUT
+      handler: updatePageHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Update an existing page
+
+    - path: /api/page-builder/pages/:id
+      method: DELETE
+      handler: deletePageHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Soft delete a page
+
+    # Page Versions
+    - path: /api/page-builder/pages/:id/versions
+      method: GET
+      handler: getPageVersionsHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get version history for a page
+
+    - path: /api/page-builder/pages/:id/versions/:versionNumber
+      method: GET
+      handler: getPageVersionHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get a specific version of a page
+
+    # Templates
+    - path: /api/page-builder/templates
+      method: GET
+      handler: listTemplatesHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: List all templates
+
+    - path: /api/page-builder/templates/:id
+      method: GET
+      handler: getTemplateHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get a specific template
+
+    - path: /api/page-builder/templates
+      method: POST
+      handler: createTemplateHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Create a new template
+
+    - path: /api/page-builder/templates/:id
+      method: PUT
+      handler: updateTemplateHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Update a template
+
+    - path: /api/page-builder/templates/:id
+      method: DELETE
+      handler: deleteTemplateHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Soft delete a template
+
+    # Reusable Blocks
+    - path: /api/page-builder/reusable-blocks
+      method: GET
+      handler: listReusableBlocksHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: List all reusable blocks
+
+    - path: /api/page-builder/reusable-blocks/:id
+      method: GET
+      handler: getReusableBlockHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get a specific reusable block
+
+    - path: /api/page-builder/reusable-blocks
+      method: POST
+      handler: createReusableBlockHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Create a new reusable block
+
+    - path: /api/page-builder/reusable-blocks/:id
+      method: PUT
+      handler: updateReusableBlockHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Update a reusable block
+
+    - path: /api/page-builder/reusable-blocks/:id
+      method: DELETE
+      handler: deleteReusableBlockHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Soft delete a reusable block
+
+    # Public Routes
+    - path: /pages/:slug
+      method: GET
+      handler: renderPageHandler
+      public: true
+      description: Render a published page by slug
+
+database:
+  migrations:
+    - 01-create-schema.sql
+    - 02-create-page-tables.sql
+    - 03-create-template-tables.sql
+    - 04-create-reusable-blocks-table.sql
+
+hooks:
+  install: onInstall
+  activate: onActivate
+  deactivate: onDeactivate
+  uninstall: onUninstall
+  update: onUpdate
+
+dependencies:
+  - content-manager
+  - taxonomy
+
+settings:
+  schema:
+    gridColumns:
+      type: number
+      default: 12
+      min: 1
+      max: 24
+      description: Default number of grid columns for new pages
+
+    enableVersioning:
+      type: boolean
+      default: true
+      description: Enable automatic version history for pages
+
+    maxVersionsPerPage:
+      type: number
+      default: 50
+      min: 1
+      max: 100
+      description: Maximum number of versions to keep per page
+
+    autoPublish:
+      type: boolean
+      default: false
+      description: Automatically publish pages on save (bypass draft status)
+
+    enableTemplates:
+      type: boolean
+      default: true
+      description: Enable template system for reusable layouts
+
+    enableReusableBlocks:
+      type: boolean
+      default: true
+      description: Enable reusable blocks for widget combinations
+
+minimumSystemVersion: 1.0.0

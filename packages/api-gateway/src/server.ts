@@ -1,11 +1,37 @@
 // Load environment variables from root .env file first, before any other imports
 import dotenv from 'dotenv';
 import path from 'path';
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
+// Try multiple possible .env locations
+const possibleEnvPaths = [
+  path.resolve(__dirname, '../../../.env'), // from dist/
+  path.resolve(__dirname, '../../../../.env'), // from packages/api-gateway/dist/
+  path.resolve(process.cwd(), '.env'), // current directory
+  path.resolve(process.cwd(), '../.env'), // parent directory
+  path.resolve(process.cwd(), '../../.env'), // grandparent directory
+];
+
+let envLoaded = false;
+for (const envPath of possibleEnvPaths) {
+  try {
+    const result = dotenv.config({ path: envPath });
+    if (!result.error) {
+      envLoaded = true;
+      break;
+    }
+  } catch (e) {
+    // Continue trying other paths
+  }
+}
+
+if (!envLoaded) {
+  console.error('Could not load .env file from any expected location');
+  process.exit(1);
+}
 
 import app from './index';
 import { Server } from 'http';
-import { createLogger, LogLevel, ensurePortAvailable } from '@monorepo/shared';
+import { createLogger, LogLevel } from '@monorepo/shared';
 
 // Validate and extract log level from environment
 function getLogLevel(): LogLevel {
@@ -47,7 +73,7 @@ const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 // Ensure port is available before starting server
 let server: Server;
 
-async function startServer(): Promise<void> {
+function startServer(): void {
   try {
     // TEMPORARILY DISABLED: Port check has bug reporting PID: 0
     // await ensurePortAvailable({
@@ -72,10 +98,12 @@ async function startServer(): Promise<void> {
 }
 
 // Start the server
-startServer().catch((err) => {
-  logger.error('Unhandled error during server startup', err);
+try {
+  startServer();
+} catch (err) {
+  logger.error('Unhandled error during server startup', err as Error);
   process.exit(1);
-});
+}
 
 function gracefulShutdown(signal: string): void {
   logger.info(`Received ${signal}. Shutting down API Gateway...`);

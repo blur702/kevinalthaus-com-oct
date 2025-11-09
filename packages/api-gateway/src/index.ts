@@ -510,6 +510,29 @@ app.options('/api/public-settings', (req, res) => {
   res.sendStatus(204);
 });
 
+// Middleware to add CORS headers to proxied responses
+const corsMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  const origin = req.header('Origin');
+  if (origin && corsOrigins.includes(origin)) {
+    // Add CORS headers to the response
+    const originalSetHeader = res.setHeader.bind(res);
+    res.setHeader = (name: string, value: string | number | readonly string[]) => {
+      if (name.toLowerCase() === 'access-control-allow-origin') {
+        // Don't override if already set
+        return res;
+      }
+      return originalSetHeader(name, value);
+    };
+
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', String(corsCredentials));
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  next();
+};
+
 // Create custom proxy with CORS support for public-settings
 const publicSettingsProxyOptions: Options = {
   target: MAIN_APP_URL,
@@ -520,25 +543,40 @@ const publicSettingsProxyOptions: Options = {
   proxyTimeout: 30000,
   onProxyReq: (proxyReq, req) => {
     // Set internal gateway token
-    proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN!);
+    proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN);
     // Propagate request id
     const rid = req.headers['x-request-id'];
     if (rid) {
       proxyReq.setHeader('x-request-id', Array.isArray(rid) ? rid[0] : String(rid));
     }
   },
-  onProxyRes: (proxyRes, req, res) => {
+  onProxyRes: (_proxyRes, req, res) => {
     // Add CORS headers to the proxied response
     const origin = req.header('Origin');
     if (origin && corsOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', String(corsCredentials));
     }
+  },
+  onError: (err, req, res) => {
+    logger.error('Proxy error for public-settings', err);
+    // Add CORS headers even on proxy errors
+    const origin = req.header('Origin');
+    if (origin && corsOrigins.includes(origin)) {
+      logger.info('Setting CORS headers for failed request', { origin });
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', String(corsCredentials));
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+    // Return a proper error response
+    res.status(503).json({ error: 'Service temporarily unavailable' });
   }
 };
 
 app.use(
   '/api/public-settings',
+  corsMiddleware,
   createProxyMiddleware(publicSettingsProxyOptions) as unknown as express.RequestHandler
 );
 

@@ -4,7 +4,7 @@
  */
 
 import { Router, Response, Request } from 'express';
-import { logger } from '@monorepo/shared';
+import { defaultLogger as logger } from '@monorepo/shared';
 import { query } from '../db';
 
 const router = Router();

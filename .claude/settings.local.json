@@ -10,7 +10,8 @@
       "Bash(docker compose ps:*)",
       "Bash(npm run lint:*)",
       "Bash(npm ls:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [
       "Bash(powershell.exe:*)",

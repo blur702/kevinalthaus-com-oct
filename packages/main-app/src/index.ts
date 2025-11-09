@@ -39,6 +39,7 @@ import { storageService } from './server';
 import { createAdminFileRoutes } from './routes/admin-files';
 import { createPluginFileRoutes } from './routes/plugin-files';
 import { createPublicShareRoutes } from './routes/public-shares';
+import pageBuilderRouter from './routes/page-builder';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -224,15 +225,21 @@ app.use(keepAliveMiddleware);
 
       // Non-wildcard: check specific origin against allowlist
       const origin = req.header('Origin');
+      logger.info(`[CORS] Request to ${req.path} from origin: ${origin}`);
+      logger.info(`[CORS] Allowed origins: ${corsOrigins.join(', ')}`);
       let isAllowed = false;
 
       if (origin) {
         // Request has Origin header - check if it's in allowlist
         isAllowed = corsOrigins.includes(origin);
+        logger.info(`[CORS] Origin ${origin} is ${isAllowed ? 'allowed' : 'not allowed'}`);
+      } else {
+        logger.info(`[CORS] No Origin header in request`);
       }
 
       // Only send credentials when origin is allowed
       const credentialsForResponse = isAllowed ? corsCredentials : false;
+      logger.info(`[CORS] Response: origin=${isAllowed}, credentials=${credentialsForResponse}`);
       callback(null, { origin: isAllowed, credentials: credentialsForResponse });
     })
   );
@@ -347,6 +354,9 @@ pluginManager.setServices({
 // Admin UI for plugin management
 pluginManager.init(app);
 app.use('/admin/plugins', adminPluginsRouter);
+
+// Page Builder admin interface
+app.use(pageBuilderRouter);
 
 // Discover plugins (manifests only for now)
 void (async () => {
