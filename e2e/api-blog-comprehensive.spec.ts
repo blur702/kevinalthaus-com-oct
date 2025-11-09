@@ -1,3 +1,4 @@
+import './test-helpers';
 /**
  * Comprehensive Blog API Tests
  * Tests all blog post endpoints including CRUD operations, publishing, and public access
@@ -752,3 +753,4 @@ test.describe('Blog API - /api/blog', () => {
     });
   });
 });
+

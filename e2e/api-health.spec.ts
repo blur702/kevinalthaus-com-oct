@@ -1,3 +1,4 @@
+import './test-helpers';
 /**
  * Comprehensive Health Check API Tests
  * Tests all health check endpoints for both API Gateway and Main App
@@ -269,3 +270,4 @@ test.describe('Health Check API - /health', () => {
     });
   });
 });
+

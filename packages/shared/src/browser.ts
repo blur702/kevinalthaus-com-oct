@@ -20,3 +20,6 @@ export { RichTextEditor } from './components/editor/RichTextEditor';
 export type { RichTextEditorProps } from './components/editor/RichTextEditor';
 export { TaxonomyField } from './components/TaxonomyField';
 export type { TaxonomyFieldProps } from './components/TaxonomyField';
+
+// Export Sentry integration
+export * from './sentry';

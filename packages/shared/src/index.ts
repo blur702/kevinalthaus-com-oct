@@ -11,6 +11,9 @@ export * from './middleware/requestId';
 // Export Services
 export * from './services';
 
+// Export Sentry utilities
+export * from './sentry';
+
 // Export Components
 export { RichTextEditor } from './components/editor/RichTextEditor';
 export type { RichTextEditorProps } from './components/editor/RichTextEditor';

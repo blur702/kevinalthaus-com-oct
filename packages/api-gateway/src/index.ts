@@ -497,6 +497,52 @@ app.use(
 
 // (removed) Previous proxy to main-app for /api/plugins to avoid duplicate registrations
 
+// Public settings endpoint (no authentication required, no JWT middleware)
+// Handle OPTIONS preflight separately before proxy
+app.options('/api/public-settings', (req, res) => {
+  const origin = req.header('Origin');
+  if (origin && corsOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', String(corsCredentials));
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendStatus(204);
+});
+
+// Create custom proxy with CORS support for public-settings
+const publicSettingsProxyOptions: Options = {
+  target: MAIN_APP_URL,
+  changeOrigin: true,
+  logLevel: 'warn',
+  pathRewrite: { '^/api/public-settings': '/api/public-settings' },
+  timeout: 30000,
+  proxyTimeout: 30000,
+  onProxyReq: (proxyReq, req) => {
+    // Set internal gateway token
+    proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN!);
+    // Propagate request id
+    const rid = req.headers['x-request-id'];
+    if (rid) {
+      proxyReq.setHeader('x-request-id', Array.isArray(rid) ? rid[0] : String(rid));
+    }
+  },
+  onProxyRes: (proxyRes, req, res) => {
+    // Add CORS headers to the proxied response
+    const origin = req.header('Origin');
+    if (origin && corsOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', String(corsCredentials));
+    }
+  }
+};
+
+app.use(
+  '/api/public-settings',
+  createProxyMiddleware(publicSettingsProxyOptions) as unknown as express.RequestHandler
+);
+
+// Authenticated settings endpoints
 app.use(
   '/api/settings',
   jwtMiddleware,
@@ -529,6 +575,18 @@ app.use(
     pathRewrite: { '^/api/blog': '/api/blog' },
     includeForwardingHeaders: true,
     timeout: 30000
+  })
+);
+
+// SSDD Validator plugin routes
+app.use(
+  '/api/ssdd-validator',
+  jwtMiddleware,
+  createProxy({
+    target: PLUGIN_ENGINE_URL,
+    pathRewrite: { '^/api/ssdd-validator': '/api/ssdd-validator' },
+    includeForwardingHeaders: true,
+    timeout: 45000 // Longer timeout for USPS/geocoding operations
   })
 );
 

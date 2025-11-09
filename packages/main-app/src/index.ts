@@ -25,6 +25,7 @@ import { usersManagerRouter } from './routes/usersManager';
 import { dashboardRouter } from './routes/dashboard';
 import { analyticsRouter } from './routes/analytics';
 import settingsRouter from './routes/settings-merged';
+import settingsPublicRouter from './routes/settings-public';
 import { editorRouter } from './routes/editor';
 import { taxonomyRouter } from './routes/taxonomy';
 import { createLogger, LogLevel } from '@monorepo/shared';
@@ -246,11 +247,18 @@ app.use(cacheMiddleware);
 // Page view tracking middleware (after cache, before routes)
 app.use(pageViewTrackingMiddleware);
 
-// Verify internal token on all requests except health checks
+// Verify internal token on all requests except health checks and public endpoints
 // Health checks need to be accessible for container orchestration
+// Public settings need to be accessible by frontend without authentication
 app.use((req, res, next) => {
-  const allowedHealthPaths = ['/health', '/health/', '/health/live', '/health/ready'];
-  if (allowedHealthPaths.includes(req.path)) {
+  const allowedPublicPaths = [
+    '/health',
+    '/health/',
+    '/health/live',
+    '/health/ready',
+    '/api/public-settings'
+  ];
+  if (allowedPublicPaths.includes(req.path)) {
     next();
   } else {
     verifyInternalToken(req, res, next);
@@ -308,6 +316,10 @@ app.use('/api/users', usersRouter);
 app.use('/api/users-manager', usersManagerRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/analytics', analyticsRouter);
+// Public settings endpoint (no authentication required)
+// Mounted at /api/public-settings to avoid being caught by /api/settings wildcard
+app.use('/api/public-settings', settingsPublicRouter);
+// Authenticated settings endpoints
 app.use('/api/settings', settingsRouter);
 app.use('/api/editor', editorRouter);
 app.use('/api/taxonomy', taxonomyRouter);

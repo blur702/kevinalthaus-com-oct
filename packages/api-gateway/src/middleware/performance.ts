@@ -347,7 +347,7 @@ export const compressionMiddleware = compression({
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 export const rateLimitMiddleware = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'test' || process.env.E2E_TESTING === 'true' ? 50000 : 1000, // Higher limit for test environments
+  max: (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') ? 10000 : 100,
   message: {
     error: 'Too many requests',
     message: 'Please try again later',
@@ -411,3 +411,5 @@ export const keepAliveMiddleware = (_req: Request, res: Response, next: NextFunc
 export const clearCache = (): void => {
   responseCache.clear();
 };
+
+

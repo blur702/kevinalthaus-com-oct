@@ -1,3 +1,4 @@
+import './test-helpers';
 /**
  * API Gateway Logging Tests
  * Validates structured logging implementation and error response formatting
@@ -222,3 +223,4 @@ test.describe('Logging Configuration', () => {
   });
 
 });
+

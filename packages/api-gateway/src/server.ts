@@ -49,12 +49,12 @@ let server: Server;
 
 async function startServer(): Promise<void> {
   try {
-    // Check and kill any existing process on this port
-    await ensurePortAvailable({
-      port: PORT,
-      serviceName: 'API Gateway',
-      killExisting: true,
-    });
+    // TEMPORARILY DISABLED: Port check has bug reporting PID: 0
+    // await ensurePortAvailable({
+    //   port: PORT,
+    //   serviceName: 'API Gateway',
+    //   killExisting: true,
+    // });
 
     server = app
       .listen(PORT, () => {

@@ -1,3 +1,4 @@
+import './test-helpers';
 /**
  * Upload Error Hygiene Tests
  * Validates that filesystem paths are never exposed in error responses
@@ -176,3 +177,4 @@ test.describe('Upload Security Configuration', () => {
   });
 
 });
+

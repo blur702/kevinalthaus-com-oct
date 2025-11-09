@@ -3,8 +3,56 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { timingSafeEqual, createHash } from 'crypto';
 import { Server } from 'http';
+import { Pool } from 'pg';
+
+import { createLogger, LogLevel, Role } from '@monorepo/shared';
+
+// Dynamic SSDD Validator plugin loader
+let SSDDValidatorPlugin: any;
+(function resolvePlugin() {
+  try {
+    const explicitPath = process.env.PLUGIN_SSDD_PATH;
+    const defaultPath = require('path').resolve(__dirname, '../../../plugins/ssdd-validator/dist/index');
+    const mod = require(explicitPath || defaultPath);
+    SSDDValidatorPlugin = (mod && (mod.default || mod)) || null;
+    if (!SSDDValidatorPlugin) {
+      throw new Error('Plugin module did not export a default constructor');
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('[plugin-engine] Failed to resolve SSDD Validator plugin module', e);
+    process.exit(1);
+  }
+})();
 
 const app = express();
+
+// Initialize logger
+const logger = createLogger({
+  level: LogLevel.INFO,
+  format: 'text',
+  service: 'plugin-engine',
+});
+
+// Initialize database connection for plugins
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  // eslint-disable-next-line no-console
+  console.error('[plugin-engine] DATABASE_URL is required');
+  process.exit(1);
+}
+
+// Create PG pool after validating env and logger is ready
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+pool.on('error', (err) => {
+  logger.error('[plugin-engine] PG pool error', err as unknown as Error);
+});
+
 const PORT = Number(process.env.PLUGIN_ENGINE_PORT || process.env.PORT || 3004);
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
@@ -89,10 +137,79 @@ app.use((req, res, next) => {
   }
 });
 
+// Extract user context from X-User-* headers (set by API gateway)
+app.use((req, _res, next) => {
+  const rawUserId = req.headers['x-user-id'];
+  const rawUserRole = req.headers['x-user-role'];
+  const rawUserEmail = req.headers['x-user-email'];
+
+  const userId = typeof rawUserId === 'string' ? rawUserId.trim() : Array.isArray(rawUserId) ? String(rawUserId[0]).trim() : '';
+  const userEmail = typeof rawUserEmail === 'string' ? rawUserEmail.trim() : Array.isArray(rawUserEmail) ? String(rawUserEmail[0]).trim() : '';
+  const roleHeader = typeof rawUserRole === 'string' ? rawUserRole.trim() : Array.isArray(rawUserRole) ? String(rawUserRole[0]).trim() : '';
+
+  if (userId && userEmail && userId.toLowerCase() !== 'undefined' && userEmail.toLowerCase() !== 'undefined' && userId.toLowerCase() !== 'null' && userEmail.toLowerCase() !== 'null') {
+    let roleValue: Role | undefined;
+    if (roleHeader) {
+      const roleStr = roleHeader.toUpperCase();
+      const validRoles = new Set<string>(Object.values(Role) as string[]);
+      if (validRoles.has(roleStr)) {
+        roleValue = roleStr as Role;
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn('[plugin-engine] Invalid x-user-role received, ignoring', { roleStr });
+      }
+    }
+    req.user = {
+      id: userId,
+      ...(roleValue ? { role: roleValue } : {}),
+      email: userEmail,
+    } as express.Request['user'];
+  }
+  next();
+});
+
+
 // Health
 app.get('/health', (_req, res) => {
   res.json({ status: 'healthy', service: 'plugin-engine' });
 });
+
+// Load and activate SSDD Validator plugin
+async function loadPlugins(): Promise<void> {
+  try {
+    // eslint-disable-next-line no-console
+    console.log('[plugin-engine] Loading SSDD Validator plugin...');
+
+    const plugin = new SSDDValidatorPlugin();
+    const context = {
+      app,
+      db: pool,
+      logger: {
+        info: (message: string, ...args: unknown[]) => logger.info(message, ...args as Array<Record<string, unknown>>),
+        warn: (message: string, ...args: unknown[]) => logger.warn(message, ...args as Array<Record<string, unknown>>),
+        error: (message: string, error?: Error, ...args: unknown[]) => logger.error(message, error, ...args as Array<Record<string, unknown>>),
+        debug: (message: string, ...args: unknown[]) => logger.debug(message, ...args as Array<Record<string, unknown>>),
+      },
+      services: {
+        blog: null,
+        editor: null,
+        taxonomy: null,
+        email: null,
+      },
+      config: {},
+    };
+
+    // Activate the plugin (this registers its routes)
+    await plugin.onActivate(context);
+
+    // eslint-disable-next-line no-console
+    console.log('[plugin-engine] SSDD Validator plugin loaded successfully');
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[plugin-engine] Failed to load SSDD Validator plugin:', error);
+    process.exit(1);
+  }
+}
 
 // Simple echo to validate proxy path: /plugins/*
 app.all('/plugins/*', (req, res) => {
@@ -116,11 +233,30 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   process.exit(1);
 }
 
+// Quick DB connectivity check before starting
+async function verifyDbConnectivity(): Promise<void> {
+  try {
+    await pool.query('SELECT 1');
+    // eslint-disable-next-line no-console
+    logger.info('[plugin-engine] Database connectivity OK');
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    logger.error('[plugin-engine] Database connectivity check failed', err as unknown as Error);
+    process.exit(1);
+  }
+}
+
 // Start server with proper error handling
 const server: Server = app
-  .listen(PORT, () => {
+  .listen(PORT, async () => {
     // eslint-disable-next-line no-console
     console.log(`[plugin-engine] listening on ${PORT}`);
+
+    // Verify DB connectivity at startup
+    await verifyDbConnectivity();
+
+    // Load plugins after server starts
+    await loadPlugins();
   })
   .on('error', (err: Error) => {
     // eslint-disable-next-line no-console
@@ -145,10 +281,21 @@ function gracefulShutdown(signal: string): void {
       clearTimeout(timer);
       process.exit(1);
     }
-    clearTimeout(timer);
-    // eslint-disable-next-line no-console
-    console.log('[plugin-engine] Shutdown complete');
-    process.exit(0);
+    // Close DB pool
+    void pool
+      .end()
+      .then(() => {
+        clearTimeout(timer);
+        // eslint-disable-next-line no-console
+        console.log('[plugin-engine] Shutdown complete');
+        process.exit(0);
+      })
+      .catch((e) => {
+        // eslint-disable-next-line no-console
+        console.error('[plugin-engine] Error closing DB pool', e);
+        clearTimeout(timer);
+        process.exit(1);
+      });
   });
 }
 
@@ -174,3 +321,4 @@ process.on('unhandledRejection', (reason) => {
   // Use setImmediate to ensure log is flushed before exit
   setImmediate(() => process.exit(1));
 });
+

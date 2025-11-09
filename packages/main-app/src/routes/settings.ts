@@ -54,6 +54,12 @@ interface EmailSettings {
   email_provider?: 'smtp' | 'brevo';
 }
 
+interface ExternalApiSettings {
+  google_maps_api_key?: string;
+  usps_api_key?: string;
+  census_gov_api_key?: string;
+}
+
 interface ApiKey {
   id: string;
   user_id: string;
@@ -702,6 +708,107 @@ router.post(
         success: false,
         message: 'Failed to test email settings'
       });
+    }
+  }
+);
+
+// GET /api/settings/external-apis - Get external API settings
+router.get(
+  '/external-apis',
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const keys = ['google_maps_api_key', 'usps_api_key', 'census_gov_api_key'];
+      const settings = await getSettings(keys);
+
+      const response = {
+        google_maps_api_key: '',
+        google_maps_api_key_configured: !!settings.google_maps_api_key && (settings.google_maps_api_key as string) !== '',
+        usps_api_key: '',
+        usps_api_key_configured: !!settings.usps_api_key && (settings.usps_api_key as string) !== '',
+        census_gov_api_key: '',
+        census_gov_api_key_configured: !!settings.census_gov_api_key && (settings.census_gov_api_key as string) !== '',
+      };
+
+      res.json(response);
+    } catch (error) {
+      logger.error('Error fetching external API settings', error as Error, {});
+      res.status(500).json({ error: 'Failed to fetch external API settings' });
+    }
+  }
+);
+
+// PUT /api/settings/external-apis - Update external API settings
+router.put(
+  '/external-apis',
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const { google_maps_api_key, usps_api_key, census_gov_api_key } = req.body as ExternalApiSettings;
+
+      // Validation
+      if (google_maps_api_key !== undefined && typeof google_maps_api_key !== 'string') {
+        res.status(400).json({ error: 'Google Maps API key must be a string' });
+        return;
+      }
+
+      if (usps_api_key !== undefined && typeof usps_api_key !== 'string') {
+        res.status(400).json({ error: 'USPS API key must be a string' });
+        return;
+      }
+
+      if (census_gov_api_key !== undefined && typeof census_gov_api_key !== 'string') {
+        res.status(400).json({ error: 'Census.gov API key must be a string' });
+        return;
+      }
+
+      // Update settings
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      await transaction(async (client) => {
+        const updates = [
+          { key: 'google_maps_api_key', value: google_maps_api_key },
+          { key: 'usps_api_key', value: usps_api_key },
+          { key: 'census_gov_api_key', value: census_gov_api_key },
+        ];
+
+        for (const update of updates) {
+          if (update.value !== undefined) {
+            await client.query(
+              `INSERT INTO system_settings (key, value, updated_by, updated_at)
+               VALUES ($1, $2::jsonb, $3, CURRENT_TIMESTAMP)
+               ON CONFLICT (key) DO UPDATE SET
+                 value = EXCLUDED.value,
+                 updated_by = EXCLUDED.updated_by,
+                 updated_at = CURRENT_TIMESTAMP`,
+              [update.key, JSON.stringify(update.value), userId]
+            );
+          }
+        }
+      });
+
+      // Fetch and return updated settings with configured flags
+      const keys = ['google_maps_api_key', 'usps_api_key', 'census_gov_api_key'];
+      const settings = await getSettings(keys);
+
+      const response = {
+        google_maps_api_key: '',
+        google_maps_api_key_configured: !!settings.google_maps_api_key && (settings.google_maps_api_key as string) !== '',
+        usps_api_key: '',
+        usps_api_key_configured: !!settings.usps_api_key && (settings.usps_api_key as string) !== '',
+        census_gov_api_key: '',
+        census_gov_api_key_configured: !!settings.census_gov_api_key && (settings.census_gov_api_key as string) !== '',
+      };
+
+      logger.info('External API settings updated', { userId });
+      res.json(response);
+    } catch (error) {
+      logger.error('Error updating external API settings', error as Error, {});
+      res.status(500).json({ error: 'Failed to update external API settings' });
     }
   }
 );

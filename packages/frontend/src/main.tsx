@@ -5,6 +5,27 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
 import { theme } from './theme';
+import { initializeSentry, SentryErrorBoundary } from '@monorepo/shared';
+import './sentry-debug';
+
+// Initialize Sentry as early as possible
+const sentryDSN = import.meta.env.VITE_SENTRY_DSN || '';
+const enableSentry = Boolean(
+  import.meta.env.PROD ||
+    String(import.meta.env.VITE_ENABLE_SENTRY || '').toLowerCase() === 'true' ||
+    String(import.meta.env.VITE_ENABLE_SENTRY || '') === '1'
+);
+console.log('Initializing Sentry - enabled:', enableSentry, '| DSN:', sentryDSN ? 'present' : 'missing');
+initializeSentry({
+  dsn: sentryDSN,
+  environment: import.meta.env.MODE || 'development',
+  release: import.meta.env.VITE_APP_VERSION || 'unknown',
+  enabled: enableSentry,
+  sendDefaultPii: true,
+  tracesSampleRate: 0.1,
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+});
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -16,16 +37,38 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <BrowserRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true,
-      }}
+    <SentryErrorBoundary
+      fallback={({ error, resetError }: { error: unknown; componentStack: string; eventId: string; resetError: () => void }) => (
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <h1>Something went wrong</h1>
+          <p>We've been notified and are working on a fix.</p>
+          <details style={{ whiteSpace: 'pre-wrap', marginTop: '20px' }}>
+            {error instanceof Error ? error.toString() : String(error)}
+          </details>
+          <button
+            onClick={resetError}
+            style={{
+              marginTop: '20px',
+              padding: '10px 20px',
+              cursor: 'pointer',
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      )}
     >
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <App />
-      </ThemeProvider>
-    </BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <App />
+        </ThemeProvider>
+      </BrowserRouter>
+    </SentryErrorBoundary>
   </React.StrictMode>
 );

@@ -1,0 +1,134 @@
+name: ssdd-validator
+version: 1.0.0
+displayName: SSDD Validator
+description: Address validation, geocoding, and congressional district mapping using USPS Web Tools API and PostGIS spatial queries
+author:
+  name: Kevin Althaus
+  email: contact@kevinalthaus.com
+license: MIT
+keywords:
+  - address-validation
+  - usps
+  - geocoding
+  - congressional-districts
+  - postgis
+
+capabilities:
+  - database:read
+  - database:write
+  - api:call
+
+entrypoint: dist/index.js
+
+backend:
+  routes:
+    # Address validation endpoint
+    - path: /api/ssdd-validator/validate
+      method: POST
+      handler: validateAddressHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+        - database:write
+        - api:call
+      description: Validate address via USPS and geocode to congressional district
+
+    # District lookup endpoint
+    - path: /api/ssdd-validator/district/:lat/:lng
+      method: GET
+      handler: getDistrictByCoordinatesHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Find congressional district by lat/lng coordinates
+
+    # KML import endpoint (Admin only)
+    - path: /api/ssdd-validator/import-kml
+      method: POST
+      handler: importKMLHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Import congressional district KML boundary files
+
+    # Member sync endpoint (Admin only)
+    - path: /api/ssdd-validator/sync-members
+      method: POST
+      handler: syncMembersHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+        - api:call
+      description: Sync congressional member data from House API
+
+    # Settings endpoints (Admin only)
+    - path: /api/ssdd-validator/settings
+      method: GET
+      handler: getSettingsHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get plugin settings (USPS API key status)
+
+    - path: /api/ssdd-validator/settings
+      method: PUT
+      handler: updateSettingsHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Update plugin settings (USPS API key)
+
+    # Address history endpoint
+    - path: /api/ssdd-validator/addresses
+      method: GET
+      handler: listAddressesHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: List validated address history for user
+
+    # District list endpoint
+    - path: /api/ssdd-validator/districts
+      method: GET
+      handler: listDistrictsHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: List all congressional districts with boundaries
+
+    # Representative info endpoint
+    - path: /api/ssdd-validator/district/:state/:number/representative
+      method: GET
+      handler: getRepresentativeHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get representative info for district
+
+database:
+  migrations:
+    - 01-create-schema.sql
+    - 02-create-addresses-table.sql
+    - 03-create-districts-table.sql
+    - 04-create-settings-table.sql
+    - 05-create-member-sync-log-table.sql
+    - 06-add-foreign-keys.sql
+    - 07-create-members-table.sql
+
+hooks:
+  install: onInstall
+  activate: onActivate
+  deactivate: onDeactivate
+  uninstall: onUninstall
+  update: onUpdate
+
+dependencies: []

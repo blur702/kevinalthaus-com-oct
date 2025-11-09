@@ -4,6 +4,16 @@ from fastapi.middleware.gzip import GZipMiddleware
 import os
 from functools import lru_cache
 from typing import Dict, Any
+import logging
+
+# Import route routers
+from routes import usps_router, geocode_router, kml_parser_router, house_api_router
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO if os.getenv("PYTHON_ENV", "development") == "production" else logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 app = FastAPI(
     title="Kevin Althaus Python Service",
@@ -68,6 +78,12 @@ async def root():
         "version": "1.0.0",
         "environment": os.getenv("PYTHON_ENV", "development")
     }
+
+# Register routers
+app.include_router(usps_router)
+app.include_router(geocode_router)
+app.include_router(kml_parser_router)
+app.include_router(house_api_router)
 
 if __name__ == "__main__":
     import uvicorn

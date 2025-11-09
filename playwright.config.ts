@@ -1,4 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
+import 'dotenv/config';
+import fs from 'fs';
 
 /**
  * Playwright E2E Testing Configuration
@@ -6,6 +8,9 @@ import { defineConfig, devices } from '@playwright/test';
  * This configuration sets up end-to-end testing for the admin panel
  * with support for multiple browsers, screenshots, traces, and parallel execution.
  */
+const authStatePath = 'e2e/.auth/admin.json';
+const hasAuthState = fs.existsSync(authStatePath);
+
 export default defineConfig({
   // Test directory
   testDir: './e2e',
@@ -77,6 +82,10 @@ export default defineConfig({
 
     // Enable JavaScript
     javaScriptEnabled: true,
+
+    // Persist and reuse authenticated session across tests
+    // The storage state file is generated during globalSetup when credentials are provided
+    storageState: hasAuthState ? authStatePath : undefined,
   },
 
   // Configure projects for major browsers

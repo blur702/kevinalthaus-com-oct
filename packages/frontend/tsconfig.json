@@ -21,6 +21,9 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
+  "include": [
+    "src",
+    "../../plugins/ssdd-validator/frontend/src"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

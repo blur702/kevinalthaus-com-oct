@@ -52,9 +52,12 @@ import {
   getApiKeys,
   createApiKey,
   revokeApiKey,
+  getExternalApiSettings,
+  updateExternalApiSettings,
   type SiteSettings,
   type SecuritySettings,
   type EmailSettings,
+  type ExternalApiSettings,
   type ApiKey,
   type CreateApiKeyRequest,
 } from '../services/settingsService';
@@ -90,6 +93,7 @@ const Settings: React.FC = () => {
   const [loadingSite, setLoadingSite] = useState(false);
   const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
+  const [loadingExternalApis, setLoadingExternalApis] = useState(false);
   const [loadingApiKeys, setLoadingApiKeys] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
@@ -130,10 +134,22 @@ const Settings: React.FC = () => {
     brevo_from_name: '',
   });
 
+  const [externalApiSettings, setExternalApiSettings] = useState<ExternalApiSettings>({
+    google_maps_api_key: '',
+    google_maps_api_key_configured: false,
+    usps_api_key: '',
+    usps_api_key_configured: false,
+    census_gov_api_key: '',
+    census_gov_api_key_configured: false,
+  });
+
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
 
   // Dialog states
   const [showPassword, setShowPassword] = useState(false);
+  const [showGoogleMapsKey, setShowGoogleMapsKey] = useState(false);
+  const [showUspsKey, setShowUspsKey] = useState(false);
+  const [showCensusKey, setShowCensusKey] = useState(false);
   const [createKeyDialogOpen, setCreateKeyDialogOpen] = useState(false);
   const [newKeyData, setNewKeyData] = useState<CreateApiKeyRequest>({
     name: '',
@@ -164,12 +180,14 @@ const Settings: React.FC = () => {
   const siteSettingsAbortController = useRef<AbortController | null>(null);
   const securitySettingsAbortController = useRef<AbortController | null>(null);
   const emailSettingsAbortController = useRef<AbortController | null>(null);
+  const externalApisAbortController = useRef<AbortController | null>(null);
   const apiKeysAbortController = useRef<AbortController | null>(null);
 
   // Loading state refs (synchronous checks to prevent race conditions)
   const loadingSiteRef = useRef(false);
   const loadingSecurityRef = useRef(false);
   const loadingEmailRef = useRef(false);
+  const loadingExternalApisRef = useRef(false);
   const loadingApiKeysRef = useRef(false);
 
   // Cleanup on unmount
@@ -312,6 +330,45 @@ const Settings: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSnackbar]);
 
+  const loadExternalApiSettings = useCallback(async () => {
+    // Prevent concurrent loads
+    if (loadingExternalApis) {
+      return;
+    }
+
+    // Cancel previous request if still running
+    externalApisAbortController.current?.abort();
+
+    // Create new AbortController
+    externalApisAbortController.current = new AbortController();
+
+    setLoadingExternalApis(true);
+
+    try {
+      const data = await getExternalApiSettings(externalApisAbortController.current.signal);
+
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setExternalApiSettings(data);
+      }
+    } catch (error) {
+      // Don't set error if request was aborted
+      if (axios.isCancel(error)) {
+        console.log('External API settings request canceled');
+        return;
+      }
+
+      if (isMountedRef.current) {
+        showSnackbar('Failed to load external API settings', 'error');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoadingExternalApis(false);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSnackbar]);
+
   const loadApiKeys = useCallback(async () => {
     // Prevent concurrent loads
     if (loadingApiKeys) {
@@ -364,6 +421,8 @@ const Settings: React.FC = () => {
     } else if (currentTab === 2) {
       loadEmailSettings();
     } else if (currentTab === 3) {
+      loadExternalApiSettings();
+    } else if (currentTab === 4) {
       loadApiKeys();
     }
 
@@ -517,6 +576,26 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleSaveExternalApiSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const updated = await updateExternalApiSettings(externalApiSettings);
+      // Clear sensitive fields after save
+      setExternalApiSettings({
+        ...updated,
+        google_maps_api_key: '',
+        usps_api_key: '',
+        census_gov_api_key: '',
+      });
+      showSnackbar('External API settings saved successfully', 'success');
+      setErrors({});
+    } catch (error) {
+      showSnackbar('Failed to save external API settings', 'error');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const handleTestEmail = async () => {
     setTestingEmail(true);
     try {
@@ -590,7 +669,8 @@ const Settings: React.FC = () => {
           <Tab label="Site Configuration" id="settings-tab-0" aria-controls="settings-tabpanel-0" />
           <Tab label="Security Settings" id="settings-tab-1" aria-controls="settings-tabpanel-1" />
           <Tab label="Email Settings" id="settings-tab-2" aria-controls="settings-tabpanel-2" />
-          <Tab label="API Keys" id="settings-tab-3" aria-controls="settings-tabpanel-3" />
+          <Tab label="External APIs" id="settings-tab-3" aria-controls="settings-tabpanel-3" />
+          <Tab label="API Keys" id="settings-tab-4" aria-controls="settings-tabpanel-4" />
         </Tabs>
 
         {/* Site Configuration Tab */}
@@ -1045,8 +1125,146 @@ const Settings: React.FC = () => {
           )}
         </TabPanel>
 
-        {/* API Keys Tab */}
+        {/* External APIs Tab */}
         <TabPanel value={activeTab} index={3}>
+          {loadingExternalApis ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  External API Configuration
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Configure API keys for external services
+                </Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <TextField
+                    label="Google Maps API Key"
+                    fullWidth
+                    type={showGoogleMapsKey ? 'text' : 'password'}
+                    value={externalApiSettings.google_maps_api_key || ''}
+                    onChange={(e) => setExternalApiSettings({ ...externalApiSettings, google_maps_api_key: e.target.value })}
+                    helperText={
+                      externalApiSettings.google_maps_api_key_configured
+                        ? 'API key is configured. Leave blank to keep existing key, or enter new key to update.'
+                        : 'Enter your Google Maps API key'
+                    }
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle google maps key visibility"
+                            onClick={() => setShowGoogleMapsKey(!showGoogleMapsKey)}
+                            edge="end"
+                          >
+                            {showGoogleMapsKey ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+
+                  {externalApiSettings.google_maps_api_key_configured && (
+                    <Chip
+                      label="Google Maps API Key Configured"
+                      color="success"
+                      size="small"
+                      sx={{ alignSelf: 'flex-start' }}
+                    />
+                  )}
+
+                  <TextField
+                    label="USPS API Key"
+                    fullWidth
+                    type={showUspsKey ? 'text' : 'password'}
+                    value={externalApiSettings.usps_api_key || ''}
+                    onChange={(e) => setExternalApiSettings({ ...externalApiSettings, usps_api_key: e.target.value })}
+                    helperText={
+                      externalApiSettings.usps_api_key_configured
+                        ? 'API key is configured. Leave blank to keep existing key, or enter new key to update.'
+                        : 'Enter your USPS API key'
+                    }
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle usps key visibility"
+                            onClick={() => setShowUspsKey(!showUspsKey)}
+                            edge="end"
+                          >
+                            {showUspsKey ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+
+                  {externalApiSettings.usps_api_key_configured && (
+                    <Chip
+                      label="USPS API Key Configured"
+                      color="success"
+                      size="small"
+                      sx={{ alignSelf: 'flex-start' }}
+                    />
+                  )}
+
+                  <TextField
+                    label="Census.gov API Key"
+                    fullWidth
+                    type={showCensusKey ? 'text' : 'password'}
+                    value={externalApiSettings.census_gov_api_key || ''}
+                    onChange={(e) => setExternalApiSettings({ ...externalApiSettings, census_gov_api_key: e.target.value })}
+                    helperText={
+                      externalApiSettings.census_gov_api_key_configured
+                        ? 'API key is configured. Leave blank to keep existing key, or enter new key to update.'
+                        : 'Enter your Census.gov API key'
+                    }
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle census key visibility"
+                            onClick={() => setShowCensusKey(!showCensusKey)}
+                            edge="end"
+                          >
+                            {showCensusKey ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+
+                  {externalApiSettings.census_gov_api_key_configured && (
+                    <Chip
+                      label="Census.gov API Key Configured"
+                      color="success"
+                      size="small"
+                      sx={{ alignSelf: 'flex-start' }}
+                    />
+                  )}
+
+                  <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                    <Button
+                      variant="contained"
+                      startIcon={savingSettings ? <CircularProgress size={20} /> : <SaveIcon />}
+                      onClick={handleSaveExternalApiSettings}
+                      disabled={savingSettings}
+                    >
+                      Save Changes
+                    </Button>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+        </TabPanel>
+
+        {/* API Keys Tab */}
+        <TabPanel value={activeTab} index={4}>
           {loadingApiKeys ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />

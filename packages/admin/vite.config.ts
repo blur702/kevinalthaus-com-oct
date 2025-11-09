@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -8,7 +9,24 @@ const __dirname = dirname(__filename);
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Upload source maps to Sentry on production builds
+    process.env.NODE_ENV === 'production' && process.env.SENTRY_AUTH_TOKEN
+      ? sentryVitePlugin({
+          org: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+          authToken: process.env.SENTRY_AUTH_TOKEN,
+          release: {
+            name: process.env.VITE_APP_VERSION || '1.0.0',
+          },
+          sourcemaps: {
+            assets: './dist/**',
+          },
+          telemetry: false,
+        })
+      : undefined,
+  ].filter(Boolean),
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

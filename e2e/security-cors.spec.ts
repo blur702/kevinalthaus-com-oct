@@ -1,3 +1,4 @@
+import './test-helpers';
 /**
  * CORS Security Tests
  * Validates CORS configuration and wildcard origin handling
@@ -120,3 +121,4 @@ test.describe('CORS Security', () => {
   });
 
 });
+

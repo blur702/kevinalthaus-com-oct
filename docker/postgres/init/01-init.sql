@@ -4,6 +4,8 @@
 -- Create extensions if needed
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- PostGIS extension for spatial data types and functions (required for SSDD Validator plugin)
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- Create schemas for plugin isolation
 -- Plugins will create their own schemas with naming convention: plugin_<pluginname>

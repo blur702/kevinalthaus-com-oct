@@ -3,3 +3,6 @@ uvicorn==0.38.0
 pydantic==2.12.3
 asyncpg==0.30.0
 sqlalchemy==2.0.44
+httpx==0.28.1
+python-multipart==0.0.18
+defusedxml==0.7.1

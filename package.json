@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "@sentry/vite-plugin": "^4.6.0",
     "@types/node": "^24.10.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
@@ -45,6 +46,8 @@
   },
   "engineNotes": "BREAKING CHANGE: Minimum Node.js version raised from 18.x to 20.x for @playwright/test compatibility and active LTS support. Node.js 18 reached end-of-life in April 2025. To upgrade: check version with 'node --version', install Node 20.x via nvm (nvm install 20) or from nodejs.org, then run 'npm install' to reinstall dependencies.",
   "dependencies": {
+    "@sentry/browser": "^10.23.0",
+    "@sentry/react": "^10.23.0",
     "bcrypt": "^6.0.0"
   }
 }

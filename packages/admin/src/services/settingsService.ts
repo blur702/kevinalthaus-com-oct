@@ -40,6 +40,15 @@ export interface EmailSettings {
   brevo_from_name?: string;
 }
 
+export interface ExternalApiSettings {
+  google_maps_api_key?: string;
+  google_maps_api_key_configured?: boolean;
+  usps_api_key?: string;
+  usps_api_key_configured?: boolean;
+  census_gov_api_key?: string;
+  census_gov_api_key_configured?: boolean;
+}
+
 export interface ApiKey {
   id: string;
   user_id: string;
@@ -143,4 +152,20 @@ export async function createApiKey(data: CreateApiKeyRequest): Promise<CreateApi
  */
 export async function revokeApiKey(id: string): Promise<void> {
   await api.delete(`${BASE_URL}/api-keys/${encodeURIComponent(id)}`);
+}
+
+/**
+ * Get external API settings
+ */
+export async function getExternalApiSettings(signal?: AbortSignal): Promise<ExternalApiSettings> {
+  const response = await api.get<ExternalApiSettings>(`${BASE_URL}/external-apis`, { signal });
+  return response.data;
+}
+
+/**
+ * Update external API settings
+ */
+export async function updateExternalApiSettings(data: Partial<ExternalApiSettings>): Promise<ExternalApiSettings> {
+  const response = await api.put<ExternalApiSettings>(`${BASE_URL}/external-apis`, data);
+  return response.data;
 }

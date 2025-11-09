@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" style="scrollbar-gutter: stable both-edges;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Playwright Test Report</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 2rem; }
+      #status { color: #555; margin-bottom: 1rem; }
+      #error { color: #b00020; }
+      .hidden { display: none; }
+      code { background: #f2f2f2; padding: 2px 4px; border-radius: 3px; }
+    </style>
+  </head>
+  <body>
+    <h1>Playwright Test Report</h1>
+    <div id="status">Loading report…</div>
+    <div id="error" class="hidden"></div>
+    <div id="content" class="hidden"></div>
+    <script>
+      (async function () {
+        const statusEl = document.getElementById('status');
+        const errorEl = document.getElementById('error');
+        const contentEl = document.getElementById('content');
+
+        // Dev fallback: support inline base64 in local development only
+        const devInline = document.getElementById('playwrightReportBase64');
+        const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (devInline && isDev) {
+          statusEl.textContent = 'Using inline development report…';
+          contentEl.classList.remove('hidden');
+          contentEl.textContent = 'Inline report present (dev fallback).';
+          return;
+        }
+
+        // Try fetching external asset (zip or json) from same directory
+        const assetCandidates = ['report.zip', 'report.json'];
+        let fetched = null;
+        for (const path of assetCandidates) {
+          try {
+            const resp = await fetch(path, { cache: 'no-cache' });
+            if (!resp.ok) continue;
+            const len = Number(resp.headers.get('content-length') || '0');
+            if (len && len < 100) {
+              // too small to be a valid report
+              continue;
+            }
+            const blob = await resp.blob();
+            fetched = { path, blob };
+            break;
+          } catch (e) {
+            // continue to next candidate
+          }
+        }
+
+        if (!fetched) {
+          statusEl.classList.add('hidden');
+          errorEl.classList.remove('hidden');
+          errorEl.textContent = 'Failed to load external report asset. Ensure report.zip or report.json is served next to this page.';
+          return;
+        }
+
+        statusEl.textContent = `Loaded ${fetched.path} (${Math.round(fetched.blob.size / 1024)} KB)`;
+        contentEl.classList.remove('hidden');
+        contentEl.textContent = 'Report asset fetched successfully. Integrate viewer to render this blob.';
+      })();
+    </script>
+  </body>
+  </html>
+
