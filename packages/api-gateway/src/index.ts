@@ -18,9 +18,54 @@ import {
   keepAliveMiddleware,
   cacheMiddleware,
 } from './middleware/performance';
+import * as Sentry from '@sentry/node';
 import { requestIdMiddleware } from './middleware/requestId';
 
+function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+  return defaultValue;
+}
+
+function parseSampleRate(value: string | undefined, defaultValue: number): number {
+  if (!value) {
+    return defaultValue;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : defaultValue;
+}
+
+function setupSentry(): boolean {
+  const dsn = (process.env.SENTRY_DSN || '').trim();
+  const enabled = Boolean(dsn) && parseBoolean(process.env.SENTRY_ENABLED, true);
+
+  if (!enabled) {
+    return false;
+  }
+
+  Sentry.init({
+    dsn,
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
+    release: process.env.SENTRY_RELEASE || process.env.VERSION || 'api-gateway@unknown',
+    integrations: [Sentry.expressIntegration()],
+    tracesSampleRate: parseSampleRate(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.05),
+    sampleRate: parseSampleRate(process.env.SENTRY_ERROR_SAMPLE_RATE, 1.0),
+    sendDefaultPii: parseBoolean(process.env.SENTRY_SEND_DEFAULT_PII, false),
+  });
+
+  return true;
+}
+
 const app = express();
+export const isSentryEnabled = setupSentry();
 
 // Normalize LOG_LEVEL to valid enum value
 const normalizedLogLevel = (() => {
@@ -46,6 +91,10 @@ const logger = createLogger({
   format: normalizedLogFormat,
   service: 'api-gateway',
 });
+
+logger.info(
+  `[Gateway] Booting with NODE_ENV=${process.env.NODE_ENV ?? 'undefined'}, E2E_TESTING=${process.env.E2E_TESTING ?? 'undefined'}, RATE_LIMIT_BYPASS_E2E=${process.env.RATE_LIMIT_BYPASS_E2E ?? 'undefined'}`
+);
 
 // Enforce JWT secret handling
 
@@ -182,10 +231,20 @@ app.use(cacheMiddleware);
 
 // Stricter rate limit for auth endpoints
 // In development/test mode, use more permissive limits to allow automated testing
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
-const authRateLimit = rateLimit({
+const shouldBypassRateLimit = (): boolean => {
+  if (process.env.DISABLE_AUTH_RATE_LIMIT === 'true') {
+    return true;
+  }
+  const explicitFlag =
+    process.env.RATE_LIMIT_BYPASS_E2E ??
+    process.env.E2E_TESTING ??
+    (process.env.NODE_ENV !== 'production' ? 'true' : 'false');
+  return String(explicitFlag).toLowerCase() !== 'false';
+};
+
+const baseAuthRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 10 : 1000,
+  max: 10,
   message: {
     error: 'Too many authentication attempts',
     message: 'Please try again later',
@@ -193,6 +252,13 @@ const authRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 }) as express.RequestHandler;
+
+const authRateLimit: express.RequestHandler = (req, res, next) => {
+  if (shouldBypassRateLimit()) {
+    return next();
+  }
+  return baseAuthRateLimit(req, res, next);
+};
 
 // General rate limit
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -580,6 +646,69 @@ app.use(
   createProxyMiddleware(publicSettingsProxyOptions) as unknown as express.RequestHandler
 );
 
+// Public menus endpoint (allows frontend to fetch navigation without auth)
+app.options('/api/public-menus', (req, res) => {
+  const origin = req.header('Origin');
+  if (origin && corsOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', String(corsCredentials));
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendStatus(204);
+});
+
+app.options('/api/public-menus/:slug', (req, res) => {
+  const origin = req.header('Origin');
+  if (origin && corsOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', String(corsCredentials));
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendStatus(204);
+});
+
+const publicMenusProxyOptions: Options = {
+  target: MAIN_APP_URL,
+  changeOrigin: true,
+  logLevel: 'warn',
+  pathRewrite: { '^/api/public-menus': '/api/public-menus' },
+  timeout: 30000,
+  proxyTimeout: 30000,
+  onProxyReq: (proxyReq, req) => {
+    proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN);
+    const rid = req.headers['x-request-id'];
+    if (rid) {
+      proxyReq.setHeader('x-request-id', Array.isArray(rid) ? rid[0] : String(rid));
+    }
+  },
+  onProxyRes: (_proxyRes, req, res) => {
+    const origin = req.header('Origin');
+    if (origin && corsOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', String(corsCredentials));
+    }
+  },
+  onError: (err, req, res) => {
+    logger.error('Proxy error for public-menus', err);
+    const origin = req.header('Origin');
+    if (origin && corsOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', String(corsCredentials));
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+    res.status(503).json({ error: 'Service temporarily unavailable' });
+  }
+};
+
+app.use(
+  '/api/public-menus',
+  corsMiddleware,
+  createProxyMiddleware(publicMenusProxyOptions) as unknown as express.RequestHandler
+);
+
 // Authenticated settings endpoints
 app.use(
   '/api/settings',
@@ -599,6 +728,18 @@ app.use(
   createProxy({
     target: MAIN_APP_URL,
     pathRewrite: { '^/api/taxonomy': '/api/taxonomy' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
+// Menu manager routes
+app.use(
+  '/api/menus',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/menus': '/api/menus' },
     includeForwardingHeaders: true,
     timeout: 30000
   })
@@ -659,6 +800,10 @@ app.use('*', (req, res) => {
     message: `Route ${req.originalUrl} not found`,
   });
 });
+
+if (isSentryEnabled) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {

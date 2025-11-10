@@ -1,0 +1,100 @@
+/* Menu Widget Editor Styles */
+.editor {
+  border: 1px solid #e0e0e0;
+  padding: 16px;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.editor label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.editor select,
+.editor input[type="text"],
+.editor input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+}
+
+.options {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: none;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.preview {
+  border: 1px dashed #bdbdbd;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fff;
+  margin-top: 16px;
+}
+
+.previewLabel {
+  font-size: 12px;
+  margin: 0 0 8px 0;
+  color: #666;
+}
+
+/* Menu Widget Display Styles */
+.widget {
+  /* Dynamic text-align will be set via CSS custom properties */
+  text-align: var(--menu-alignment, left);
+}
+
+.list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  /* Dynamic display will be set via CSS custom properties */
+  display: var(--menu-display, block);
+  gap: var(--menu-gap, 0);
+  flex-wrap: var(--menu-flex-wrap, nowrap);
+}
+
+.item {
+  /* Dynamic margin-bottom will be set via CSS custom properties */
+  margin-bottom: var(--menu-item-margin, 0);
+}
+
+.link {
+  text-decoration: none;
+  color: inherit;
+  /* Dynamic properties will be set via CSS custom properties */
+  padding: var(--menu-link-padding, 0);
+  border-radius: var(--menu-link-radius, 0);
+  background-color: var(--menu-link-bg, transparent);
+  color: var(--menu-link-color, inherit);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.link:hover {
+  opacity: 0.8;
+}
+
+.list.depth1 {
+  margin-left: 1.5rem;
+}
+
+.icon {
+  /* Icon styles if needed */
+}

@@ -26,9 +26,13 @@ import { dashboardRouter } from './routes/dashboard';
 import { analyticsRouter } from './routes/analytics';
 import settingsRouter from './routes/settings-merged';
 import settingsPublicRouter from './routes/settings-public';
+import menusRouter from './routes/menus';
+import publicMenusRouter from './routes/public-menus';
+import aiServicesRouter from './routes/ai-services';
 import { editorRouter } from './routes/editor';
 import { taxonomyRouter } from './routes/taxonomy';
 import { createLogger, LogLevel } from '@monorepo/shared';
+import * as Sentry from '@sentry/node';
 import { createBlogRouter } from './routes/blog';
 import path from 'path';
 import { createPageBuilderRouter } from '../../../plugins/page-builder/dist/routes/index';
@@ -43,6 +47,50 @@ import { createAdminFileRoutes } from './routes/admin-files';
 import { createPluginFileRoutes } from './routes/plugin-files';
 import { createPublicShareRoutes } from './routes/public-shares';
 import pageBuilderRouter from './routes/page-builder';
+
+function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+  return defaultValue;
+}
+
+function parseSampleRate(value: string | undefined, defaultValue: number): number {
+  if (!value) {
+    return defaultValue;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : defaultValue;
+}
+
+function setupSentry(): boolean {
+  const dsn = (process.env.SENTRY_DSN || '').trim();
+  const enabled = Boolean(dsn) && parseBoolean(process.env.SENTRY_ENABLED, true);
+
+  if (!enabled) {
+    return false;
+  }
+
+  Sentry.init({
+    dsn,
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
+    release: process.env.SENTRY_RELEASE || process.env.VERSION || 'main-app@unknown',
+    integrations: [Sentry.expressIntegration()],
+    tracesSampleRate: parseSampleRate(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.05),
+    sampleRate: parseSampleRate(process.env.SENTRY_ERROR_SAMPLE_RATE, 1.0),
+    // Disable sending PII by default for security and privacy compliance
+    sendDefaultPii: parseBoolean(process.env.SENTRY_SEND_DEFAULT_PII, false),
+  });
+
+  return true;
+}
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -112,6 +160,7 @@ function verifyInternalToken(req: express.Request, res: express.Response, next: 
 }
 
 const app = express();
+export const isSentryEnabled = setupSentry();
 
 // Trust proxy configuration - can be number of hops, specific IPs, or CIDR ranges
 // Defaults to 1 (first proxy hop) for typical reverse proxy setup
@@ -329,11 +378,14 @@ app.use('/api/analytics', analyticsRouter);
 // Public settings endpoint (no authentication required)
 // Mounted at /api/public-settings to avoid being caught by /api/settings wildcard
 app.use('/api/public-settings', settingsPublicRouter);
+app.use('/api/public-menus', publicMenusRouter);
 // Authenticated settings endpoints
 app.use('/api/settings', settingsRouter);
+app.use('/api/ai', aiServicesRouter);
 app.use('/api/editor', editorRouter);
 app.use('/api/taxonomy', taxonomyRouter);
 app.use('/api/uploads', uploadsRouter);
+app.use('/api/menus', menusRouter);
 // pluginsRouter already has authMiddleware and requireRole(Role.ADMIN) applied at line 37 of routes/plugins.ts
 app.use('/api/plugins', pluginsRouter);
 // Blog plugin routes
@@ -393,6 +445,10 @@ app.use('*', (req, res) => {
     statusCode: 404,
   });
 });
+
+if (isSentryEnabled) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // Global error handling middleware - must be last
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {

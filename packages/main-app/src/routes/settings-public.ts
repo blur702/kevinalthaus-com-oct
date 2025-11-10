@@ -6,6 +6,8 @@
 import { Router, Response, Request } from 'express';
 import { defaultLogger as logger } from '@monorepo/shared';
 import { query } from '../db';
+import * as Sentry from '@sentry/node';
+import { isSentryEnabled } from '../index';
 
 const router = Router();
 
@@ -56,6 +58,9 @@ router.get(
       res.json(response);
     } catch (error) {
       logger.error('Error fetching public settings', error as Error, {});
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to fetch public settings' });
     }
   }

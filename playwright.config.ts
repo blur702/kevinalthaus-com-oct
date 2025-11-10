@@ -1,6 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
 import 'dotenv/config';
-import fs from 'fs';
 
 /**
  * Playwright E2E Testing Configuration
@@ -9,7 +8,17 @@ import fs from 'fs';
  * with support for multiple browsers, screenshots, traces, and parallel execution.
  */
 const authStatePath = 'e2e/.auth/admin.json';
-const hasAuthState = fs.existsSync(authStatePath);
+
+const sharedE2EEnv = {
+  ...process.env,
+  E2E_TESTING: 'true',
+  RATE_LIMIT_BYPASS_E2E: 'true',
+  NODE_ENV: 'development',
+  DISABLE_AUTH_RATE_LIMIT: 'true',
+  API_GATEWAY_BASE_URL: 'http://localhost:3000',
+  MAIN_APP_BASE_URL: 'http://localhost:3003',
+  MAIN_APP_URL: 'http://localhost:3003',
+};
 
 export default defineConfig({
   // Test directory
@@ -85,7 +94,7 @@ export default defineConfig({
 
     // Persist and reuse authenticated session across tests
     // The storage state file is generated during globalSetup when credentials are provided
-    storageState: hasAuthState ? authStatePath : undefined,
+    storageState: authStatePath,
   },
 
   // Configure projects for major browsers
@@ -120,15 +129,34 @@ export default defineConfig({
   webServer: [
     {
       command: 'npm run dev --workspace=@monorepo/main-app',
-      port: 3001,
+      port: 3003,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
+      env: {
+        ...sharedE2EEnv,
+        MAIN_APP_PORT: '3003',
+        PORT: '3003',
+      },
+    },
+    {
+      command: 'npm run dev --workspace=@monorepo/api-gateway',
+      port: 3000,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        ...sharedE2EEnv,
+        API_GATEWAY_PORT: '3000',
+      },
     },
     {
       command: 'npm run dev --workspace=@monorepo/admin',
       port: 3002,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
+      env: {
+        ...sharedE2EEnv,
+        PORT: '3002',
+      },
     },
   ],
 

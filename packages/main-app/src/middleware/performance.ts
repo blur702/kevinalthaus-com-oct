@@ -481,8 +481,13 @@ export const rateLimitMiddleware = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for health checks and in test environments
-  skip: (req: Request) => req.path === '/health' || process.env.E2E_TESTING === 'true',
+  // Skip rate limiting for health checks and in non-production/E2E environments
+  skip: (req: Request) =>
+    req.path === '/health' ||
+    req.path.startsWith('/health/') ||
+    process.env.E2E_TESTING === 'true' ||
+    process.env.RATE_LIMIT_BYPASS_E2E === 'true' ||
+    process.env.NODE_ENV !== 'production',
 });
 
 // Request/Response timing middleware

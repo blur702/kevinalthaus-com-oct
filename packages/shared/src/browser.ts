@@ -23,3 +23,6 @@ export type { TaxonomyFieldProps } from './components/TaxonomyField';
 
 // Export Sentry integration
 export * from './sentry';
+
+// Export menu types for frontend consumers
+export * from './menus/types';

@@ -198,13 +198,21 @@ export function rateLimit(options: RateLimitOptions = {}) {
 /**
  * Strict rate limit for authentication endpoints
  */
+const isAuthRateLimitDisabled = (): boolean => {
+  return process.env.DISABLE_AUTH_RATE_LIMIT === 'true' ||
+    process.env.E2E_TESTING === 'true' ||
+    process.env.RATE_LIMIT_BYPASS_E2E === 'true' ||
+    process.env.NODE_ENV === 'test';
+};
+
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per 15 minutes
+  max: isAuthRateLimitDisabled() ? 10000 : 5, // 5 requests per 15 minutes (unless disabled)
   message: 'Too many authentication attempts, please try again later',
   skipSuccessfulRequests: true, // Only count failed attempts
   enableBruteForceProtection: true,
-  blockDuration: 30 * 60 * 1000 // 30 minutes block
+  blockDuration: 30 * 60 * 1000, // 30 minutes block
+  skip: () => isAuthRateLimitDisabled(),
 });
 
 /**

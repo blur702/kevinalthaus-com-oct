@@ -1,6 +1,9 @@
-import { chromium, FullConfig } from '@playwright/test';
+import { chromium, request as playwrightRequest, FullConfig } from '@playwright/test';
 import 'dotenv/config';
 import fs from 'fs';
+import path from 'path';
+
+const authStatePath = 'e2e/.auth/admin.json';
 
 /**
  * Global setup runs once before all tests
@@ -14,6 +17,7 @@ import fs from 'fs';
 async function globalSetup(config: FullConfig): Promise<void> {
   // Set E2E_TESTING environment variable to disable rate limiting
   process.env.E2E_TESTING = 'true';
+  process.env.RATE_LIMIT_BYPASS_E2E = 'true';
 
   // Validate that projects are configured
   if (!config.projects || config.projects.length === 0) {
@@ -53,14 +57,43 @@ async function globalSetup(config: FullConfig): Promise<void> {
     const password = process.env.TEST_ADMIN_PASSWORD;
 
     if (!username || !password) {
-      console.warn(
-        '[Global Setup] Skipping login: TEST_ADMIN_USERNAME/TEST_ADMIN_PASSWORD not set.'
+      throw new Error(
+        'TEST_ADMIN_USERNAME and TEST_ADMIN_PASSWORD must be set in the environment to run Playwright tests.'
       );
-    } else {
-      console.log('[Global Setup] Skipping login for now - will test without auth persistence');
-      // TEMPORARILY DISABLED: Login causing timeouts due to rate limiting issues
-      // Tests will handle their own authentication
     }
+
+    // Verify login page loads (but do not authenticate via UI to avoid rate limiting proxies)
+    await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle', timeout: 60_000 });
+
+    const authBaseUrl =
+      process.env.E2E_LOGIN_BASE_URL ||
+      process.env.API_GATEWAY_BASE_URL ||
+      process.env.MAIN_APP_BASE_URL ||
+      'http://localhost:3000';
+    const apiContext = await playwrightRequest.newContext({
+      baseURL: authBaseUrl,
+      extraHTTPHeaders: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const loginResponse = await apiContext.post('/api/auth/login', {
+      data: { username, password },
+    });
+
+    if (!loginResponse.ok()) {
+      const responseBody = await loginResponse.json().catch(() => ({}));
+      throw new Error(
+        `API login failed for ${authBaseUrl}/api/auth/login as ${username}. Status: ${loginResponse.status()} ${
+          loginResponse.statusText()
+        } Response: ${JSON.stringify(responseBody)}`
+      );
+    }
+
+    fs.mkdirSync(path.dirname(authStatePath), { recursive: true });
+    await apiContext.storageState({ path: authStatePath });
+    await apiContext.dispose();
+    console.log('[Global Setup] API authentication complete; storage state saved.');
   } catch (error) {
     console.error('[Global Setup] Failed to connect to application:', error);
     throw new Error(

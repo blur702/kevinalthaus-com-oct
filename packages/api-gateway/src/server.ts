@@ -2,6 +2,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import * as Sentry from '@sentry/node';
 
 // Robust .env discovery: search upward from multiple start points
 function findEnv(startDir: string, maxUp = 6): string | null {
@@ -52,7 +53,6 @@ if (!loaded) {
   }
 }
 
-import app from './index';
 import { Server } from 'http';
 import { createLogger, LogLevel, PORTS, ensurePortAvailable } from '@monorepo/shared';
 
@@ -92,8 +92,13 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   process.exit(1);
 }
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
+const SENTRY_FLUSH_TIMEOUT = Number(process.env.SENTRY_FLUSH_TIMEOUT_MS) || 2000;
 
 // Ensure port is available before starting server
+// Load application after environment is configured to ensure rate limit bypass flags are available
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { default: app, isSentryEnabled } = require('./index');
+
 let server: Server;
 
 async function startServer(): Promise<void> {
@@ -150,17 +155,24 @@ function gracefulShutdown(signal: string): void {
 
 process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+function reportFatalErrorAndExit(err: Error): void {
+  if (isSentryEnabled) {
+    Sentry.captureException(err);
+    void Sentry.flush(SENTRY_FLUSH_TIMEOUT).finally(() => {
+      process.exit(1);
+    });
+  } else {
+    process.exit(1);
+  }
+}
+
 process.on('uncaughtException', (err) => {
   logger.error('Uncaught Exception in API Gateway - exiting immediately', err);
-  // Node.js recommends immediate exit after uncaught exception
-  // Use setImmediate to ensure log is flushed before exit
-  setImmediate(() => process.exit(1));
+  reportFatalErrorAndExit(err);
 });
 process.on('unhandledRejection', (reason) => {
   // Normalize rejection reason to Error for consistent logging
   const err = reason instanceof Error ? reason : new Error(String(reason));
   logger.error('Unhandled Rejection in API Gateway - exiting immediately', err);
-  // Mirror uncaughtException behavior: exit immediately after logging
-  // Use setImmediate to ensure log is flushed before exit
-  setImmediate(() => process.exit(1));
+  reportFatalErrorAndExit(err);
 });

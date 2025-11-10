@@ -13,6 +13,11 @@ import { test, expect, type Page } from '@playwright/test';
 
 // Helper function to login
 async function loginAsAdmin(page: Page) {
+  await page.goto('/', { waitUntil: 'networkidle' });
+  if (!page.url().includes('/login')) {
+    return;
+  }
+
   await page.goto('/login');
   await page.waitForLoadState('networkidle');
 
@@ -60,6 +65,8 @@ test.describe('Admin Panel Comprehensive Test', () => {
   test('Complete admin workflow with screenshots', async ({ page }) => {
     // Step 1: Ensure authenticated (use storageState if available; otherwise login)
     await page.goto('/', { waitUntil: 'networkidle' });
+    const cookies = await page.context().cookies();
+    console.log('Auth cookies at start:', cookies.map((c) => ({ name: c.name, domain: c.domain, expires: c.expires })));
     if (page.url().includes('/login')) {
       console.log('No auth state; logging in...');
       await loginAsAdmin(page);
@@ -129,8 +136,42 @@ test.describe('Admin Panel Comprehensive Test', () => {
     // Verify files page elements
     await expect(page.locator('text=Files')).toBeVisible();
 
-    // Step 6: Navigate to Analytics page
-    console.log('Step 6: Testing Analytics page...');
+    // Step 6: Manage menus and verify public navigation
+    console.log('Step 6: Testing Menu Manager...');
+    await page.click('a[href="/menus"]');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('h4:has-text("Menu Manager")')).toBeVisible();
+
+    await page.locator('li:has-text("Main Navigation")').click();
+
+    const menuLinkLabel = `QA Link ${Date.now()}`;
+    const menuLinkPath = `/qa-${Date.now()}`;
+
+    await page.getByRole('button', { name: 'Add Item' }).click();
+    const addItemDialog = page.getByRole('dialog', { name: 'Add Menu Item' });
+    await addItemDialog.getByLabel('Label').fill(menuLinkLabel);
+    await addItemDialog.getByLabel('URL').fill(menuLinkPath);
+    await addItemDialog.getByRole('button', { name: 'Add Item' }).click();
+    await expect(page.getByRole('treeitem', { name: new RegExp(menuLinkLabel, 'i') })).toBeVisible();
+
+    await page.goto('http://localhost:3001', { waitUntil: 'networkidle' });
+    await expect(page.getByRole('link', { name: menuLinkLabel })).toBeVisible();
+
+    await page.goto('/menus');
+    await page.waitForLoadState('networkidle');
+    await page.locator('li:has-text("Main Navigation")').click();
+    await page
+      .getByRole('treeitem', { name: new RegExp(menuLinkLabel, 'i') })
+      .getByRole('button', { name: new RegExp(`Delete ${menuLinkLabel}`, 'i') })
+      .click();
+    await page
+      .getByRole('dialog', { name: 'Delete Menu Item' })
+      .getByRole('button', { name: 'Delete' })
+      .click();
+    await expect(page.getByRole('treeitem', { name: new RegExp(menuLinkLabel, 'i') })).toHaveCount(0);
+
+    // Step 7: Navigate to Analytics page
+    console.log('Step 7: Testing Analytics page...');
     await page.click('a[href="/analytics"]');
     await page.waitForLoadState('networkidle');
     await page.screenshot({
@@ -142,8 +183,8 @@ test.describe('Admin Panel Comprehensive Test', () => {
     // Verify analytics page elements
     await expect(page.locator('text=Analytics')).toBeVisible();
 
-    // Step 7: Navigate to Settings page
-    console.log('Step 7: Testing Settings page...');
+    // Step 8: Navigate to Settings page
+    console.log('Step 8: Testing Settings page...');
     await page.click('a[href="/settings"]');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000); // Give settings time to load
@@ -158,8 +199,8 @@ test.describe('Admin Panel Comprehensive Test', () => {
     const hasError = await page.locator('text=/something went wrong/i').isVisible();
     expect(hasSettings || hasError).toBeTruthy();
 
-    // Step 8: Navigate to Editor Test page
-    console.log('Step 8: Testing Editor Test page...');
+    // Step 9: Navigate to Editor Test page
+    console.log('Step 9: Testing Editor Test page...');
     await page.click('a[href="/editor-test"]');
     await page.waitForLoadState('networkidle');
     await page.screenshot({
@@ -171,8 +212,8 @@ test.describe('Admin Panel Comprehensive Test', () => {
     // Verify editor test page elements
     await expect(page.locator('text=Editor Test')).toBeVisible();
 
-    // Step 9: Test navigation menu
-    console.log('Step 9: Verifying navigation menu...');
+    // Step 10: Test navigation menu
+    console.log('Step 10: Verifying navigation menu...');
     await expect(page.locator('text=Dashboard')).toBeVisible();
     await expect(page.locator('text=Users')).toBeVisible();
     await expect(page.locator('text=Content')).toBeVisible();
@@ -336,4 +377,3 @@ test.describe('Admin Panel Comprehensive Test', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
   });
 });
-

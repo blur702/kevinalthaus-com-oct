@@ -456,18 +456,23 @@ export function rateLimit(options: RateLimitOptions = {}) {
  * Predefined rate limiters
  */
 
+const isAuthRateLimitDisabled = (): boolean => {
+  return process.env.DISABLE_AUTH_RATE_LIMIT === 'true' ||
+    process.env.E2E_TESTING === 'true' ||
+    process.env.RATE_LIMIT_BYPASS_E2E === 'true' ||
+    process.env.NODE_ENV === 'test';
+};
+
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.E2E_TESTING === 'true' || process.env.NODE_ENV === 'test' ? 10000 : 5,
+  max: isAuthRateLimitDisabled() ? 10000 : 5,
   message: 'Too many authentication attempts, please try again later',
   skipSuccessfulRequests: true,
   enableBruteForceProtection: false, // Disable for E2E testing
   blockDuration: 30 * 60 * 1000,
   skip: (_req: Request | AuthenticatedRequest) => {
     // Bypass rate limiting for E2E tests
-    return process.env.E2E_TESTING === 'true' ||
-           process.env.RATE_LIMIT_BYPASS_E2E === 'true' ||
-           process.env.NODE_ENV === 'test';
+    return isAuthRateLimitDisabled();
   },
 });
 
@@ -519,6 +524,46 @@ export const passwordResetRateLimit = rateLimit({
     const email = req.body?.email;
     if (email) {
       return `reset:${String(email)}`;
+    }
+    return defaultKeyGenerator(req);
+  },
+});
+
+export const aiServicesRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: 'Too many AI service configuration requests, please try again later',
+  keyGenerator: (req: Request | AuthenticatedRequest) => {
+    const authReq = req as AuthenticatedRequest;
+    if (authReq.user?.userId) {
+      return `ai-services:${authReq.user.userId}`;
+    }
+    return defaultKeyGenerator(req);
+  },
+});
+
+export const aiPromptsRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 50,
+  message: 'Too many prompt library requests, please try again later',
+  keyGenerator: (req: Request | AuthenticatedRequest) => {
+    const authReq = req as AuthenticatedRequest;
+    if (authReq.user?.userId) {
+      return `ai-prompts:${authReq.user.userId}`;
+    }
+    return defaultKeyGenerator(req);
+  },
+});
+
+export const aiCallRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: 'Too many AI API calls, please try again later',
+  enableBruteForceProtection: false,
+  keyGenerator: (req: Request | AuthenticatedRequest) => {
+    const authReq = req as AuthenticatedRequest;
+    if (authReq.user?.userId) {
+      return `ai-calls:${authReq.user.userId}`;
     }
     return defaultKeyGenerator(req);
   },

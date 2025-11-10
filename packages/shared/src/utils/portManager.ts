@@ -46,11 +46,13 @@ export async function isPortInUse(port: number): Promise<PortCheckResult> {
       // or:     TCP    127.0.0.1:3000         0.0.0.0:0              LISTENING       12345
       const lines = stdout.trim().split('\n');
 
+      let foundListeningLine = false;
       for (const line of lines) {
         // Look for lines in LISTENING state
         if (!line.includes('LISTENING')) {
           continue;
         }
+        foundListeningLine = true;
 
         // Extract PID from the end of the line
         const match = line.match(/\s+(\d+)\s*$/);
@@ -63,7 +65,12 @@ export async function isPortInUse(port: number): Promise<PortCheckResult> {
         }
       }
 
-      // If we found output but no valid PID, port might be in use by system
+      if (!foundListeningLine) {
+        // Only TIME_WAIT/CLOSE_WAIT entries were present; treat as available
+        return { inUse: false };
+      }
+
+      // If we found LISTENING output but no valid PID, port might be in use by system
       return { inUse: true, pid: undefined };
     } else {
       // Unix: lsof -ti returns PID directly

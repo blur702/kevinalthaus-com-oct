@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
-import app from './index';
 import { Server } from 'http';
 import { runMigrations } from './db/migrations';
 import { pool, closePool } from './db';
@@ -16,6 +15,12 @@ import { BlogService } from './services/BlogService';
 import { EditorService } from './services/EditorService';
 import { TaxonomyService } from './services/TaxonomyService';
 import { StorageService } from './services/StorageService';
+import { MenuService } from './services/MenuService';
+import * as Sentry from '@sentry/node';
+
+// Load application after environment configuration to ensure env flags take effect
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { default: app, isSentryEnabled } = require('./index');
 
 function getLogLevel(): LogLevel {
   const envLevel = process.env.LOG_LEVEL;
@@ -58,6 +63,7 @@ if (
 }
 
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
+const SENTRY_FLUSH_TIMEOUT = Number(process.env.SENTRY_FLUSH_TIMEOUT_MS) || 2000;
 
 let server: Server | undefined;
 let isShuttingDown = false; // Idempotency guard for graceful shutdown
@@ -73,6 +79,9 @@ export const taxonomyService = new TaxonomyService(pool);
 
 // Initialize Storage Service
 export const storageService = new StorageService('./storage', pool);
+
+// Initialize Menu Service
+export const menuService = new MenuService(pool);
 
 // Initialize services (Vault, Redis, Email, Settings Cache, Blog, Storage)
 async function initializeServices(): Promise<void> {
@@ -269,16 +278,26 @@ process.on('SIGTERM', () => {
 });
 
 // Handle uncaught exceptions and unhandled rejections
+function reportFatalErrorAndExit(err: Error): void {
+  if (isSentryEnabled) {
+    Sentry.captureException(err);
+    void Sentry.flush(SENTRY_FLUSH_TIMEOUT).finally(() => {
+      process.exit(1);
+    });
+  } else {
+    process.exit(1);
+  }
+}
+
 process.on('uncaughtException', (err) => {
   logger.error('Uncaught Exception', err);
-  process.exit(1); // Exit immediately after logging, no cleanup attempt
+  reportFatalErrorAndExit(err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   const err = reason instanceof Error ? reason : new Error(String(reason));
   logger.error('Unhandled Rejection', err, { promise: String(promise) });
-  // Exit immediately after logging per Node.js guidance to avoid undefined state
-  process.exit(1);
+  reportFatalErrorAndExit(err);
 });
 
 // Export getter function instead of potentially undefined server instance

@@ -3,6 +3,7 @@ import { AppBar, Toolbar, Typography, Button, Box, IconButton, Menu, MenuItem } 
 import { AccountCircle } from '@mui/icons-material';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchNavigationMenu, type NavigationMenuItem } from '../services/menuService';
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -54,10 +55,46 @@ const Header: React.FC = () => {
     }
   };
 
-  const navItems = [
-    { label: 'Home', path: '/' },
-    { label: 'About', path: '/about' },
-  ];
+  const [menuItems, setMenuItems] = React.useState<NavigationMenuItem[]>([]);
+  const defaultNavItems = React.useMemo<NavigationMenuItem[]>(
+    () => [
+      {
+        id: 'home',
+        label: 'Home',
+        url: '/',
+        is_external: false,
+        open_in_new_tab: false,
+        icon: null,
+        rel: undefined,
+      },
+      {
+        id: 'about',
+        label: 'About',
+        url: '/about',
+        is_external: false,
+        open_in_new_tab: false,
+        icon: null,
+        rel: undefined,
+      },
+    ],
+    []
+  );
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    fetchNavigationMenu('main-navigation', controller.signal)
+      .then((menu) => {
+        setMenuItems(menu.items);
+      })
+      .catch((error) => {
+        console.warn('[Header] Falling back to default nav items:', error);
+        setMenuItems([]);
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const navItems = menuItems.length > 0 ? menuItems : defaultNavItems;
 
   return (
     <AppBar position="static" elevation={1}>
@@ -76,22 +113,42 @@ const Header: React.FC = () => {
           {siteName}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          {navItems.map((item) => (
-            <Button
-              key={item.path}
-              component={RouterLink}
-              to={item.path}
-              color="inherit"
-              variant={location.pathname === item.path ? 'outlined' : 'text'}
-              aria-current={location.pathname === item.path ? 'page' : undefined}
-              sx={{
-                color: location.pathname === item.path ? 'common.white' : 'inherit',
-                borderColor: location.pathname === item.path ? 'rgba(255,255,255,0.3)' : 'transparent',
-              }}
-            >
-              {item.label}
-            </Button>
-          ))}
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.url;
+            if (item.is_external) {
+              return (
+                <Button
+                  key={item.id}
+                  component="a"
+                  href={item.url}
+                  color="inherit"
+                  target={item.open_in_new_tab ? '_blank' : '_self'}
+                  rel={item.open_in_new_tab ? item.rel || 'noopener noreferrer' : item.rel || undefined}
+                  sx={{
+                    borderColor: 'transparent',
+                  }}
+                >
+                  {item.label}
+                </Button>
+              );
+            }
+            return (
+              <Button
+                key={item.id}
+                component={RouterLink}
+                to={item.url}
+                color="inherit"
+                variant={isActive ? 'outlined' : 'text'}
+                aria-current={isActive ? 'page' : undefined}
+                sx={{
+                  color: isActive ? 'common.white' : 'inherit',
+                  borderColor: isActive ? 'rgba(255,255,255,0.3)' : 'transparent',
+                }}
+              >
+                {item.label}
+              </Button>
+            );
+          })}
 
           {isAuthenticated ? (
             <>
@@ -128,5 +185,3 @@ const Header: React.FC = () => {
 };
 
 export default Header;
-
-

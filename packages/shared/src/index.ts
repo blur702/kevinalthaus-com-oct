@@ -12,6 +12,9 @@ export * from './middleware/requestId';
 // Export Services
 export * from './services';
 
+// Menu types
+export * from './menus/types';
+
 // Export Sentry utilities
 export * from './sentry';
 

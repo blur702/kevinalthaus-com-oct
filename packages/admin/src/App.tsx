@@ -27,6 +27,8 @@ import {
   Label as LabelIcon,
   Edit as EditIcon,
   FolderOpen as FilesIcon,
+  SmartToy as AiIcon,
+  MenuOpen as MenuManagerIcon,
 } from '@mui/icons-material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
@@ -39,6 +41,8 @@ import Settings from './pages/Settings.tsx';
 import Taxonomy from './pages/Taxonomy.tsx';
 import EditorTest from './pages/EditorTest.tsx';
 import Files from './pages/Files.tsx';
+import AiServices from './pages/AiServices.tsx';
+import Menus from './pages/Menus.tsx';
 
 // Import auth components and pages
 import ProtectedRoute from './components/ProtectedRoute.tsx';
@@ -81,6 +85,8 @@ const navItems: NavItem[] = [
   { label: 'Content', path: '/content', icon: <ArticleIcon /> },
   { label: 'Taxonomy', path: '/taxonomy', icon: <LabelIcon /> },
   { label: 'Files', path: '/files', icon: <FilesIcon /> },
+  { label: 'Menus', path: '/menus', icon: <MenuManagerIcon /> },
+  { label: 'AI Services', path: '/ai-services', icon: <AiIcon /> },
   { label: 'Analytics', path: '/analytics', icon: <AnalyticsIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
   { label: 'Editor Test', path: '/editor-test', icon: <EditIcon /> },
@@ -231,6 +237,8 @@ const App: React.FC = () => {
           { path: '/content', element: <Content /> },
           { path: '/taxonomy', element: <Taxonomy /> },
           { path: '/files', element: <Files /> },
+          { path: '/menus', element: <Menus /> },
+          { path: '/ai-services', element: <AiServices /> },
           { path: '/analytics', element: <Analytics /> },
           {
             path: '/settings',
