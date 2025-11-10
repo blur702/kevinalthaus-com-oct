@@ -15,9 +15,9 @@ const os = require('os');
 // Define all ports used by the application
 const PORTS = {
   'API Gateway': 3000,
-  'Main App': 3001,
-  'Frontend': 3002,
-  'Admin': 3003,
+  'Frontend': 3001,       // Fixed: was 3002
+  'Admin': 3002,          // Fixed: was 3003
+  'Main App': 3003,       // New: Main App moved here
   'Plugin Engine': 3004,
   'Python Service': 8000,
 };

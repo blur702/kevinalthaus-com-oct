@@ -17,17 +17,20 @@ export interface SentryConfig {
  * @param config - Sentry configuration options
  */
 export function initializeSentry(config: SentryConfig): void {
+  // Derive environment from NODE_ENV if not explicitly provided
+  const defaultEnvironment = (process.env.NODE_ENV || '').trim() || 'development';
+
   const {
     dsn,
-    environment = process.env.NODE_ENV || 'development',
-    release = process.env.VITE_APP_VERSION || 'unknown',
+    environment = defaultEnvironment,
+    release = 'unknown',
     sampleRate = 1.0,
     tracesSampleRate = 0.1,
     replaysSessionSampleRate = 0.1,
     replaysOnErrorSampleRate = 1.0,
-    // Default privacy-safe; allow override via env flag SENTRY_SEND_DEFAULT_PII
+    // Default privacy-safe; allow override via config
     sendDefaultPii = undefined,
-    enabled = process.env.NODE_ENV === 'production',
+    enabled = false,
   } = config;
 
   // Don't initialize if disabled or no DSN provided
@@ -36,12 +39,8 @@ export function initializeSentry(config: SentryConfig): void {
     return;
   }
 
-  // Determine final PII flag
-  const piiEnv = String(process.env.SENTRY_SEND_DEFAULT_PII || '').toLowerCase();
-  const sendDefaultPiiFinal =
-    typeof sendDefaultPii === 'boolean'
-      ? sendDefaultPii
-      : piiEnv === 'true' || piiEnv === '1';
+  // Use sendDefaultPii from config, default to false for privacy
+  const sendDefaultPiiFinal = typeof sendDefaultPii === 'boolean' ? sendDefaultPii : false;
 
   Sentry.init({
     dsn,
@@ -94,13 +93,6 @@ export function initializeSentry(config: SentryConfig): void {
       'Network request failed',
       'NetworkError',
       'Failed to fetch',
-      // Optionally ignore specific Minified React errors by code (env: SENTRY_IGNORE_MINIFIED_REACT_CODES)
-      ...(process.env.SENTRY_IGNORE_MINIFIED_REACT_CODES
-        ? process.env.SENTRY_IGNORE_MINIFIED_REACT_CODES.split(",")
-            .map((c) => c.trim())
-            .filter((c) => /^\d+$/.test(c)) // Only accept numeric codes to prevent ReDoS
-            .map((c) => new RegExp(`^Minified React error #${c}:`))
-        : []),
     ],
     // Denylist for URLs we don't want to track
     denyUrls: [

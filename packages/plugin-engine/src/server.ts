@@ -5,7 +5,7 @@ import { timingSafeEqual, createHash } from 'crypto';
 import { Server } from 'http';
 import { Pool } from 'pg';
 
-import { createLogger, LogLevel, Role } from '@monorepo/shared';
+import { createLogger, LogLevel, Role, PORTS, ensurePortAvailable } from '@monorepo/shared';
 
 // Dynamic SSDD Validator plugin loader
 let SSDDValidatorPlugin: any;
@@ -53,7 +53,7 @@ pool.on('error', (err) => {
   logger.error('[plugin-engine] PG pool error', err as unknown as Error);
 });
 
-const PORT = Number(process.env.PLUGIN_ENGINE_PORT || process.env.PORT || 3004);
+const PORT = Number(process.env.PLUGIN_ENGINE_PORT || process.env.PORT || PORTS.PLUGIN_ENGINE);
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
 // Internal gateway token for service-to-service authentication
@@ -247,22 +247,53 @@ async function verifyDbConnectivity(): Promise<void> {
 }
 
 // Start server with proper error handling
-const server: Server = app
-  .listen(PORT, async () => {
-    // eslint-disable-next-line no-console
-    console.log(`[plugin-engine] listening on ${PORT}`);
+let server: Server;
 
-    // Verify DB connectivity at startup
-    await verifyDbConnectivity();
+async function startServer(): Promise<void> {
+  try {
+    await ensurePortAvailable({
+      port: PORT,
+      serviceName: 'Plugin Engine',
+      killExisting: true,
+    });
 
-    // Load plugins after server starts
-    await loadPlugins();
-  })
-  .on('error', (err: Error) => {
+    // Verify DB connectivity before starting server
+    try {
+      await verifyDbConnectivity();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[plugin-engine] Database connectivity check failed during startup', error);
+      process.exit(1);
+    }
+
+    // Load plugins before starting server
+    try {
+      await loadPlugins();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[plugin-engine] Failed to load plugins during startup', error);
+      process.exit(1);
+    }
+
+    server = app
+      .listen(PORT, () => {
+        // eslint-disable-next-line no-console
+        console.log(`[plugin-engine] listening on ${PORT}`);
+      })
+      .on('error', (err: Error) => {
+        // eslint-disable-next-line no-console
+        console.error('[plugin-engine] Failed to start server', err);
+        process.exit(1);
+      });
+  } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('[plugin-engine] Failed to start server', err);
+    console.error('[plugin-engine] Failed to ensure port availability', error);
     process.exit(1);
-  });
+  }
+}
+
+// Start the server
+void startServer();
 
 // Graceful shutdown handler
 function gracefulShutdown(signal: string): void {

@@ -11,7 +11,8 @@
       "Bash(npm run lint:*)",
       "Bash(npm ls:*)",
       "Bash(cat:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(test:*)"
     ],
     "deny": [
       "Bash(powershell.exe:*)",

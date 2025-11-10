@@ -42,14 +42,34 @@ export async function isPortInUse(port: number): Promise<PortCheckResult> {
     // Parse PID from output
     if (process.platform === 'win32') {
       // Windows: Extract PID from netstat output
+      // Format: TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING       12345
+      // or:     TCP    127.0.0.1:3000         0.0.0.0:0              LISTENING       12345
       const lines = stdout.trim().split('\n');
-      const match = lines[0].match(/\s+(\d+)\s*$/);
-      const pid = match ? parseInt(match[1], 10) : undefined;
-      return { inUse: true, pid };
+
+      for (const line of lines) {
+        // Look for lines in LISTENING state
+        if (!line.includes('LISTENING')) {
+          continue;
+        }
+
+        // Extract PID from the end of the line
+        const match = line.match(/\s+(\d+)\s*$/);
+        if (match) {
+          const pid = parseInt(match[1], 10);
+          // Skip system process (PID 0 or 4) and invalid PIDs
+          if (pid > 4 && !isNaN(pid)) {
+            return { inUse: true, pid };
+          }
+        }
+      }
+
+      // If we found output but no valid PID, port might be in use by system
+      return { inUse: true, pid: undefined };
     } else {
       // Unix: lsof -ti returns PID directly
-      const pid = parseInt(stdout.trim().split('\n')[0], 10);
-      return { inUse: true, pid };
+      const pidStr = stdout.trim().split('\n')[0];
+      const pid = parseInt(pidStr, 10);
+      return { inUse: true, pid: !isNaN(pid) ? pid : undefined };
     }
   } catch (error) {
     // Command failed means port is not in use
@@ -64,9 +84,17 @@ export async function killProcessOnPort(port: number): Promise<boolean> {
   try {
     const portCheck = await isPortInUse(port);
 
-    if (!portCheck.inUse || !portCheck.pid) {
-      return false; // Port not in use
+    if (!portCheck.inUse) {
+      console.log(`Port ${port} is not in use`);
+      return false;
     }
+
+    if (!portCheck.pid) {
+      console.error(`Port ${port} is in use but PID could not be determined (system process or insufficient permissions)`);
+      return false;
+    }
+
+    console.log(`Killing process ${portCheck.pid} on port ${port}...`);
 
     const killCommand = process.platform === 'win32'
       ? `taskkill /F /PID ${portCheck.pid}`
@@ -79,7 +107,13 @@ export async function killProcessOnPort(port: number): Promise<boolean> {
 
     // Verify port is now free
     const recheck = await isPortInUse(port);
-    return !recheck.inUse;
+    if (!recheck.inUse) {
+      console.log(`Successfully killed process ${portCheck.pid} and freed port ${port}`);
+      return true;
+    } else {
+      console.warn(`Port ${port} still in use after killing process ${portCheck.pid}`);
+      return false;
+    }
   } catch (error) {
     console.error(`Failed to kill process on port ${port}:`, error);
     return false;

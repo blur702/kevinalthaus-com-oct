@@ -54,7 +54,7 @@ if (!loaded) {
 
 import app from './index';
 import { Server } from 'http';
-import { createLogger, LogLevel } from '@monorepo/shared';
+import { createLogger, LogLevel, PORTS, ensurePortAvailable } from '@monorepo/shared';
 
 // Validate and extract log level from environment
 function getLogLevel(): LogLevel {
@@ -81,7 +81,7 @@ const logger = createLogger({
   format: getLogFormat(),
 });
 
-const PORT = Number(process.env.API_GATEWAY_PORT || process.env.PORT || 3000);
+const PORT = Number(process.env.API_GATEWAY_PORT || process.env.PORT || PORTS.API_GATEWAY);
 
 // Validate PORT is a valid number in range
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
@@ -96,14 +96,13 @@ const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 // Ensure port is available before starting server
 let server: Server;
 
-function startServer(): void {
+async function startServer(): Promise<void> {
   try {
-    // TEMPORARILY DISABLED: Port check has bug reporting PID: 0
-    // await ensurePortAvailable({
-    //   port: PORT,
-    //   serviceName: 'API Gateway',
-    //   killExisting: true,
-    // });
+    await ensurePortAvailable({
+      port: PORT,
+      serviceName: 'API Gateway',
+      killExisting: true,
+    });
 
     server = app
       .listen(PORT, () => {
@@ -121,12 +120,14 @@ function startServer(): void {
 }
 
 // Start the server
-try {
-  startServer();
-} catch (err) {
-  logger.error('Unhandled error during server startup', err as Error);
-  process.exit(1);
-}
+void (async () => {
+  try {
+    await startServer();
+  } catch (err) {
+    logger.error('Unhandled error during server startup', err as Error);
+    process.exit(1);
+  }
+})();
 
 function gracefulShutdown(signal: string): void {
   logger.info(`Received ${signal}. Shutting down API Gateway...`);

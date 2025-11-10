@@ -463,12 +463,24 @@ export const authRateLimit = rateLimit({
   skipSuccessfulRequests: true,
   enableBruteForceProtection: false, // Disable for E2E testing
   blockDuration: 30 * 60 * 1000,
+  skip: (_req: Request | AuthenticatedRequest) => {
+    // Bypass rate limiting for E2E tests
+    return process.env.E2E_TESTING === 'true' ||
+           process.env.RATE_LIMIT_BYPASS_E2E === 'true' ||
+           process.env.NODE_ENV === 'test';
+  },
 });
 
 export const apiRateLimit = rateLimit({
   windowMs: 60 * 1000,
   max: process.env.E2E_TESTING === 'true' || process.env.NODE_ENV === 'test' ? 100000 : 100,
   message: 'API rate limit exceeded',
+  skip: (_req: Request | AuthenticatedRequest) => {
+    // Bypass rate limiting for E2E tests
+    return process.env.E2E_TESTING === 'true' ||
+           process.env.RATE_LIMIT_BYPASS_E2E === 'true' ||
+           process.env.NODE_ENV === 'test';
+  },
 });
 
 export const settingsRateLimit = rateLimit({

@@ -62,7 +62,7 @@ export class BulkService {
 
       this.logger.info(`Parsed ${records.length} records from CSV`);
 
-      return await this.importUsers(records, actorId);
+      return await this.importUsers(records as Record<string, unknown>[], actorId);
     } catch (error) {
       this.logger.error('Failed to import from CSV', error as Error);
       throw new Error(`CSV parsing failed: ${(error as Error).message}`);
@@ -82,7 +82,7 @@ export class BulkService {
 
       this.logger.info(`Parsed ${records.length} records from JSON`);
 
-      return await this.importUsers(records, actorId);
+      return await this.importUsers(records as Record<string, unknown>[], actorId);
     } catch (error) {
       this.logger.error('Failed to import from JSON', error as Error);
       throw new Error(`JSON parsing failed: ${(error as Error).message}`);
@@ -344,7 +344,7 @@ export class BulkService {
         // Check required columns
         const requiredColumns = ['email', 'username'];
         const firstRecord = records[0];
-        if (firstRecord) {
+        if (firstRecord && typeof firstRecord === 'object' && firstRecord !== null) {
           const missingColumns = requiredColumns.filter((col) => !(col in firstRecord));
           if (missingColumns.length > 0) {
             errors.push(`Missing required columns: ${missingColumns.join(', ')}`);

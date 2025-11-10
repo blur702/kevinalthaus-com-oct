@@ -7,7 +7,7 @@ import app from './index';
 import { Server } from 'http';
 import { runMigrations } from './db/migrations';
 import { pool, closePool } from './db';
-import { createLogger, LogLevel } from '@monorepo/shared';
+import { createLogger, LogLevel, PORTS, ensurePortAvailable } from '@monorepo/shared';
 import { ensureUploadDirectory } from './middleware/upload';
 import { initializeRedisRateLimiter, closeRedisRateLimiter } from './middleware/rateLimitRedis';
 import { secretsService } from './services/secretsService';
@@ -37,7 +37,7 @@ const logger = createLogger({
   format: getLogFormat(),
 });
 
-const PORT = Number(process.env.MAIN_APP_PORT || process.env.PORT || 3001);
+const PORT = Number(process.env.MAIN_APP_PORT || process.env.PORT || PORTS.MAIN_APP);
 
 // Validate PORT is a valid number in range
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
@@ -150,6 +150,13 @@ async function initializeServices(): Promise<void> {
 // Initialize database and start server
 async function start(): Promise<void> {
   try {
+    // Ensure port is available before starting
+    await ensurePortAvailable({
+      port: PORT,
+      serviceName: 'Main App',
+      killExisting: true,
+    });
+
     // Initialize upload directory before starting server
     await ensureUploadDirectory();
     logger.info('Upload directory initialized');
