@@ -179,12 +179,13 @@ export function rateLimit(options: RateLimitOptions = {}) {
     // Track response status for conditional counting
     if (skipFailedRequests || skipSuccessfulRequests) {
       const originalSend = res.send;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       res.send = function(data: any): Response {
         // Decrement counter based on response status
         if (res.statusCode >= 400 && skipFailedRequests) {
-          entry!.count--;
+          entry.count--;
         } else if (res.statusCode < 400 && skipSuccessfulRequests) {
-          entry!.count--;
+          entry.count--;
         }
         return originalSend.call(this, data);
       };
@@ -261,9 +262,10 @@ export const passwordResetRateLimit = rateLimit({
   enableBruteForceProtection: true,
   keyGenerator: (req: Request) => {
     // Use email or IP for password reset
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const email = req.body?.email;
     if (email) {
-      return `reset:${email}`;
+      return `reset:${String(email)}`;
     }
     return defaultKeyGenerator(req);
   }

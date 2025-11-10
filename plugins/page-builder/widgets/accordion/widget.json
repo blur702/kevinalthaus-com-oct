@@ -1,0 +1,18 @@
+{
+  "type": "accordion",
+  "name": "Accordion",
+  "displayName": "Accordion/Collapsible",
+  "description": "Collapsible content sections with expandable panels for organizing information",
+  "category": "advanced",
+  "icon": "expand_more",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["accordion", "collapse", "expand", "faq", "sections"],
+  "isContainer": true,
+  "deprecated": false
+}

@@ -362,7 +362,7 @@ test.describe('User Management', () => {
 
       for (let i = 0; i < Math.min(count, 5); i++) {
         const username = await rows.nth(i).locator('td:nth-child(2)').textContent();
-        if (username) usernames.push(username);
+        if (username) {usernames.push(username);}
       }
 
       // Should be sorted (ascending or descending)
@@ -642,7 +642,7 @@ test.describe('User Management', () => {
 
     test('should update user details', async ({ page }) => {
       // Wait for response when searching
-      let responsePromise = page.waitForResponse((response) =>
+      const responsePromise = page.waitForResponse((response) =>
         response.url().includes('/api/users') && response.status() === 200
       );
 

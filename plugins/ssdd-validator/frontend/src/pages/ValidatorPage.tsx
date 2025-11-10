@@ -9,6 +9,7 @@
  */
 
 import React, { useState } from 'react';
+import type * as GeoJSON from 'geojson';
 import {
   Box,
   Container,
@@ -77,7 +78,7 @@ const ValidatorPage: React.FC<ValidatorPageProps> = ({ isAdmin = false }) => {
   const handleValidationComplete = (result: ValidationResult) => {
     // Update map with validation results
     const { coordinates, boundary } = result;
-    if (!coordinates) return;
+    if (!coordinates) {return;}
     setMarkerPosition([coordinates.latitude, coordinates.longitude]);
     setMapCenter([coordinates.latitude, coordinates.longitude]);
     setMapZoom(12);

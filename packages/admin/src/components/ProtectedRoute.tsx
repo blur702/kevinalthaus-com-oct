@@ -27,10 +27,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       })
       .catch((err) => {
         if (import.meta.env && import.meta.env.DEV) {
-           
+
           console.error('Auth check failed', err);
         } else {
-           
+
           console.warn('Auth check failed');
         }
         if (mounted) {
@@ -40,7 +40,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [location.pathname]);
 
   if (authenticated === null) {
     // Still checking authentication - show loading state

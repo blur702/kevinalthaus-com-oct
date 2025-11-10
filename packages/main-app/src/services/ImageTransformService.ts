@@ -272,32 +272,32 @@ export class ImageTransformService {
     const options: TransformOptions = {};
 
     // Resize options
-    if (query.width) options.width = parseInt(String(query.width), 10);
-    if (query.height) options.height = parseInt(String(query.height), 10);
-    if (query.fit) options.fit = String(query.fit) as TransformOptions['fit'];
-    if (query.position) options.position = String(query.position) as TransformOptions['position'];
+    if (query.width) {options.width = parseInt(String(query.width), 10);}
+    if (query.height) {options.height = parseInt(String(query.height), 10);}
+    if (query.fit) {options.fit = String(query.fit) as TransformOptions['fit'];}
+    if (query.position) {options.position = String(query.position) as TransformOptions['position'];}
 
     // Crop options
-    if (query.cropX) options.cropX = parseInt(String(query.cropX), 10);
-    if (query.cropY) options.cropY = parseInt(String(query.cropY), 10);
-    if (query.cropWidth) options.cropWidth = parseInt(String(query.cropWidth), 10);
-    if (query.cropHeight) options.cropHeight = parseInt(String(query.cropHeight), 10);
+    if (query.cropX) {options.cropX = parseInt(String(query.cropX), 10);}
+    if (query.cropY) {options.cropY = parseInt(String(query.cropY), 10);}
+    if (query.cropWidth) {options.cropWidth = parseInt(String(query.cropWidth), 10);}
+    if (query.cropHeight) {options.cropHeight = parseInt(String(query.cropHeight), 10);}
 
     // Format options
-    if (query.format) options.format = String(query.format) as TransformOptions['format'];
-    if (query.quality) options.quality = parseInt(String(query.quality), 10);
+    if (query.format) {options.format = String(query.format) as TransformOptions['format'];}
+    if (query.quality) {options.quality = parseInt(String(query.quality), 10);}
 
     // Filter options
-    if (query.grayscale === 'true' || query.grayscale === '1') options.grayscale = true;
-    if (query.blur) options.blur = parseFloat(String(query.blur));
-    if (query.sharpen === 'true' || query.sharpen === '1') options.sharpen = true;
-    if (query.rotate) options.rotate = parseInt(String(query.rotate), 10);
-    if (query.flip === 'true' || query.flip === '1') options.flip = true;
-    if (query.flop === 'true' || query.flop === '1') options.flop = true;
+    if (query.grayscale === 'true' || query.grayscale === '1') {options.grayscale = true;}
+    if (query.blur) {options.blur = parseFloat(String(query.blur));}
+    if (query.sharpen === 'true' || query.sharpen === '1') {options.sharpen = true;}
+    if (query.rotate) {options.rotate = parseInt(String(query.rotate), 10);}
+    if (query.flip === 'true' || query.flip === '1') {options.flip = true;}
+    if (query.flop === 'true' || query.flop === '1') {options.flop = true;}
 
     // Advanced options
-    if (query.stripMetadata === 'true' || query.stripMetadata === '1') options.stripMetadata = true;
-    if (query.withoutEnlargement === 'false' || query.withoutEnlargement === '0') options.withoutEnlargement = false;
+    if (query.stripMetadata === 'true' || query.stripMetadata === '1') {options.stripMetadata = true;}
+    if (query.withoutEnlargement === 'false' || query.withoutEnlargement === '0') {options.withoutEnlargement = false;}
 
     return options;
   }

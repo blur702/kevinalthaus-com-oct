@@ -12,7 +12,7 @@ test.describe('Blog Post UI', () => {
     for (let i = 0; i < 30; i++) {
       try {
         const res = await page.request.get('http://127.0.0.1:3000/health');
-        if (res.ok()) break;
+        if (res.ok()) {break;}
       } catch {}
       await page.waitForTimeout(1000);
     }

@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import type { EditorPlugin, EditorCore } from '../types';
+import type { EditorPlugin } from '../types';
 
 /**
  * Image icon component
@@ -52,7 +52,7 @@ export const ImagePlugin: EditorPlugin = {
     group: 'insert',
   },
 
-  onCommand(command: string, value?: any): boolean {
+  onCommand(command: string, _value?: any): boolean {
     if (command === 'insertImage') {
       // Prompt for image URL
       const url = prompt('Enter image URL:', 'https://');

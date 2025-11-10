@@ -5,7 +5,7 @@
  * Handles user registration, login, JWT token management, and password operations.
  */
 
-import { AuthService } from '@monorepo/shared';
+import { AuthService, createLogger } from '@monorepo/shared';
 import type {
   AuthResult,
   LoginResult,
@@ -18,6 +18,8 @@ import { Role, getCapabilitiesForRole } from '@monorepo/shared';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+
+const logger = createLogger({ context: 'AuthService' });
 
 interface User {
   id: string;
@@ -58,11 +60,13 @@ export class AuthServiceImpl extends AuthService {
     if (!this.jwtSecret) {
       throw new Error('JWT_SECRET is required for AuthService');
     }
-    console.log('[AuthService] ✓ Initialized');
+    logger.info('Initialized');
+    return Promise.resolve();
   }
 
   async shutdown(): Promise<void> {
-    console.log('[AuthService] ✓ Shut down');
+    logger.info('Shut down');
+    return Promise.resolve();
   }
 
   async healthCheck(): Promise<{ healthy: boolean; message?: string }> {
@@ -88,10 +92,10 @@ export class AuthServiceImpl extends AuthService {
     const knex = this.dbService.getKnex();
 
     // Check if user already exists
-    const existingUser = await knex('users')
+    const existingUser = (await knex('users')
       .where({ email: data.email })
       .orWhere({ username: data.username })
-      .first();
+      .first()) as User | undefined;
 
     if (existingUser) {
       throw new Error('User with this email or username already exists');
@@ -128,10 +132,10 @@ export class AuthServiceImpl extends AuthService {
     const knex = this.dbService.getKnex();
 
     // Find user by email or username
-    const user = await knex('users')
+    const user = (await knex('users')
       .where({ email: data.identifier })
       .orWhere({ username: data.identifier })
-      .first() as User;
+      .first()) as User | undefined;
 
     if (!user) {
       throw new Error('Invalid credentials');
@@ -164,11 +168,11 @@ export class AuthServiceImpl extends AuthService {
     await knex('refresh_tokens').where({ token_hash: tokenHash }).delete();
   }
 
-  async validateToken(token: string): Promise<TokenPayload> {
+  validateToken(token: string): Promise<TokenPayload> {
     try {
       const payload = jwt.verify(token, this.jwtSecret) as TokenPayload;
-      return payload;
-    } catch (error) {
+      return Promise.resolve(payload);
+    } catch (_error) {
       throw new Error('Invalid or expired token');
     }
   }
@@ -184,16 +188,16 @@ export class AuthServiceImpl extends AuthService {
     const storedToken = (await knex('refresh_tokens')
       .where({ token_hash: tokenHash })
       .where('expires_at', '>', knex.fn.now())
-      .first()) as RefreshToken;
+      .first()) as RefreshToken | undefined;
 
     if (!storedToken) {
       throw new Error('Invalid or expired refresh token');
     }
 
     // Get user
-    const user = await knex('users')
+    const user = (await knex('users')
       .where({ id: storedToken.user_id })
-      .first() as User;
+      .first()) as User | undefined;
 
     if (!user) {
       throw new Error('User not found');
@@ -210,7 +214,7 @@ export class AuthServiceImpl extends AuthService {
     const knex = this.dbService.getKnex();
 
     // Check if user exists
-    const user = await knex('users').where({ email }).first() as User;
+    const user = (await knex('users').where({ email }).first()) as User | undefined;
     if (!user) {
       // Don't reveal if user exists for security
       throw new Error('If an account exists with this email, a reset link will be sent');
@@ -266,7 +270,7 @@ export class AuthServiceImpl extends AuthService {
     const knex = this.dbService.getKnex();
 
     // Get user
-    const user = await knex('users').where({ id: data.userId }).first() as User;
+    const user = (await knex('users').where({ id: data.userId }).first()) as User | undefined;
     if (!user) {
       throw new Error('User not found');
     }

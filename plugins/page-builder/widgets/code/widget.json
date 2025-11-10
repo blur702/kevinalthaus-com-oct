@@ -1,0 +1,18 @@
+{
+  "type": "code",
+  "name": "Code Block",
+  "displayName": "Syntax-Highlighted Code",
+  "description": "Display syntax-highlighted code blocks with line numbers and copy functionality",
+  "category": "advanced",
+  "icon": "code",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["code", "syntax", "programming", "snippet", "developer"],
+  "isContainer": false,
+  "deprecated": false
+}

@@ -105,7 +105,7 @@ export function getDistrictByCoordinatesHandler(context: PluginExecutionContext)
         boundary,
         areaSquareKm: row.area_sq_km ? Number(row.area_sq_km) : undefined,
         centroid: (function () {
-          if (!row.centroid) return undefined;
+          if (!row.centroid) {return undefined;}
           try {
             return parseCentroid(row.centroid);
           } catch (_e) {

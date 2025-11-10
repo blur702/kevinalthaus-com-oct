@@ -2,22 +2,12 @@
  * SSDD Validator Plugin - TypeScript Type Definitions
  */
 
-// GeoJSON types - simplified for frontend use
-export interface GeoJSONGeometry {
-  type: string;
-  coordinates: number[] | number[][] | number[][][] | number[][][][];
-}
+import type * as GeoJSON from 'geojson';
 
-export interface GeoJSONFeature {
-  type: 'Feature';
-  geometry: GeoJSONGeometry;
-  properties?: Record<string, unknown>;
-}
-
-export interface GeoJSONFeatureCollection {
-  type: 'FeatureCollection';
-  features: GeoJSONFeature[];
-}
+// Re-export GeoJSON types from the official package
+export type GeoJSONGeometry = GeoJSON.Geometry;
+export type GeoJSONFeature = GeoJSON.Feature;
+export type GeoJSONFeatureCollection = GeoJSON.FeatureCollection;
 
 export interface Address {
   street1: string;

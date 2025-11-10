@@ -1,0 +1,18 @@
+{
+  "type": "spacer",
+  "name": "Spacer",
+  "displayName": "Vertical Spacer",
+  "description": "Add vertical spacing between widgets for better layout control",
+  "category": "general",
+  "icon": "height",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["spacer", "spacing", "margin", "gap", "layout"],
+  "isContainer": false,
+  "deprecated": false
+}

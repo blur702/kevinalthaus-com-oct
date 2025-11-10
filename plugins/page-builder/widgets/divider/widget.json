@@ -1,0 +1,18 @@
+{
+  "type": "divider",
+  "name": "Divider",
+  "displayName": "Horizontal Divider",
+  "description": "Horizontal rule for separating content sections with customizable style and spacing",
+  "category": "general",
+  "icon": "horizontal_rule",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["divider", "separator", "hr", "line", "rule"],
+  "isContainer": false,
+  "deprecated": false
+}

@@ -35,10 +35,11 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0', // Listen on all network interfaces (IPv4 and IPv6)
-    port: 3003,
+    port: 3002,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000', // API Gateway (exposed to host)
+        // Point directly to main-app in development to avoid port conflicts with gateway
+        target: 'http://localhost:3011',
         changeOrigin: true,
         secure: process.env.NODE_ENV === 'production' || process.env.VITE_PROXY_SECURE === 'true',
         cookieDomainRewrite: 'localhost',

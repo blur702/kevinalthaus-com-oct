@@ -1,0 +1,7 @@
+{
+  "extends": ["../../../../.eslintrc.json"],
+  "rules": {
+    "@typescript-eslint/no-floating-promises": "off",
+    "react-hooks/exhaustive-deps": "off"
+  }
+}

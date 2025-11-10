@@ -5,6 +5,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { Pool } from 'pg';
 import { PageService } from '../services/page.service';
+import { WidgetRegistryService } from '../services/widget-registry.service';
 import { PluginLogger } from '@monorepo/shared/plugin/lifecycle';
 import { PageStatus } from '../types';
 
@@ -16,7 +17,7 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-export function createPageBuilderRouter(pool: Pool, logger: PluginLogger): Router {
+export function createPageBuilderRouter(pool: Pool, logger: PluginLogger, widgetRegistry: WidgetRegistryService): Router {
   const router = Router();
   const pageService = new PageService(pool);
 
@@ -28,9 +29,8 @@ export function createPageBuilderRouter(pool: Pool, logger: PluginLogger): Route
         return;
       }
 
-      const hasCapabilities = capabilities.every(cap =>
-        req.user!.capabilities.includes(cap)
-      );
+      const userCaps = Array.isArray(req.user.capabilities) ? req.user.capabilities : [];
+      const hasCapabilities = capabilities.every((cap) => userCaps.includes(cap));
 
       if (!hasCapabilities) {
         res.status(403).json({
@@ -502,6 +502,83 @@ export function createPageBuilderRouter(pool: Pool, logger: PluginLogger): Route
         res.status(500).json({
           success: false,
           error: 'Failed to create reusable block'
+        });
+      }
+    }
+  );
+
+  // =========================================================================
+  // WIDGET REGISTRY ROUTES
+  // =========================================================================
+
+  /**
+   * Get all widgets or filter by category
+   * GET /api/page-builder/widgets?category=general
+   */
+  router.get(
+    '/widgets',
+    requireCapabilities(['database:read']),
+    async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const { category } = req.query;
+
+        let widgets;
+        if (category && typeof category === 'string') {
+          widgets = widgetRegistry.getWidgetsByCategory(category);
+        } else {
+          widgets = widgetRegistry.getRegistry();
+        }
+
+        const categories = widgetRegistry.getCategories();
+
+        res.json({
+          success: true,
+          data: {
+            widgets,
+            total: widgets.length,
+            categories,
+            version: '1.0'
+          }
+        });
+      } catch (error) {
+        logger.error('Failed to get widgets:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to get widgets'
+        });
+      }
+    }
+  );
+
+  /**
+   * Get widget by type
+   * GET /api/page-builder/widgets/:type
+   */
+  router.get(
+    '/widgets/:type',
+    requireCapabilities(['database:read']),
+    async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const { type } = req.params;
+
+        const widget = widgetRegistry.getWidgetByType(type);
+
+        if (!widget) {
+          return res.status(404).json({
+            success: false,
+            error: `Widget type '${type}' not found`
+          });
+        }
+
+        res.json({
+          success: true,
+          data: widget
+        });
+      } catch (error) {
+        logger.error('Failed to get widget:', error as Error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to get widget'
         });
       }
     }

@@ -133,13 +133,13 @@ export function listAddressesHandler(context: PluginExecutionContext) {
             const stateValid = /^[A-Z]{2}$/.test(candidateState.toUpperCase());
             // eslint-disable-next-line security/detect-unsafe-regex
             const zipValid = /^\d{5}(-\d{4})?$/.test(candidateZip);
-            if (stateValid) originalState = candidateState.toUpperCase();
-            if (zipValid) originalZip = candidateZip;
-            if (candidateCity) originalCity = candidateCity;
-            if (parts.length > 3) originalStreet1 = parts.slice(0, parts.length - 3).join(', ');
+            if (stateValid) {originalState = candidateState.toUpperCase();}
+            if (zipValid) {originalZip = candidateZip;}
+            if (candidateCity) {originalCity = candidateCity;}
+            if (parts.length > 3) {originalStreet1 = parts.slice(0, parts.length - 3).join(', ');}
           } else if (parts.length === 2) {
             const candidateState = parts[1] || '';
-            if (/^[A-Z]{2}$/.test(candidateState.toUpperCase())) originalState = candidateState.toUpperCase();
+            if (/^[A-Z]{2}$/.test(candidateState.toUpperCase())) {originalState = candidateState.toUpperCase();}
             originalCity = parts[0] || city;
           } else if (parts.length === 1) {
             originalStreet1 = parts[0] || street1;

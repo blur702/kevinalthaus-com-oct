@@ -77,6 +77,12 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
     try {
       const { id } = req.params;
 
+      // Validate ID parameter exists
+      if (!id || id === 'undefined') {
+        res.status(400).json({ error: 'Blog post ID is required' });
+        return;
+      }
+
       const post = await blogService.getPostById(id);
 
       if (!post) {
@@ -165,6 +171,12 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       }
 
       const { id } = req.params;
+
+      // Validate ID parameter exists
+      if (!id || id === 'undefined') {
+        res.status(400).json({ error: 'Blog post ID is required' });
+        return;
+      }
       const {
         title,
         slug,
@@ -246,6 +258,12 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
 
       const { id } = req.params;
 
+      // Validate ID parameter exists
+      if (!id || id === 'undefined') {
+        res.status(400).json({ error: 'Blog post ID is required' });
+        return;
+      }
+
       // Get existing post to verify authorization
       const existingPost = await blogService.getPostById(id);
 
@@ -287,6 +305,12 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       }
 
       const { id } = req.params;
+
+      // Validate ID parameter exists
+      if (!id || id === 'undefined') {
+        res.status(400).json({ error: 'Blog post ID is required' });
+        return;
+      }
 
       // Get existing post to verify authorization and state
       const existingPost = await blogService.getPostById(id);
@@ -341,6 +365,12 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       }
 
       const { id } = req.params;
+
+      // Validate ID parameter exists
+      if (!id || id === 'undefined') {
+        res.status(400).json({ error: 'Blog post ID is required' });
+        return;
+      }
 
       // Get existing post to verify authorization
       const existingPost = await blogService.getPostById(id);

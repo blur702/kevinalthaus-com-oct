@@ -139,11 +139,11 @@ export async function listUsersViaApi(
   const queryParams = new URLSearchParams();
 
   if (params) {
-    if (params.page !== undefined) queryParams.set('page', String(params.page));
-    if (params.limit !== undefined) queryParams.set('limit', String(params.limit));
-    if (params.search) queryParams.set('search', params.search);
-    if (params.role) queryParams.set('role', params.role);
-    if (params.active !== undefined) queryParams.set('active', String(params.active));
+    if (params.page !== undefined) {queryParams.set('page', String(params.page));}
+    if (params.limit !== undefined) {queryParams.set('limit', String(params.limit));}
+    if (params.search) {queryParams.set('search', params.search);}
+    if (params.role) {queryParams.set('role', params.role);}
+    if (params.active !== undefined) {queryParams.set('active', String(params.active));}
   }
 
   const queryString = queryParams.toString();

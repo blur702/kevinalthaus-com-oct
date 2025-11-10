@@ -19,7 +19,7 @@ test('Complete blog post creation workflow', async ({ page }) => {
   for (let i = 0; i < 30; i++) {
     try {
       const res = await page.request.get('http://localhost:3001/health');
-      if (res.ok()) break;
+      if (res.ok()) {break;}
     } catch {}
     await page.waitForTimeout(1000);
   }

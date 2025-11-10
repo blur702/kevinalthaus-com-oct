@@ -9,7 +9,7 @@
  * - Clean up old versions (retention policy)
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -187,7 +187,7 @@ export function VersionHistoryDialog({
   };
 
   const formatChecksum = (checksum: string | null): string => {
-    if (!checksum) return 'N/A';
+    if (!checksum) {return 'N/A';}
     return `${checksum.substring(0, 8)}...${checksum.substring(checksum.length - 8)}`;
   };
 

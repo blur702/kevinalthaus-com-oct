@@ -1,0 +1,18 @@
+{
+  "type": "text-content",
+  "name": "Text Content",
+  "displayName": "Rich Text Content",
+  "description": "Editable text content with rich formatting options including bold, italic, lists, and links",
+  "category": "general",
+  "icon": "text_fields",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["text", "content", "wysiwyg", "editor", "paragraph"],
+  "isContainer": false,
+  "deprecated": false
+}

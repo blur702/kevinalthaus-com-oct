@@ -1,0 +1,331 @@
+"use strict";
+/**
+ * Widget Registry Service
+ * Auto-discovers and manages widget metadata from the widgets/ directory
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.WidgetRegistryService = void 0;
+const fs = __importStar(require("fs/promises"));
+const path = __importStar(require("path"));
+const types_1 = require("../types");
+class WidgetRegistryService {
+    constructor(pluginPath, logger) {
+        this.registry = new Map();
+        this.schemaCache = new Map();
+        this.pluginPath = pluginPath;
+        this.logger = logger;
+    }
+    /**
+     * Discover and load all widgets from the widgets/ directory
+     */
+    async discoverWidgets() {
+        const widgetsDir = path.join(this.pluginPath, 'widgets');
+        try {
+            this.logger.info('Starting widget discovery', { widgetsDir });
+            // Read widgets directory
+            const entries = await fs.readdir(widgetsDir, { withFileTypes: true });
+            // Filter directories (exclude README.md and other files)
+            const widgetDirs = entries
+                .filter(entry => entry.isDirectory())
+                .map(entry => entry.name);
+            if (widgetDirs.length === 0) {
+                this.logger.info('No widget directories found');
+                return;
+            }
+            // Load each widget
+            let validCount = 0;
+            let invalidCount = 0;
+            for (const widgetName of widgetDirs) {
+                const entry = await this.validateAndLoadWidget(widgetName);
+                if (entry && entry.isValid) {
+                    this.registry.set(entry.type, entry);
+                    validCount++;
+                }
+                else {
+                    invalidCount++;
+                }
+            }
+            this.logger.info('Widget discovery completed', {
+                total: widgetDirs.length,
+                valid: validCount,
+                invalid: invalidCount
+            });
+        }
+        catch (error) {
+            // Don't throw - log and continue with empty registry
+            this.logger.error('Widget discovery failed', error);
+        }
+    }
+    /**
+     * Validate and load a single widget
+     */
+    async validateAndLoadWidget(widgetName) {
+        const widgetPath = path.join(this.pluginPath, 'widgets', widgetName);
+        const validationErrors = [];
+        try {
+            // Check required files
+            const requiredFiles = ['widget.json', 'component.tsx', 'config.ts', 'types.ts'];
+            for (const file of requiredFiles) {
+                const filePath = path.join(widgetPath, file);
+                try {
+                    await fs.access(filePath);
+                }
+                catch {
+                    validationErrors.push(`Missing required file: ${file}`);
+                }
+            }
+            // If any required files are missing, create invalid entry
+            if (validationErrors.length > 0) {
+                this.logger.warn(`Widget '${widgetName}' is missing required files`, {
+                    widgetName,
+                    errors: validationErrors
+                });
+                return null;
+            }
+            // Read and parse widget.json
+            const manifestPath = path.join(widgetPath, 'widget.json');
+            const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+            const manifestData = JSON.parse(manifestContent);
+            // Validate manifest
+            let manifest;
+            try {
+                manifest = (0, types_1.validateWidgetManifest)(manifestData);
+            }
+            catch (error) {
+                validationErrors.push(`Invalid manifest: ${error instanceof Error ? error.message : String(error)}`);
+                // Create invalid entry with partial data
+                const entry = {
+                    ...manifestData,
+                    type: manifestData.type || widgetName,
+                    componentPath: path.join('widgets', widgetName, 'component.tsx'),
+                    configSchemaPath: path.join('widgets', widgetName, 'config.ts'),
+                    typesPath: path.join('widgets', widgetName, 'types.ts'),
+                    isValid: false,
+                    validationErrors,
+                    loadedAt: new Date()
+                };
+                this.logger.warn(`Widget '${widgetName}' has invalid manifest`, {
+                    widgetName,
+                    errors: validationErrors
+                });
+                return entry;
+            }
+            // Create valid entry
+            const entry = {
+                ...manifest,
+                componentPath: path.join('widgets', widgetName, 'component.tsx'),
+                configSchemaPath: path.join('widgets', widgetName, 'config.ts'),
+                typesPath: path.join('widgets', widgetName, 'types.ts'),
+                isValid: true,
+                validationErrors: [],
+                loadedAt: new Date()
+            };
+            this.logger.debug(`Successfully loaded widget '${manifest.type}'`, {
+                type: manifest.type,
+                category: manifest.category,
+                version: manifest.version
+            });
+            return entry;
+        }
+        catch (error) {
+            this.logger.error(`Failed to load widget '${widgetName}'`, error);
+            return null;
+        }
+    }
+    /**
+     * Get all registered widgets
+     */
+    getRegistry() {
+        return Array.from(this.registry.values());
+    }
+    /**
+     * Get widget by type
+     */
+    getWidgetByType(type) {
+        return this.registry.get(type) || null;
+    }
+    /**
+     * Get widgets by category
+     */
+    getWidgetsByCategory(category) {
+        return this.getRegistry().filter(widget => widget.category === category);
+    }
+    /**
+     * Get unique list of categories
+     */
+    getCategories() {
+        const categories = new Set();
+        for (const widget of this.registry.values()) {
+            if (widget.isValid) {
+                categories.add(widget.category);
+            }
+        }
+        return Array.from(categories).sort();
+    }
+    /**
+     * Check if widget type exists and is valid
+     */
+    isWidgetAvailable(type) {
+        const widget = this.registry.get(type);
+        return widget !== undefined && widget.isValid;
+    }
+    /**
+     * Get placeholder widget for missing/invalid widgets
+     */
+    getPlaceholderWidget() {
+        return {
+            type: 'placeholder',
+            name: 'Placeholder',
+            displayName: 'Missing Widget',
+            description: 'This widget is no longer available or failed to load',
+            category: 'general',
+            icon: 'block',
+            version: '1.0.0',
+            author: {
+                name: 'System',
+                email: 'system@kevinalthaus.com'
+            },
+            configSchema: 'config.ts',
+            tags: ['placeholder', 'fallback'],
+            isContainer: false,
+            deprecated: true,
+            componentPath: '',
+            configSchemaPath: '',
+            typesPath: '',
+            isValid: true,
+            validationErrors: [],
+            loadedAt: new Date()
+        };
+    }
+    /**
+     * Resolve widget for rendering with graceful degradation
+     */
+    resolveWidgetForRendering(widgetInstance) {
+        const widget = this.getWidgetByType(widgetInstance.type);
+        if (widget && widget.isValid) {
+            return widget;
+        }
+        // Widget not found or invalid - log warning and return placeholder
+        this.logger.warn('Widget not available for rendering, using placeholder', {
+            widgetType: widgetInstance.type,
+            widgetId: widgetInstance.id
+        });
+        return this.getPlaceholderWidget();
+    }
+    /**
+     * Validate widget configuration against its schema
+     */
+    async validateWidgetConfig(widgetType, config) {
+        try {
+            const schema = await this.getWidgetSchema(widgetType);
+            if (!schema) {
+                return {
+                    valid: false,
+                    errors: [`Schema not found for widget type: ${widgetType}`]
+                };
+            }
+            const { error } = schema.validate(config, {
+                abortEarly: false,
+                stripUnknown: false
+            });
+            if (error) {
+                return {
+                    valid: false,
+                    errors: error.details.map((detail) => detail.message)
+                };
+            }
+            return { valid: true };
+        }
+        catch (error) {
+            return {
+                valid: false,
+                errors: [`Validation failed: ${error instanceof Error ? error.message : String(error)}`]
+            };
+        }
+    }
+    /**
+     * Get widget's Joi schema by dynamically importing config.ts
+     */
+    async getWidgetSchema(widgetType) {
+        // Check cache first
+        if (this.schemaCache.has(widgetType)) {
+            return this.schemaCache.get(widgetType);
+        }
+        const widget = this.getWidgetByType(widgetType);
+        if (!widget || !widget.isValid) {
+            this.logger.warn(`Cannot load schema for invalid widget: ${widgetType}`);
+            return null;
+        }
+        try {
+            // Dynamic import of config.ts with path validation to avoid directory traversal
+            const widgetsBaseDir = path.join(this.pluginPath, 'widgets');
+            const resolvedConfigPath = path.resolve(this.pluginPath, widget.configSchemaPath);
+            const normalizedBase = path.resolve(widgetsBaseDir) + path.sep;
+            const normalizedResolved = path.resolve(resolvedConfigPath) + '';
+            if (!normalizedResolved.startsWith(normalizedBase)) {
+                this.logger.error(`Rejected schema path outside widgets directory for widget: ${widgetType}`, new Error(`Invalid schema path: ${resolvedConfigPath}`));
+                return null;
+            }
+            const configModule = await Promise.resolve(`${resolvedConfigPath}`).then(s => __importStar(require(s)));
+            // Look for common schema export names
+            const schema = configModule.default ||
+                configModule[`${widgetType}ConfigSchema`] ||
+                configModule.configSchema ||
+                configModule.schema;
+            if (!schema) {
+                this.logger.error(`No schema export found in config.ts for widget: ${widgetType}`, new Error(`Schema not found in ${configPath}`));
+                return null;
+            }
+            // Cache the schema
+            this.schemaCache.set(widgetType, schema);
+            return schema;
+        }
+        catch (error) {
+            this.logger.error(`Failed to load schema for widget: ${widgetType}`, error);
+            return null;
+        }
+    }
+    /**
+     * Refresh widget registry (useful for development/hot-reload)
+     */
+    async refresh() {
+        this.registry.clear();
+        this.schemaCache.clear();
+        await this.discoverWidgets();
+    }
+}
+exports.WidgetRegistryService = WidgetRegistryService;
+//# sourceMappingURL=widget-registry.service.js.map

@@ -1073,7 +1073,7 @@ router.post(
       }
 
       // Validate new password strength
-      if (!isValidPassword(newPassword)) {
+      if (!(await isValidPassword(newPassword))) {
         res.status(400).json({
           error: 'Bad Request',
           message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character',
@@ -1164,9 +1164,11 @@ router.get('/me', authMiddleware, (req: AuthenticatedRequest, res: Response) => 
 });
 
 // GET /api/auth/csrf-token - Get CSRF token for authenticated users
-router.get('/csrf-token', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const { getCSRFToken } = await import('../middleware/csrf');
-  getCSRFToken(req, res);
+router.get('/csrf-token', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+  void (async () => {
+    const { getCSRFToken } = await import('../middleware/csrf');
+    getCSRFToken(req, res);
+  })();
 });
 
 // Auth middleware

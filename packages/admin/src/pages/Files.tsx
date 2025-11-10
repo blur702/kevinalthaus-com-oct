@@ -35,10 +35,6 @@ import {
   DialogContent,
   DialogActions,
   InputAdornment,
-  Card,
-  CardMedia,
-  CardContent,
-  CardActions,
   Grid,
   Divider,
   FormControlLabel,
@@ -76,7 +72,6 @@ import {
   getAllowedFileTypes,
   formatFileSize,
   getCategoryFromMimeType,
-  getFileIcon,
 } from '../services/filesService';
 import { ShareDialog } from '../components/ShareDialog';
 import { VersionHistoryDialog } from '../components/VersionHistoryDialog';
@@ -90,7 +85,7 @@ const Files: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [allowedTypes, setAllowedTypes] = useState<AllowedFileType[]>([]);
+  const [_allowedTypes, _setAllowedTypes] = useState<AllowedFileType[]>([]);
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -101,7 +96,7 @@ const Files: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   // Filter state
-  const [searchQuery, setSearchQuery] = useState('');
+  const [_searchQuery, _setSearchQuery] = useState('');
   const [pluginIdFilter, setPluginIdFilter] = useState<string>('');
   const [mimeTypeFilter, setMimeTypeFilter] = useState<string>('');
   const [includeDeleted, setIncludeDeleted] = useState(false);
@@ -195,7 +190,7 @@ const Files: React.FC = () => {
   const fetchAllowedTypes = useCallback(async () => {
     try {
       const types = await getAllowedFileTypes();
-      setAllowedTypes(types);
+      _setAllowedTypes(types);
     } catch (err) {
       console.error('Failed to fetch allowed file types:', err);
     }
@@ -386,7 +381,7 @@ const Files: React.FC = () => {
   };
 
   const handleEditSave = async (): Promise<void> => {
-    if (!editingFile) return;
+    if (!editingFile) {return;}
 
     try {
       await updateFileMetadata(editingFile.id, {
@@ -446,7 +441,7 @@ const Files: React.FC = () => {
   };
 
   const handleDeleteConfirm = async (): Promise<void> => {
-    if (!deletingFile) return;
+    if (!deletingFile) {return;}
 
     try {
       if (hardDelete) {

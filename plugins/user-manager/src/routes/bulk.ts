@@ -181,7 +181,7 @@ export function createBulkRouter(pool: Pool, logger: Logger): Router {
             columns: true,
             skip_empty_lines: true,
             trim: true,
-          }) as Array<Record<string, string>>;
+          });
           recordCount = records.length;
         } catch {
           // Fallback to simple counting if parsing fails

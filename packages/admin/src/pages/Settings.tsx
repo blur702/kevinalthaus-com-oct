@@ -185,10 +185,6 @@ const Settings: React.FC = () => {
 
   // Loading state refs (synchronous checks to prevent race conditions)
   const loadingSiteRef = useRef(false);
-  const loadingSecurityRef = useRef(false);
-  const loadingEmailRef = useRef(false);
-  const loadingExternalApisRef = useRef(false);
-  const loadingApiKeysRef = useRef(false);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -528,7 +524,7 @@ const Settings: React.FC = () => {
 
   // Save handlers
   const handleSaveSiteSettings = async () => {
-    if (!validateSiteSettings()) return;
+    if (!validateSiteSettings()) {return;}
 
     setSavingSettings(true);
     try {
@@ -544,7 +540,7 @@ const Settings: React.FC = () => {
   };
 
   const handleSaveSecuritySettings = async () => {
-    if (!validateSecuritySettings()) return;
+    if (!validateSecuritySettings()) {return;}
 
     setSavingSettings(true);
     try {
@@ -560,7 +556,7 @@ const Settings: React.FC = () => {
   };
 
   const handleSaveEmailSettings = async () => {
-    if (!validateEmailSettings()) return;
+    if (!validateEmailSettings()) {return;}
 
     setSavingSettings(true);
     try {

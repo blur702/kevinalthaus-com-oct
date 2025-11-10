@@ -1,32 +1,55 @@
 // Load environment variables from root .env file first, before any other imports
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
-// Try multiple possible .env locations
-const possibleEnvPaths = [
-  path.resolve(__dirname, '../../../.env'), // from dist/
-  path.resolve(__dirname, '../../../../.env'), // from packages/api-gateway/dist/
-  path.resolve(process.cwd(), '.env'), // current directory
-  path.resolve(process.cwd(), '../.env'), // parent directory
-  path.resolve(process.cwd(), '../../.env'), // grandparent directory
-];
-
-let envLoaded = false;
-for (const envPath of possibleEnvPaths) {
-  try {
-    const result = dotenv.config({ path: envPath });
-    if (!result.error) {
-      envLoaded = true;
+// Robust .env discovery: search upward from multiple start points
+function findEnv(startDir: string, maxUp = 6): string | null {
+  let dir = path.resolve(startDir);
+  for (let i = 0; i < maxUp; i++) {
+    const candidate = path.join(dir, '.env');
+    try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    } catch (e) {
+      // ignore and continue
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
       break;
     }
-  } catch (e) {
-    // Continue trying other paths
+    dir = parent;
+  }
+  return null;
+}
+
+const candidates = [process.cwd(), __dirname];
+let loaded = false;
+for (const start of candidates) {
+  const found = findEnv(start, 8);
+  if (found) {
+    const result = dotenv.config({ path: found });
+    if (!result.error) {
+      loaded = true;
+      // avoid noisy console in production; use logger later
+      // eslint-disable-next-line no-console
+      console.log('Loaded .env from:', found);
+      break;
+    }
   }
 }
 
-if (!envLoaded) {
-  console.error('Could not load .env file from any expected location');
-  process.exit(1);
+if (!loaded) {
+  // If no .env found, only continue if required vars are present in environment
+  const required = ['JWT_SECRET'];
+  const missing = required.filter((k) => !process.env[k]);
+  if (missing.length > 0) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to locate .env and required env vars are missing:', missing.join(', '));
+    process.exit(1);
+  }
 }
 
 import app from './index';

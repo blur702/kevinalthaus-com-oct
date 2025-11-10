@@ -60,7 +60,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   // Update counts
   const updateCounts = useCallback(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current) {return;}
 
     const text = editorRef.current.innerText || '';
     const words = text.trim().split(/\s+/).filter(Boolean);
@@ -70,7 +70,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   // Handle content changes
   const handleInput = useCallback(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current) {return;}
 
     const html = editorRef.current.innerHTML;
     onChange(html);
@@ -128,7 +128,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   // Toggle source view
   const toggleSourceView = useCallback(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current) {return;}
 
     if (showSource) {
       // Switch back to WYSIWYG
@@ -151,10 +151,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const updateFormatState = useCallback(() => {
     const formats: string[] = [];
 
-    if (document.queryCommandState('bold')) formats.push('bold');
-    if (document.queryCommandState('italic')) formats.push('italic');
-    if (document.queryCommandState('underline')) formats.push('underline');
-    if (document.queryCommandState('strikeThrough')) formats.push('strikethrough');
+    if (document.queryCommandState('bold')) {formats.push('bold');}
+    if (document.queryCommandState('italic')) {formats.push('italic');}
+    if (document.queryCommandState('underline')) {formats.push('underline');}
+    if (document.queryCommandState('strikeThrough')) {formats.push('strikethrough');}
 
     setSelectedFormat(formats);
   }, []);

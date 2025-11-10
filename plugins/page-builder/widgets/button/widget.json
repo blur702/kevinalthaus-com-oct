@@ -1,0 +1,18 @@
+{
+  "type": "button",
+  "name": "Button",
+  "displayName": "Call-to-Action Button",
+  "description": "Customizable button with link, styling options, and hover effects for calls-to-action",
+  "category": "marketing",
+  "icon": "smart_button",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["button", "cta", "link", "action", "marketing"],
+  "isContainer": false,
+  "deprecated": false
+}

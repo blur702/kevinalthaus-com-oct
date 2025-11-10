@@ -11,6 +11,7 @@ import { PluginExecutionContext, PluginLifecycleHooks, PluginLogger } from '@mon
 import { Pool } from 'pg';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { WidgetRegistryService } from './services/widget-registry.service';
 
 /**
  * Page Builder Plugin Class
@@ -19,6 +20,7 @@ import path from 'path';
 export default class PageBuilderPlugin implements PluginLifecycleHooks {
   private pool: Pool | null = null;
   private logger: PluginLogger | null = null;
+  private widgetRegistry: WidgetRegistryService | null = null;
 
   /**
    * Install hook - runs migrations and sets up database schema
@@ -70,9 +72,27 @@ export default class PageBuilderPlugin implements PluginLifecycleHooks {
 
     this.logger.info('Activating Page Builder Plugin...');
 
+    // Discover widgets
+    try {
+      const pluginPath = path.join(__dirname, '..');
+      this.widgetRegistry = new WidgetRegistryService(pluginPath, this.logger);
+      await this.widgetRegistry.discoverWidgets();
+
+      const widgets = this.widgetRegistry.getRegistry();
+      const validWidgets = widgets.filter(w => w.isValid).length;
+      const invalidWidgets = widgets.filter(w => !w.isValid).length;
+
+      this.logger.info(`Widget discovery complete: ${validWidgets} valid, ${invalidWidgets} invalid`);
+    } catch (error) {
+      // Don't fail activation if widget discovery fails
+      this.logger.error('Widget discovery failed, continuing with empty registry', error as Error);
+      const pluginPath = path.join(__dirname, '..');
+      this.widgetRegistry = new WidgetRegistryService(pluginPath, this.logger);
+    }
+
     // Register routes
     const { createPageBuilderRouter } = await import('./routes');
-    const router = createPageBuilderRouter(this.pool, this.logger);
+    const router = createPageBuilderRouter(this.pool, this.logger, this.widgetRegistry);
     context.app.use('/api/page-builder', router);
     this.logger.info('Routes registered: /api/page-builder/*');
 
@@ -91,6 +111,7 @@ export default class PageBuilderPlugin implements PluginLifecycleHooks {
     // Cleanup: clear any cron jobs, close connections if owned
     // Note: Pool is managed by main app, so we just clear reference
     this.pool = null;
+    this.widgetRegistry = null;
 
     this.logger.info('Page Builder Plugin deactivated cleanly');
   }

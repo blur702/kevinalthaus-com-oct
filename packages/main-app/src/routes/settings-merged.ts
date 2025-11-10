@@ -246,11 +246,11 @@ router.put('/site', csrfProtection, settingsRateLimit, async (req: Authenticated
     }
 
     // Update settings
-    if (site_name !== undefined) await updateSetting('site_name', stripAllHTML(site_name!), userId);
-    if (site_description !== undefined) await updateSetting('site_description', stripAllHTML(site_description!), userId);
-    if (site_url !== undefined) await updateSetting('site_url', site_url!, userId);
-    if (timezone !== undefined) await updateSetting('timezone', timezone!, userId);
-    if (language !== undefined) await updateSetting('language', language!, userId);
+    if (site_name !== undefined) {await updateSetting('site_name', stripAllHTML(site_name), userId);}
+    if (site_description !== undefined) {await updateSetting('site_description', stripAllHTML(site_description), userId);}
+    if (site_url !== undefined) {await updateSetting('site_url', site_url, userId);}
+    if (timezone !== undefined) {await updateSetting('timezone', timezone, userId);}
+    if (language !== undefined) {await updateSetting('language', language, userId);}
 
     await logAudit(userId, 'UPDATE', 'settings', 'site', { site_name, site_description, site_url, timezone, language }, req);
 
@@ -306,10 +306,10 @@ router.put('/security', csrfProtection, settingsRateLimit, async (req: Authentic
     }
 
     // Update settings
-    if (password_policy) await updateSetting('security.password_policy', password_policy, userId);
-    if (jwt_config) await updateSetting('security.jwt_config', jwt_config, userId);
-    if (session_config) await updateSetting('security.session_config', session_config, userId);
-    if (login_security) await updateSetting('security.login_security', login_security, userId);
+    if (password_policy) {await updateSetting('security.password_policy', password_policy, userId);}
+    if (jwt_config) {await updateSetting('security.jwt_config', jwt_config, userId);}
+    if (session_config) {await updateSetting('security.session_config', session_config, userId);}
+    if (login_security) {await updateSetting('security.login_security', login_security, userId);}
 
     // Refresh the entire settings cache to ensure auth system picks up changes
     await settingsCacheService.refreshCache();
@@ -384,8 +384,8 @@ router.put('/email', csrfProtection, settingsRateLimit, async (req: Authenticate
     }
 
     // Update other email settings
-    if (smtp_from_email !== undefined) await updateSetting('email.smtp_from_email', smtp_from_email!, userId);
-    if (smtp_from_name !== undefined) await updateSetting('email.smtp_from_name', stripAllHTML(smtp_from_name!), userId);
+    if (smtp_from_email !== undefined) {await updateSetting('email.smtp_from_email', smtp_from_email, userId);}
+    if (smtp_from_name !== undefined) {await updateSetting('email.smtp_from_name', stripAllHTML(smtp_from_name), userId);}
 
     await logAudit(userId, 'UPDATE', 'settings', 'email', { brevo_configured: !!brevo_api_key, smtp_from_email, smtp_from_name }, req);
 

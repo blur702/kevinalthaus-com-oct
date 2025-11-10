@@ -8,7 +8,7 @@
  * - Copy share URL to clipboard
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -21,7 +21,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   IconButton,
   Alert,
   Chip,
@@ -150,17 +149,17 @@ export function ShareDialog({ open, onClose, fileId, fileName }: ShareDialogProp
   };
 
   const formatDate = (dateString: string | null): string => {
-    if (!dateString) return 'Never';
+    if (!dateString) {return 'Never';}
     return new Date(dateString).toLocaleString();
   };
 
   const isExpired = (share: FileShare): boolean => {
-    if (!share.expiresAt) return false;
+    if (!share.expiresAt) {return false;}
     return new Date(share.expiresAt) < new Date();
   };
 
   const isDownloadLimitReached = (share: FileShare): boolean => {
-    if (share.maxDownloads === null) return false;
+    if (share.maxDownloads === null) {return false;}
     return share.downloadCount >= share.maxDownloads;
   };
 

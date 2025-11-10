@@ -2,28 +2,120 @@
 
 This directory contains the extensible plugin-in-plugin widget system for the Page Builder.
 
+## Auto-Discovery System
+
+Widgets are automatically discovered and registered at plugin activation. The system scans this `widgets/` directory for widget folders and validates their structure.
+
+### How Discovery Works
+
+1. **Plugin Activation**: When the Page Builder plugin activates, the Widget Registry Service scans the `widgets/` directory
+2. **Structure Validation**: Each widget folder is checked for required files (`widget.json`, `component.tsx`, `config.ts`, `types.ts`)
+3. **Manifest Validation**: The `widget.json` file is parsed and validated against the widget manifest schema
+4. **Registry Storage**: Valid widgets are stored in an in-memory registry with their metadata and file paths
+5. **API Exposure**: The registry is exposed via REST API endpoints (`/api/page-builder/widgets`)
+6. **Frontend Access**: The frontend queries available widgets to populate the drag-and-drop editor palette
+
+### Discovery Results
+
+- **Valid Widgets**: Pass all validation checks and are available in the editor
+- **Invalid Widgets**: Have validation errors but are stored in the registry with `isValid: false` status
+- **Missing Files**: Widgets missing required files are skipped and logged as warnings
+
+The discovery process never fails plugin activation - it continues with whatever valid widgets are found.
+
 ## Widget Development Guide
 
-Each widget is a self-contained plugin with its own component, configuration, types, and styles.
+Each widget is a self-contained module with its own component, configuration, types, and manifest.
 
 ### Widget Structure
 
 ```
 widgets/
   <widget-name>/
-    component.tsx     # React component implementation
-    config.ts         # Joi validation schema
-    types.ts          # TypeScript interfaces
+    widget.json       # Widget manifest (REQUIRED)
+    component.tsx     # React component implementation (REQUIRED)
+    config.ts         # Joi validation schema (REQUIRED)
+    types.ts          # TypeScript interfaces (REQUIRED)
     styles.module.css # Widget-specific styles (optional)
-    README.md         # Widget documentation
+    README.md         # Widget documentation (recommended)
 ```
+
+### Widget Manifest (widget.json)
+
+Every widget must include a `widget.json` manifest file with metadata about the widget. This file is read at plugin activation to register the widget.
+
+**Required Fields:**
+- `type` (string): Unique widget identifier in kebab-case (e.g., `"text-content"`)
+- `name` (string): Short display name (e.g., `"Text Content"`)
+- `displayName` (string): Human-readable name (e.g., `"Rich Text Content"`)
+- `description` (string): Widget description (1-500 characters)
+- `category` (string): Widget category - see [Widget Categories](#widget-categories) below
+- `icon` (string): Icon identifier (Material-UI icon name or custom path)
+- `version` (string): Semantic version (e.g., `"1.0.0"`)
+- `author` (object): Author information with `name` and `email`
+- `configSchema` (string): Must be `"config.ts"`
+- `tags` (array): Search tags for widget discovery
+- `isContainer` (boolean): Whether widget can contain children (like accordion/tabs)
+- `deprecated` (boolean): Whether widget is deprecated
+
+**Optional Fields:**
+- `previewImage` (string): Path to thumbnail image
+
+**Example:**
+```json
+{
+  "type": "text-content",
+  "name": "Text Content",
+  "displayName": "Rich Text Content",
+  "description": "Editable text content with rich formatting options",
+  "category": "general",
+  "icon": "text_fields",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["text", "content", "wysiwyg"],
+  "isContainer": false,
+  "deprecated": false
+}
+```
+
+See `widget-template/widget.json` for a complete reference.
+
+### Widget Categories
+
+Widgets are organized into standard categories for the editor palette:
+
+- **general**: Basic content widgets (text, image, heading, etc.)
+- **creative**: Design-focused widgets (gallery, carousel, etc.)
+- **marketing**: Conversion-focused widgets (CTA buttons, forms, testimonials)
+- **header-footer**: Site structure widgets (navigation, footer, etc.)
+- **social-media**: Social integration widgets (share buttons, feeds, etc.)
+- **forms**: Form and input widgets
+- **advanced**: Complex or specialized widgets
+
+Choose the category that best fits your widget's primary purpose.
 
 ### Creating a New Widget
 
-1. **Create Widget Folder**
-   ```bash
-   mkdir widgets/my-widget
-   ```
+**Step 0: Copy the Widget Template**
+```bash
+cp -r widgets/widget-template widgets/my-widget
+cd widgets/my-widget
+```
+
+The `widget-template` folder provides a complete reference implementation with all required files and documentation. Using it as a starting point ensures you follow best practices.
+
+1. **Update Widget Manifest** (widget.json)
+   - Change `type` to your unique widget identifier
+   - Update `name`, `displayName`, and `description`
+   - Set appropriate `category` from the list above
+   - Choose an `icon` (Material-UI icon or custom)
+   - Update `author` information
+   - Add relevant `tags`
 
 2. **Implement Component** (component.tsx)
    ```tsx
@@ -65,14 +157,24 @@ widgets/
 
 4. **Define Types** (types.ts)
    ```typescript
-   export interface MyWidgetConfig {
+   import { WidgetConfig } from '../../src/types';
+
+   export interface MyWidgetConfig extends WidgetConfig {
      title: string;
      alignment: 'left' | 'center' | 'right';
    }
    ```
 
-5. **Register Widget**
-   Add to the widget registry in the main application to make it available in the editor palette.
+5. **Test Widget Discovery**
+   - Restart the plugin or server to trigger widget discovery
+   - Check server logs for discovery results
+   - Query the widget registry API:
+     ```bash
+     curl http://localhost:3000/api/page-builder/widgets
+     ```
+   - Verify your widget appears with `isValid: true`
+
+No manual registration is needed - widgets are automatically discovered and registered at plugin activation!
 
 ### Built-in Widget Types (Planned)
 
@@ -133,11 +235,38 @@ All widget configurations are validated using Joi schemas:
 - Types must match TypeScript interfaces
 - Constraints (min/max, patterns) should prevent invalid states
 
-### Testing
+### Testing Widgets
+
+#### Testing Widget Discovery
+
+To verify your widget is discovered correctly:
+
+1. **Check Server Logs**: Look for discovery messages when the plugin activates
+   ```
+   [PageBuilder] Starting widget discovery
+   [PageBuilder] Successfully loaded widget 'my-widget'
+   [PageBuilder] Widget discovery complete: 5 valid, 0 invalid
+   ```
+
+2. **Query Registry Endpoint**: Use the API to see all registered widgets
+   ```bash
+   # Get all widgets
+   curl http://localhost:3000/api/page-builder/widgets
+
+   # Get specific widget
+   curl http://localhost:3000/api/page-builder/widgets/my-widget
+
+   # Filter by category
+   curl http://localhost:3000/api/page-builder/widgets?category=general
+   ```
+
+3. **Check Validation Status**: Ensure your widget has `isValid: true` in the response
+
+#### Testing Widget Functionality
 
 Each widget should include:
 - Unit tests for configuration validation
-- Component tests for rendering
+- Component tests for rendering in edit and preview modes
 - Accessibility tests (ARIA, keyboard nav)
 - Visual regression tests
 
@@ -148,18 +277,73 @@ Each widget should include:
 - Optimize images and media
 - Limit DOM complexity
 
+### Troubleshooting
+
+#### Widget Not Appearing in Registry
+
+**Problem**: Widget doesn't show up when querying `/api/page-builder/widgets`
+
+**Solutions**:
+- Verify all required files exist: `widget.json`, `component.tsx`, `config.ts`, `types.ts`
+- Check `widget.json` syntax is valid JSON (use a JSON validator)
+- Review server logs for specific validation errors
+- Ensure widget folder name follows kebab-case convention
+- Restart the server to trigger re-discovery
+
+#### Widget Marked as Invalid
+
+**Problem**: Widget appears in registry but has `isValid: false`
+
+**Solutions**:
+- Check server logs for detailed validation errors
+- Ensure `widget.json` contains all required fields
+- Verify `type` field uses kebab-case format (lowercase with hyphens)
+- Confirm `category` is one of the valid categories
+- Check `version` follows semantic versioning (e.g., "1.0.0")
+- Validate `author.email` is a valid email address
+
+#### Component Not Loading
+
+**Problem**: Widget renders but shows errors or blank content
+
+**Solutions**:
+- Verify `component.tsx` exports a default function component
+- Check for TypeScript compilation errors in the component
+- Ensure all imports use correct relative paths
+- Review browser console for runtime errors
+- Test the component in isolation first
+
+#### Schema Validation Failures
+
+**Problem**: Widget configs fail validation unexpectedly
+
+**Solutions**:
+- Ensure `config.ts` exports a valid Joi schema as default or named export
+- Verify schema field names match the TypeScript interface in `types.ts`
+- Check for typos in field names or validation rules
+- Test the schema with sample data independently
+- Review conditional validation logic (`.when()` clauses)
+
 ### Examples
 
-See individual widget folders for complete implementation examples once they are created.
+See the `widget-template/` folder for a complete reference implementation with:
+- All required files properly structured
+- Comprehensive inline documentation
+- Example configuration options
+- Dual-mode rendering (edit vs preview)
+- Accessibility best practices
+
+Additional widget examples will be added as the library grows.
 
 ## Development
 
 To add a widget to the editor:
-1. Implement the widget following the structure above
-2. Export the component, config, and types
-3. Register in the widget palette configuration
-4. Test in the editor environment
-5. Document usage in the widget's README
+1. Copy the `widget-template` folder as a starting point
+2. Update `widget.json` with your widget's metadata
+3. Implement the component, config, and types
+4. Test widget discovery via server logs and API
+5. Test the widget in the page builder editor
+6. Document usage in the widget's README
 
 ## License
 

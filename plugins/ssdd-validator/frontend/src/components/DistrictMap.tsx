@@ -10,6 +10,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
+import type * as GeoJSON from 'geojson';
 import { Box, Paper, Typography } from '@mui/material';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -49,7 +50,7 @@ const DistrictMap: React.FC<DistrictMapProps> = ({
 
   // Initialize map on mount
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (!mapContainerRef.current || mapRef.current) {return;}
 
     const map = L.map(mapContainerRef.current).setView(center, zoom);
 
@@ -72,7 +73,7 @@ const DistrictMap: React.FC<DistrictMapProps> = ({
 
   // Update district boundary
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current) {return;}
 
     // Remove existing boundary layer
     if (boundaryLayerRef.current) {
@@ -104,7 +105,7 @@ const DistrictMap: React.FC<DistrictMapProps> = ({
 
   // Update marker position
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current) {return;}
 
     // Remove existing marker
     if (markerRef.current) {

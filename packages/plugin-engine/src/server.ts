@@ -241,7 +241,7 @@ async function verifyDbConnectivity(): Promise<void> {
     logger.info('[plugin-engine] Database connectivity OK');
   } catch (err) {
     // eslint-disable-next-line no-console
-    logger.error('[plugin-engine] Database connectivity check failed', err as unknown as Error);
+    logger.error('[plugin-engine] Database connectivity check failed', err as Error);
     process.exit(1);
   }
 }

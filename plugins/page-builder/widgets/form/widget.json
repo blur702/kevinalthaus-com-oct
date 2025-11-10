@@ -1,0 +1,18 @@
+{
+  "type": "form",
+  "name": "Form",
+  "displayName": "Contact Form",
+  "description": "Customizable form builder with various field types and validation",
+  "category": "forms",
+  "icon": "contact_mail",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["form", "contact", "input", "submit", "fields"],
+  "isContainer": false,
+  "deprecated": false
+}

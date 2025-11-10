@@ -311,7 +311,7 @@ test.describe('Authentication', () => {
 
       // Cookies should either be removed or have past expiration
       const validAuthCookies = authCookies.filter((c) => {
-        if (!c.expires) return true;
+        if (!c.expires) {return true;}
         return c.expires > Date.now() / 1000;
       });
 

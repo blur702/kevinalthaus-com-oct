@@ -1,0 +1,18 @@
+{
+  "type": "image",
+  "name": "Image",
+  "displayName": "Image with Caption",
+  "description": "Display images with optional caption, alt text, and responsive sizing options",
+  "category": "general",
+  "icon": "image",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["image", "photo", "picture", "media", "visual"],
+  "isContainer": false,
+  "deprecated": false
+}

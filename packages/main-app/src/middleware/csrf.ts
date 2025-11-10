@@ -86,6 +86,7 @@ export function csrfProtection(req: AuthenticatedRequest, res: Response, next: N
   }
 
   // Get CSRF token from header or body
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   const token = req.headers[CSRF_HEADER_NAME] as string ||
                 req.body?.csrfToken as string;
 

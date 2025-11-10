@@ -323,7 +323,7 @@ export const BlogForm: React.FC<BlogFormProps> = ({
             </Typography>
             <RichTextEditor
               value={formData.body_html}
-              onChange={(html) => setFormData({ ...formData, body_html: html })}
+              onChange={(html: string) => setFormData({ ...formData, body_html: html })}
               placeholder="Start writing your blog post..."
               minHeight={300}
               maxHeight={600}
@@ -349,7 +349,7 @@ export const BlogForm: React.FC<BlogFormProps> = ({
             vocabularyMachineName="categories"
             label="Categories"
             value={categories}
-            onChange={(value) => setCategories(Array.isArray(value) ? value : [value])}
+            onChange={(value: string | string[]) => setCategories(Array.isArray(value) ? value : [value])}
             helperText="Select one or more categories for this post"
           />
         </Grid>
@@ -359,7 +359,7 @@ export const BlogForm: React.FC<BlogFormProps> = ({
             vocabularyMachineName="tags"
             label="Tags"
             value={tags}
-            onChange={(value) => setTags(Array.isArray(value) ? value : [value])}
+            onChange={(value: string | string[]) => setTags(Array.isArray(value) ? value : [value])}
             helperText="Add relevant tags to help readers find this post"
           />
         </Grid>

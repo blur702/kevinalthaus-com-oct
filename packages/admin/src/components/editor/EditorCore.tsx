@@ -242,7 +242,7 @@ const EditorCoreComponent = forwardRef<EditorCoreInterface, EditorProps>((props,
     }
 
     // Let plugins handle keyboard shortcuts
-    const nativeEvent = event.nativeEvent as KeyboardEvent;
+    const nativeEvent = event.nativeEvent;
     for (const plugin of pluginsRef.current.values()) {
       if (plugin.onKeyDown) {
         const handled = plugin.onKeyDown(nativeEvent, editorCore);
@@ -264,7 +264,7 @@ const EditorCoreComponent = forwardRef<EditorCoreInterface, EditorProps>((props,
     }
 
     // Let plugins handle paste
-    const nativeEvent = event.nativeEvent as ClipboardEvent;
+    const nativeEvent = event.nativeEvent;
     for (const plugin of pluginsRef.current.values()) {
       if (plugin.onPaste) {
         const handled = plugin.onPaste(nativeEvent, editorCore);

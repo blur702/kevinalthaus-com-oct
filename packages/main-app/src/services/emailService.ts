@@ -168,7 +168,7 @@ class EmailService {
       // Set API key on the instance
       if (this.apiInstance.apiClient) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const apiKeyAuth = (this.apiInstance.apiClient.authentications as any)['api-key'];
+        const apiKeyAuth = (this.apiInstance.apiClient.authentications)['api-key'];
         if (apiKeyAuth) {
           apiKeyAuth.apiKey = apiKey;
         }
@@ -525,7 +525,7 @@ From: ${this.defaultFrom.name} <${this.defaultFrom.email}>
 
       if (testInstance.apiClient) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const apiKeyAuth = (testInstance.apiClient.authentications as any)['api-key'];
+        const apiKeyAuth = (testInstance.apiClient.authentications)['api-key'];
         if (apiKeyAuth) {
           apiKeyAuth.apiKey = newApiKey;
         }

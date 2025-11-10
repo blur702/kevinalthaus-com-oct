@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { EditorToolbarProps, EditorPlugin, ToolbarButton } from './types';
+import type { EditorToolbarProps, EditorPlugin } from './types';
 
 /**
  * EditorToolbar component

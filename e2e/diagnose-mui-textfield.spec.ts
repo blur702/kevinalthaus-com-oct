@@ -68,11 +68,11 @@ test('Deep dive: MUI TextField structure', async ({ page }) => {
     const labels = Array.from(document.querySelectorAll('label'));
     const contentLabel = labels.find((l) => l.textContent?.includes('Content'));
 
-    if (!contentLabel) return { error: 'Content label not found' };
+    if (!contentLabel) {return { error: 'Content label not found' };}
 
     // Get the parent MUI TextField
     const textField = contentLabel.closest('.MuiFormControl-root');
-    if (!textField) return { error: 'MuiFormControl not found' };
+    if (!textField) {return { error: 'MuiFormControl not found' };}
 
     // Get all children
     const children = Array.from(textField.querySelectorAll('*')).map((el) => {
@@ -109,7 +109,7 @@ test('Deep dive: MUI TextField structure', async ({ page }) => {
     // Check what element is focused
     const focusedElement = await page.evaluate(() => {
       const el = document.activeElement;
-      if (!el) return { error: 'No focused element' };
+      if (!el) {return { error: 'No focused element' };}
 
       const styles = window.getComputedStyle(el);
       return {

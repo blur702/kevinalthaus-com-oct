@@ -156,7 +156,7 @@ test.describe('Content Field Diagnostic', () => {
     const reactState = await page.evaluate(() => {
       // Try to find the textarea element
       const textarea = document.querySelector('textarea');
-      if (!textarea) return { error: 'No textarea found in DOM' };
+      if (!textarea) {return { error: 'No textarea found in DOM' };}
 
       return {
         value: textarea.value,

@@ -1,0 +1,18 @@
+{
+  "type": "heading",
+  "name": "Heading",
+  "displayName": "Semantic Heading",
+  "description": "Semantic headings (H1-H6) with customizable styling for proper document structure",
+  "category": "general",
+  "icon": "title",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["heading", "title", "h1", "h2", "h3", "semantic"],
+  "isContainer": false,
+  "deprecated": false
+}

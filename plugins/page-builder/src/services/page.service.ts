@@ -124,7 +124,7 @@ export class PageService {
   async listPages(options: ListPagesOptions = {}): Promise<{ pages: Page[]; total: number }> {
     const { status, limit = 20, offset = 0, search, created_by } = options;
 
-    let whereConditions = ['deleted_at IS NULL'];
+    const whereConditions = ['deleted_at IS NULL'];
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -227,13 +227,15 @@ export class PageService {
       paramIndex++;
     }
 
-    updates.push(`updated_by = $${paramIndex}`);
-    params.push(input.updated_by);
-    paramIndex++;
-
+    // If no updatable fields were provided, return current page without touching updated_by
     if (updates.length === 0) {
       return this.getPageById(id);
     }
+
+    // Record updater only when there are actual changes
+    updates.push(`updated_by = $${paramIndex}`);
+    params.push(input.updated_by);
+    paramIndex++;
 
     params.push(id);
 

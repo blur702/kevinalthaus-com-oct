@@ -149,7 +149,7 @@ export class DatabaseService implements IDatabaseService {
 
     // Get underlying pool
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.pool = (this.knexInstance.client as any).pool as Pool;
+    this.pool = (this.knexInstance.client).pool as Pool;
 
     this.initialized = true;
   }

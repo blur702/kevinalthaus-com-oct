@@ -58,7 +58,7 @@ export class BulkService {
         columns: true,
         skip_empty_lines: true,
         trim: true,
-      }) as Array<Record<string, string>>;
+      });
 
       this.logger.info(`Parsed ${records.length} records from CSV`);
 
@@ -332,7 +332,7 @@ export class BulkService {
           columns: true,
           skip_empty_lines: true,
           trim: true,
-        }) as Array<Record<string, string>>;
+        });
 
         recordCount = records.length;
 

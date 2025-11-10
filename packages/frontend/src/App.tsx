@@ -35,8 +35,8 @@ const App: React.FC = () => {
     const flag = (import.meta as any)?.env?.VITE_ENABLE_SENTRY_TEST_ROUTE;
     if (typeof flag === 'string') {
       const v = flag.toLowerCase();
-      if (v === 'true' || v === '1') return true;
-      if (v === 'false' || v === '0') return false;
+      if (v === 'true' || v === '1') {return true;}
+      if (v === 'false' || v === '0') {return false;}
     }
     return !(import.meta as any)?.env?.PROD; // enable by default in non-prod
   })();

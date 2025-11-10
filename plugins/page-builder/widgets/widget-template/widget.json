@@ -1,0 +1,18 @@
+{
+  "type": "widget-template",
+  "name": "Widget Template",
+  "displayName": "Widget Template Example",
+  "description": "Reference template for creating new page builder widgets. Copy this folder and modify to create your own widget.",
+  "category": "general",
+  "icon": "widgets",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kevin Althaus",
+    "email": "contact@kevinalthaus.com"
+  },
+  "configSchema": "config.ts",
+  "previewImage": null,
+  "tags": ["template", "example", "reference"],
+  "isContainer": false,
+  "deprecated": false
+}

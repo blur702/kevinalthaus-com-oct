@@ -44,7 +44,7 @@ export const LinkPlugin: EditorPlugin = {
     group: 'insert',
   },
 
-  onCommand(command: string, value?: any): boolean {
+  onCommand(command: string, _value?: any): boolean {
     if (command === 'createLink') {
       // Prompt for URL
       const url = prompt('Enter URL:', 'https://');
@@ -83,14 +83,14 @@ export const LinkPlugin: EditorPlugin = {
     return false;
   },
 
-  isActive(editor: EditorCore): boolean {
+  isActive(_editor: EditorCore): boolean {
     try {
       // Check if selection is within a link
       const selection = window.getSelection();
-      if (!selection) return false;
+      if (!selection) {return false;}
 
       const node = selection.anchorNode;
-      if (!node) return false;
+      if (!node) {return false;}
 
       // Check if node or parent is an anchor tag
       let current: Node | null = node;
@@ -107,7 +107,7 @@ export const LinkPlugin: EditorPlugin = {
     }
   },
 
-  isDisabled(editor: EditorCore): boolean {
+  isDisabled(_editor: EditorCore): boolean {
     // Disabled if no selection
     return !hasSelection();
   },

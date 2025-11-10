@@ -51,8 +51,8 @@ export default defineConfig({
   // Shared settings for all projects
   use: {
     // Base URL for all tests (prefer IPv4 localhost to avoid ::1 binding issues)
-    // Note: Admin panel runs on port 3003 in current dev setup
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3003',
+    // Note: Admin panel runs on port 3002 in current dev setup
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3002',
 
     // Capture screenshot on failure
     screenshot: 'only-on-failure',
@@ -116,19 +116,21 @@ export default defineConfig({
     // },
   ],
 
-  // Web servers: start backend and admin for UI tests. Use IPv4 and longer timeouts.
-  webServer: process.env.CI
-    ? undefined
-    : {
-        // Start backend in background, then build+preview admin on 127.0.0.1:3003
-        command:
-          "(CORS_ORIGIN=http://localhost:3003 E2E_TESTING=true npm run --workspace @monorepo/main-app dev &) && VITE_API_URL=http://localhost:3001/api npm run --workspace @monorepo/admin build && VITE_API_URL=http://localhost:3001/api npm run --workspace @monorepo/admin preview -- --host localhost --port 3003",
-        url: 'http://localhost:3003/login',
-        reuseExistingServer: true,
-        timeout: 300000,
-        stdout: 'pipe',
-        stderr: 'pipe',
-      },
+  // Start dev servers for tests automatically
+  webServer: [
+    {
+      command: 'npm run dev --workspace=@monorepo/main-app',
+      port: 3001,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      command: 'npm run dev --workspace=@monorepo/admin',
+      port: 3002,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 
   // Output folder for test artifacts
   outputDir: 'test-results',

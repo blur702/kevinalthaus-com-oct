@@ -471,6 +471,73 @@ export async function runMigrations(): Promise<void> {
       `);
     });
 
+    await runMigration('18-create-comments-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS comments (
+          id SERIAL PRIMARY KEY,
+          content TEXT NOT NULL,
+          author VARCHAR(255) NOT NULL,
+          status VARCHAR(50) NOT NULL DEFAULT 'pending',
+          node_id INTEGER NOT NULL,
+          content_type VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_comments_node_id_content_type ON comments(node_id, content_type);
+        CREATE INDEX IF NOT EXISTS idx_comments_status ON comments(status);
+      `);
+    });
+
+    await runMigration('19-create-comment-settings-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS comment_settings (
+          id SERIAL PRIMARY KEY,
+          node_id INTEGER NOT NULL,
+          content_type VARCHAR(255) NOT NULL,
+          enabled BOOLEAN NOT NULL DEFAULT true,
+          frozen BOOLEAN NOT NULL DEFAULT false,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT unique_comment_setting UNIQUE (node_id, content_type)
+        )
+      `);
+    });
+
+    await runMigration('21-extend-plugin-registry', async (client: PoolClient) => {
+      // Step 1: Create enum type for installation_source with idempotent pattern
+      await client.query(`
+        DO $$
+        BEGIN
+          CREATE TYPE plugin_installation_source AS ENUM ('filesystem', 'zip', 'marketplace');
+        EXCEPTION
+          WHEN duplicate_object THEN NULL;
+        END
+        $$;
+      `);
+
+      // Step 2: Add new columns to plugin_registry with IF NOT EXISTS for idempotency
+      await client.query(`
+        ALTER TABLE plugin_registry
+        ADD COLUMN IF NOT EXISTS capabilities JSONB DEFAULT '[]'::jsonb,
+        ADD COLUMN IF NOT EXISTS dependencies JSONB DEFAULT '{}'::jsonb,
+        ADD COLUMN IF NOT EXISTS settings_schema JSONB DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS hooks JSONB DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS is_core BOOLEAN DEFAULT false NOT NULL,
+        ADD COLUMN IF NOT EXISTS installation_source plugin_installation_source DEFAULT 'filesystem' NOT NULL;
+      `);
+    }, async () => {
+      // Step 3: Create indexes concurrently for zero-downtime
+      await query(`
+        CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_plugin_registry_is_core ON plugin_registry(is_core);
+      `);
+      await query(`
+        CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_plugin_registry_installation_source ON plugin_registry(installation_source);
+      `);
+    });
+
     // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');
   } catch (error) {
@@ -498,7 +565,8 @@ export async function runMigrations(): Promise<void> {
 
 async function runMigration(
   name: string,
-  migration: (client: PoolClient) => Promise<void>
+  migration: (client: PoolClient) => Promise<void>,
+  postMigration?: () => Promise<void>
 ): Promise<void> {
   const result = await query<{ name: string }>('SELECT name FROM migrations WHERE name = $1', [
     name,
@@ -513,21 +581,31 @@ async function runMigration(
   // eslint-disable-next-line no-console
   console.log(`[Migrations] Running ${name}...`);
 
-  // Wrap migration execution in transaction for atomicity
-  await transaction(async (client) => {
-    try {
-      // Execute the migration with transaction client
+  // If no postMigration, run legacy transactional flow
+  if (!postMigration) {
+    await transaction(async (client) => {
+      try {
+        await migration(client);
+        await client.query('INSERT INTO migrations (name) VALUES ($1)', [name]);
+        console.log(`[Migrations] Completed ${name}`);
+      } catch (error) {
+        console.error(`[Migrations] Failed ${name}:`, error);
+        throw error;
+      }
+    });
+    return;
+  }
+
+  // Phased flow: transactional part, then non-transactional part (e.g., concurrent indexes)
+  try {
+    await transaction(async (client) => {
       await migration(client);
-
-      // Record migration in database
-      await client.query('INSERT INTO migrations (name) VALUES ($1)', [name]);
-
-      // eslint-disable-next-line no-console
-      console.log(`[Migrations] Completed ${name}`);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(`[Migrations] Failed ${name}:`, error);
-      throw error;
-    }
-  });
+    });
+    await postMigration();
+    await query('INSERT INTO migrations (name) VALUES ($1)', [name]);
+    console.log(`[Migrations] Completed ${name}`);
+  } catch (error) {
+    console.error(`[Migrations] Failed ${name}:`, error);
+    throw error;
+  }
 }

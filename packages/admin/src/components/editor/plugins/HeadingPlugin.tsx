@@ -4,7 +4,7 @@
  * Adds heading (H1-H6) formatting capability
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import type { EditorPlugin, EditorCore } from '../types';
 
 /**
@@ -47,7 +47,7 @@ export const HeadingPlugin: EditorPlugin = {
     return false;
   },
 
-  isActive(editor: EditorCore): boolean {
+  isActive(_editor: EditorCore): boolean {
     // Check if we're in any heading
     const formats = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
     try {
@@ -82,7 +82,7 @@ export const Heading1Plugin: EditorPlugin = {
     return false;
   },
 
-  isActive(editor: EditorCore): boolean {
+  isActive(_editor: EditorCore): boolean {
     try {
       const currentFormat = document.queryCommandValue('formatBlock').toLowerCase();
       return currentFormat === 'h1';
@@ -111,7 +111,7 @@ export const Heading2Plugin: EditorPlugin = {
     return false;
   },
 
-  isActive(editor: EditorCore): boolean {
+  isActive(_editor: EditorCore): boolean {
     try {
       const currentFormat = document.queryCommandValue('formatBlock').toLowerCase();
       return currentFormat === 'h2';
@@ -140,7 +140,7 @@ export const Heading3Plugin: EditorPlugin = {
     return false;
   },
 
-  isActive(editor: EditorCore): boolean {
+  isActive(_editor: EditorCore): boolean {
     try {
       const currentFormat = document.queryCommandValue('formatBlock').toLowerCase();
       return currentFormat === 'h3';

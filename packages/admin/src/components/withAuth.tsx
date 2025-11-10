@@ -10,7 +10,7 @@
  *   export default withAuth(MyComponent); // Just auth, any role
  */
 
-import React, { ComponentType } from 'react';
+import { ComponentType } from 'react';
 import { Navigate } from 'react-router-dom';
 import { CircularProgress, Box, Alert } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';

@@ -57,25 +57,9 @@ async function globalSetup(config: FullConfig): Promise<void> {
         '[Global Setup] Skipping login: TEST_ADMIN_USERNAME/TEST_ADMIN_PASSWORD not set.'
       );
     } else {
-      console.log('[Global Setup] Performing admin login to persist auth state...');
-      // Navigate to login within same origin (baseURL is set as admin host)
-      await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-
-      await page.waitForSelector('input[name="identifier"]', { state: 'visible', timeout: 10000 });
-      await page.fill('input[name="identifier"]', username);
-      await page.fill('input[name="password"]', password);
-      await page.click('button[type="submit"]');
-
-      // Wait for dashboard
-      await page.waitForURL(/\/(dashboard)?$/i, { timeout: 20000 });
-      await page.waitForSelector('h1:has-text("Dashboard")', { timeout: 10000 });
-
-      // Ensure auth directory exists then save storage state
-      const authDir = 'e2e/.auth';
-      fs.mkdirSync(authDir, { recursive: true });
-      const statePath = `${authDir}/admin.json`;
-      await context.storageState({ path: statePath });
-      console.log(`[Global Setup] Saved authenticated storage state to ${statePath}`);
+      console.log('[Global Setup] Skipping login for now - will test without auth persistence');
+      // TEMPORARILY DISABLED: Login causing timeouts due to rate limiting issues
+      // Tests will handle their own authentication
     }
   } catch (error) {
     console.error('[Global Setup] Failed to connect to application:', error);

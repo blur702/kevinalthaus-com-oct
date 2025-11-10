@@ -323,7 +323,7 @@ describe('StorageService', () => {
       // Write to stream
       await new Promise<void>((resolve, reject) => {
         stream.write('Stream write test', (err) => {
-          if (err) reject(err);
+          if (err) {reject(err);}
           stream.end(() => resolve());
         });
       });

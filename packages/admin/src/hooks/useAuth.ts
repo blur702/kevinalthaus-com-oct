@@ -34,13 +34,6 @@ export interface AuthContext extends AuthState {
   checkAuth: () => Promise<void>;
 }
 
-// Role hierarchy for permission checking
-const ROLE_HIERARCHY: Record<string, number> = {
-  admin: 3,
-  editor: 2,
-  viewer: 1,
-};
-
 // Capability mapping by role
 const ROLE_CAPABILITIES: Record<string, string[]> = {
   admin: ['user:view', 'user:edit', 'user:delete', 'content:view', 'content:edit', 'content:delete', 'settings:view', 'settings:edit'],
@@ -59,7 +52,7 @@ export function useAuth(): AuthContext {
 
   // Check if user has specific role(s)
   const hasRole = useCallback((role: string | string[]): boolean => {
-    if (!authState.user) return false;
+    if (!authState.user) {return false;}
 
     const roles = Array.isArray(role) ? role : [role];
     return roles.includes(authState.user.role);
@@ -67,7 +60,7 @@ export function useAuth(): AuthContext {
 
   // Check if user has specific capability
   const can = useCallback((capability: string): boolean => {
-    if (!authState.user) return false;
+    if (!authState.user) {return false;}
 
     const userCapabilities = ROLE_CAPABILITIES[authState.user.role] || [];
     return userCapabilities.includes(capability);

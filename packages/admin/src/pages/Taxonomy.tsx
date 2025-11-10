@@ -3,7 +3,7 @@
  * Manages vocabularies and terms for the taxonomy system
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -26,17 +26,12 @@ import {
   Alert,
   Chip,
   Stack,
-  Divider,
-  Tabs,
-  Tab,
   CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
@@ -74,7 +69,7 @@ export default function Taxonomy() {
   const [terms, setTerms] = useState<Term[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tabValue, setTabValue] = useState(0);
+  const [_tabValue, _setTabValue] = useState(0);
 
   // Vocabulary dialog state
   const [vocabularyDialog, setVocabularyDialog] = useState(false);
@@ -258,7 +253,7 @@ export default function Taxonomy() {
   };
 
   const handleCreateTerm = () => {
-    if (!selectedVocabulary) return;
+    if (!selectedVocabulary) {return;}
 
     setTermForm({
       vocabulary_id: selectedVocabulary.id,

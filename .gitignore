@@ -118,3 +118,4 @@ NUL
 /playwright/.cache/
 /playwright/.auth/
 cookies.txt
+CLAUDE.md

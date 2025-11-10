@@ -104,14 +104,14 @@ export async function listFiles(
 ): Promise<FileListResult> {
   const params = new URLSearchParams();
 
-  if (options.pluginId) params.append('pluginId', options.pluginId);
-  if (options.mimeType) params.append('mimeType', options.mimeType);
-  if (options.tags) params.append('tags', options.tags.join(','));
-  if (options.limit) params.append('limit', options.limit.toString());
-  if (options.offset) params.append('offset', options.offset.toString());
-  if (options.orderBy) params.append('orderBy', options.orderBy);
-  if (options.orderDirection) params.append('orderDirection', options.orderDirection);
-  if (options.includeDeleted) params.append('includeDeleted', 'true');
+  if (options.pluginId) {params.append('pluginId', options.pluginId);}
+  if (options.mimeType) {params.append('mimeType', options.mimeType);}
+  if (options.tags) {params.append('tags', options.tags.join(','));}
+  if (options.limit) {params.append('limit', options.limit.toString());}
+  if (options.offset) {params.append('offset', options.offset.toString());}
+  if (options.orderBy) {params.append('orderBy', options.orderBy);}
+  if (options.orderDirection) {params.append('orderDirection', options.orderDirection);}
+  if (options.includeDeleted) {params.append('includeDeleted', 'true');}
 
   const response = await api.get<FileListResult>(`/admin/files?${params.toString()}`, {
     signal,
@@ -250,7 +250,7 @@ export async function getAllowedFileTypes(
  * Format file size for display
  */
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) {return '0 Bytes';}
 
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -263,10 +263,10 @@ export function formatFileSize(bytes: number): string {
  * Get file category from MIME type
  */
 export function getCategoryFromMimeType(mimeType: string): string {
-  if (mimeType.startsWith('image/')) return 'image';
-  if (mimeType.startsWith('video/')) return 'video';
-  if (mimeType.startsWith('audio/')) return 'audio';
-  if (mimeType.startsWith('application/pdf')) return 'document';
+  if (mimeType.startsWith('image/')) {return 'image';}
+  if (mimeType.startsWith('video/')) {return 'video';}
+  if (mimeType.startsWith('audio/')) {return 'audio';}
+  if (mimeType.startsWith('application/pdf')) {return 'document';}
   if (mimeType.startsWith('application/zip') || mimeType.startsWith('application/x-')) {
     return 'archive';
   }
@@ -355,9 +355,9 @@ export async function listMyShares(options: {
   offset?: number;
 } = {}): Promise<ShareListResult> {
   const params = new URLSearchParams();
-  if (options.includeInactive) params.append('includeInactive', 'true');
-  if (options.limit) params.append('limit', options.limit.toString());
-  if (options.offset) params.append('offset', options.offset.toString());
+  if (options.includeInactive) {params.append('includeInactive', 'true');}
+  if (options.limit) {params.append('limit', options.limit.toString());}
+  if (options.offset) {params.append('offset', options.offset.toString());}
 
   const response = await api.get<ShareListResult>(`/admin/shares?${params.toString()}`);
   return response.data;
@@ -440,8 +440,8 @@ export async function listFileVersions(
   } = {}
 ): Promise<FileVersionListResult> {
   const params = new URLSearchParams();
-  if (options.limit) params.append('limit', options.limit.toString());
-  if (options.offset) params.append('offset', options.offset.toString());
+  if (options.limit) {params.append('limit', options.limit.toString());}
+  if (options.offset) {params.append('offset', options.offset.toString());}
 
   const queryString = params.toString();
   const url = `/admin/files/${fileId}/versions${queryString ? `?${queryString}` : ''}`;

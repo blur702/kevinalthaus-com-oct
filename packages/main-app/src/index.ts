@@ -30,7 +30,9 @@ import { editorRouter } from './routes/editor';
 import { taxonomyRouter } from './routes/taxonomy';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { createBlogRouter } from './routes/blog';
-import { createPageBuilderRouter } from '../../../plugins/page-builder/src/routes/index';
+import path from 'path';
+import { createPageBuilderRouter } from '../../../plugins/page-builder/dist/routes/index';
+import { WidgetRegistryService } from '../../../plugins/page-builder/dist/services/widget-registry.service';
 import { pool } from './db';
 import { asyncHandler } from './utils/asyncHandler';
 import { requestIdMiddleware } from './middleware/requestId';
@@ -339,7 +341,13 @@ const blogService = new BlogService(pool);
 app.use('/api/blog', createBlogRouter(blogService, logger));
 
 // Page Builder plugin routes
-const pageBuilderApiRouter = createPageBuilderRouter(pool, logger);
+const widgetRegistry = new WidgetRegistryService(
+  path.resolve(__dirname, '../../../plugins/page-builder'),
+  logger
+);
+// Discover widgets asynchronously (non-blocking)
+void widgetRegistry.discoverWidgets();
+const pageBuilderApiRouter = createPageBuilderRouter(pool, logger, widgetRegistry);
 app.use('/api/page-builder', pageBuilderApiRouter);
 
 // File management routes (storageService imported from server.ts)
