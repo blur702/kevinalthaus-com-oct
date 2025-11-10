@@ -170,7 +170,7 @@ export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetPro
             key={tab.id}
             role="tab"
             id={`tab-${tab.id}`}
-            aria-selected={String(tab.id === activeTabId)}
+            aria-selected={tab.id === activeTabId}
             aria-controls={`tabpanel-${tab.id}`}
             onClick={() => setActiveTabId(tab.id)}
             tabIndex={tab.id === activeTabId ? 0 : -1}
