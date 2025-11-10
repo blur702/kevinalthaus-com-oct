@@ -19,9 +19,22 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
 
   if (editMode) {
     return (
-      <div className="image-widget-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="src" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+      <div className="image-widget-editor">
+        <style>{`
+          .image-widget-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .section { margin-bottom: 12px; }
+          .label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .input, .select { width: 100%; padding: 8px; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+          .preview { margin-top: 16px; padding: 16px; background-color: #f5f5f5; border-radius: 4px; }
+          .preview-title { margin: 0 0 8px 0; font-weight: bold; font-size: 12px; color: #666; }
+          .align-left { text-align: left; }
+          .align-center { text-align: center; }
+          .align-right { text-align: right; }
+          .img-${widget.id} { max-width: 100%; width: ${config.width}px; height: ${config.height ? `${config.height}px` : 'auto'}; object-fit: ${config.objectFit}; border-radius: ${config.borderRadius}px; display: block; }
+        `}</style>
+        <div className="section">
+          <label htmlFor="src" className="label">
             Image URL:
           </label>
           <input
@@ -29,13 +42,13 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
             type="url"
             value={config.src}
             onChange={(e) => handleConfigChange({ src: e.target.value })}
-            style={{ width: '100%', padding: '8px' }}
+            className="input"
             placeholder="https://example.com/image.jpg"
           />
         </div>
 
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="alt" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+        <div className="section">
+          <label htmlFor="alt" className="label">
             Alt Text (Required for Accessibility):
           </label>
           <input
@@ -43,14 +56,14 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
             type="text"
             value={config.alt}
             onChange={(e) => handleConfigChange({ alt: e.target.value })}
-            style={{ width: '100%', padding: '8px' }}
+            className="input"
             placeholder="Describe the image for screen readers"
             required
           />
         </div>
 
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="caption" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+        <div className="section">
+          <label htmlFor="caption" className="label">
             Caption (Optional):
           </label>
           <input
@@ -58,14 +71,14 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
             type="text"
             value={config.caption || ''}
             onChange={(e) => handleConfigChange({ caption: e.target.value })}
-            style={{ width: '100%', padding: '8px' }}
+            className="input"
             placeholder="Image caption"
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+        <div className="grid-2">
           <div>
-            <label htmlFor="width" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="width" className="label">
               Width (px):
             </label>
             <input
@@ -80,12 +93,12 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
                   handleConfigChange({ width: value });
                 }
               }}
-              style={{ width: '100%', padding: '8px' }}
+              className="input"
             />
           </div>
 
           <div>
-            <label htmlFor="height" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="height" className="label">
               Height (px, optional):
             </label>
             <input
@@ -95,20 +108,20 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
               max="2000"
               value={config.height || ''}
               onChange={(e) => handleConfigChange({ height: e.target.value ? parseInt(e.target.value) : undefined })}
-              style={{ width: '100%', padding: '8px' }}
+              className="input"
               placeholder="Auto"
             />
           </div>
 
           <div>
-            <label htmlFor="objectFit" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="objectFit" className="label">
               Object Fit:
             </label>
             <select
               id="objectFit"
               value={config.objectFit}
               onChange={(e) => handleConfigChange({ objectFit: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="cover">Cover</option>
               <option value="contain">Contain</option>
@@ -119,14 +132,14 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
           </div>
 
           <div>
-            <label htmlFor="alignment" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="alignment" className="label">
               Alignment:
             </label>
             <select
               id="alignment"
               value={config.alignment}
               onChange={(e) => handleConfigChange({ alignment: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="left">Left</option>
               <option value="center">Center</option>
@@ -135,8 +148,8 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
           </div>
         </div>
 
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="borderRadius" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+        <div className="section">
+          <label htmlFor="borderRadius" className="label">
             Border Radius: {config.borderRadius}px
           </label>
           <input
@@ -149,12 +162,12 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
               const value = parseInt(e.target.value, 10);
               handleConfigChange({ borderRadius: Number.isNaN(value) ? 0 : value });
             }}
-            style={{ width: '100%' }}
+            className="select"
           />
         </div>
 
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="linkUrl" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+        <div className="section">
+          <label htmlFor="linkUrl" className="label">
             Link URL (Optional):
           </label>
           <input
@@ -162,14 +175,15 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
             type="url"
             value={config.linkUrl || ''}
             onChange={(e) => handleConfigChange({ linkUrl: e.target.value })}
-            style={{ width: '100%', padding: '8px' }}
+            className="input"
             placeholder="https://example.com"
           />
         </div>
 
         {config.linkUrl && (
           <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <style>{`.checkbox-inline { display: flex; align-items: center; gap: 8px; }`}</style>
+            <label className="label checkbox-inline">
               <input
                 type="checkbox"
                 checked={config.openInNewTab}
@@ -181,20 +195,10 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
         )}
 
         {/* Preview */}
-        <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-          <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', fontSize: '12px', color: '#666' }}>Preview:</p>
-          <div style={{ textAlign: config.alignment }}>
-            <img
-              src={config.src}
-              alt={config.alt}
-              style={{
-                maxWidth: '100%',
-                width: `${config.width}px`,
-                height: config.height ? `${config.height}px` : 'auto',
-                objectFit: config.objectFit,
-                borderRadius: `${config.borderRadius}px`
-              }}
-            />
+        <div className="preview">
+          <p className="preview-title">Preview:</p>
+          <div className={`align-${config.alignment}`}>
+            <img className={`img-${widget.id}`} src={config.src} alt={config.alt} />
           </div>
         </div>
       </div>
@@ -202,34 +206,30 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
   }
 
   const imageElement = (
-    <img
-      src={config.src}
-      alt={config.alt}
-      style={{
-        maxWidth: '100%',
-        width: `${config.width}px`,
-        height: config.height ? `${config.height}px` : 'auto',
-        objectFit: config.objectFit,
-        borderRadius: `${config.borderRadius}px`,
-        display: 'block'
-      }}
-    />
+    <>
+      <style>{`
+        .img-${widget.id} { max-width: 100%; width: ${config.width}px; height: ${config.height ? `${config.height}px` : 'auto'}; object-fit: ${config.objectFit}; border-radius: ${config.borderRadius}px; display: block; }
+      `}</style>
+      <img className={`img-${widget.id}`} src={config.src} alt={config.alt} />
+    </>
   );
 
   return (
-    <figure
-      className="image-widget"
-      style={{
-        margin: 0,
-        textAlign: config.alignment
-      }}
-    >
+    <figure className={`image-widget align-${config.alignment}`}>
+      <style>{`
+        .image-widget { margin: 0; }
+        .align-left { text-align: left; }
+        .align-center { text-align: center; }
+        .align-right { text-align: right; }
+        .inline-block { display: inline-block; }
+        .img-caption { margin-top: 8px; font-size: 14px; color: #666; font-style: italic; }
+      `}</style>
       {config.linkUrl ? (
         <a
           href={config.linkUrl}
           target={config.openInNewTab ? '_blank' : '_self'}
           rel={config.openInNewTab ? 'noopener noreferrer' : undefined}
-          style={{ display: 'inline-block' }}
+          className="inline-block"
         >
           {imageElement}
         </a>
@@ -237,7 +237,7 @@ export default function ImageWidget({ widget, editMode, onChange }: ImageWidgetP
         imageElement
       )}
       {config.caption && (
-        <figcaption style={{ marginTop: '8px', fontSize: '14px', color: '#666', fontStyle: 'italic' }}>
+        <figcaption className="img-caption">
           {config.caption}
         </figcaption>
       )}

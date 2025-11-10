@@ -45,83 +45,99 @@ export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetPro
 
   if (editMode) {
     return (
-      <div className="tabs-widget-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <h4 style={{ margin: '0 0 12px 0' }}>Tabs Settings</h4>
+      <div className="tabs-widget-editor">
+        <style>{`
+          .tabs-widget-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .tabs-heading { margin: 0 0 12px 0; }
+          .tabs-settings-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+          .tabs-label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 12px; }
+          .tabs-color { width: 100%; height: 32px; }
+          .tabs-section-title { margin: 16px 0 8px 0; }
+          .tab-item { margin-bottom: 12px; padding: 12px; background-color: #f9f9f9; border-radius: 4px; }
+          .tab-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+          .tab-item-title { font-size: 14px; }
+          .btn-remove { padding: 4px 8px; background-color: #dc3545; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+          .btn-remove:disabled { background-color: #ccc; cursor: not-allowed; }
+          .text-input { width: 100%; padding: 8px; margin-bottom: 8px; }
+          .textarea { width: 100%; min-height: 80px; padding: 8px; }
+          .btn-add { width: 100%; padding: 8px; background-color: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+          .btn-add:disabled { background-color: #ccc; cursor: not-allowed; }
+        `}</style>
+        <h4 className="tabs-heading">Tabs Settings</h4>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        <div className="tabs-settings-grid">
           <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '12px' }}>
+            <label htmlFor={`${widget.id}-active-color`} className="tabs-label">
               Active Tab Color:
             </label>
             <input
+              id={`${widget.id}-active-color`}
               type="color"
               value={config.activeTabBackgroundColor}
               onChange={(e) => handleConfigChange({ activeTabBackgroundColor: e.target.value })}
-              style={{ width: '100%', height: '32px' }}
+              className="tabs-color"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '12px' }}>
+            <label htmlFor={`${widget.id}-inactive-color`} className="tabs-label">
               Inactive Tab Color:
             </label>
             <input
+              id={`${widget.id}-inactive-color`}
               type="color"
               value={config.inactiveTabBackgroundColor}
               onChange={(e) => handleConfigChange({ inactiveTabBackgroundColor: e.target.value })}
-              style={{ width: '100%', height: '32px' }}
+              className="tabs-color"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '12px' }}>
+            <label htmlFor={`${widget.id}-text-color`} className="tabs-label">
               Tab Text Color:
             </label>
             <input
+              id={`${widget.id}-text-color`}
               type="color"
               value={config.tabTextColor}
               onChange={(e) => handleConfigChange({ tabTextColor: e.target.value })}
-              style={{ width: '100%', height: '32px' }}
+              className="tabs-color"
             />
           </div>
         </div>
 
-        <h5 style={{ margin: '16px 0 8px 0' }}>Tabs:</h5>
+        <h5 className="tabs-section-title">Tabs:</h5>
 
         {config.tabs.map((tab, index) => (
-          <div key={tab.id} style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <strong style={{ fontSize: '14px' }}>Tab {index + 1}</strong>
+          <div key={tab.id} className="tab-item">
+            <div className="tab-item-header">
+              <strong className="tab-item-title">Tab {index + 1}</strong>
               <button
                 onClick={() => removeTab(tab.id)}
                 disabled={config.tabs.length === 1}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: config.tabs.length === 1 ? '#ccc' : '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: config.tabs.length === 1 ? 'not-allowed' : 'pointer',
-                  fontSize: '12px'
-                }}
+                className="btn-remove"
               >
                 Remove
               </button>
             </div>
 
+            <label htmlFor={`${tab.id}-title`} className="tabs-label">Tab Title</label>
             <input
+              id={`${tab.id}-title`}
               type="text"
               value={tab.title}
               onChange={(e) => updateTab(tab.id, { title: e.target.value })}
               placeholder="Tab title"
-              style={{ width: '100%', padding: '8px', marginBottom: '8px' }}
+              className="text-input"
             />
 
+            <label htmlFor={`${tab.id}-content`} className="tabs-label">Tab Content</label>
             <textarea
+              id={`${tab.id}-content`}
               value={tab.content}
               onChange={(e) => updateTab(tab.id, { content: e.target.value })}
               placeholder="Tab content"
-              style={{ width: '100%', minHeight: '80px', padding: '8px' }}
+              className="textarea"
             />
           </div>
         ))}
@@ -129,15 +145,7 @@ export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetPro
         <button
           onClick={addTab}
           disabled={config.tabs.length >= 10}
-          style={{
-            width: '100%',
-            padding: '8px',
-            backgroundColor: config.tabs.length >= 10 ? '#ccc' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: config.tabs.length >= 10 ? 'not-allowed' : 'pointer'
-          }}
+          className="btn-add"
         >
           + Add Tab
         </button>
@@ -148,25 +156,26 @@ export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetPro
   const activeTab = config.tabs.find(tab => tab.id === activeTabId) || config.tabs[0];
 
   return (
-    <div className="tabs-widget" role="tablist">
-      <div style={{ display: 'flex', borderBottom: '2px solid #e0e0e0', gap: '4px' }}>
+    <div className={`tabs-widget tabs-${widget.id}`}>
+      <style>{`
+        .tabs-${widget.id} .tabs-header { display: flex; border-bottom: 2px solid #e0e0e0; gap: 4px; }
+        .tabs-${widget.id} .tab-btn { padding: 12px 24px; border: none; border-radius: 4px 4px 0 0; cursor: pointer; transition: all 0.2s; }
+        .tabs-${widget.id} .tab-btn[aria-selected="true"] { background-color: ${config.activeTabBackgroundColor}; color: ${config.tabTextColor}; font-weight: bold; }
+        .tabs-${widget.id} .tab-btn[aria-selected="false"] { background-color: ${config.inactiveTabBackgroundColor}; color: #333; font-weight: normal; }
+        .tabs-${widget.id} .tab-panel { padding: 24px; background-color: #fff; border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; }
+      `}</style>
+      <div className="tabs-header" role="tablist">
         {config.tabs.map((tab) => (
           <button
             key={tab.id}
             role="tab"
-            aria-selected={tab.id === activeTabId}
+            id={`tab-${tab.id}`}
+            aria-selected={String(tab.id === activeTabId)}
             aria-controls={`tabpanel-${tab.id}`}
             onClick={() => setActiveTabId(tab.id)}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: tab.id === activeTabId ? config.activeTabBackgroundColor : config.inactiveTabBackgroundColor,
-              color: tab.id === activeTabId ? config.tabTextColor : '#333',
-              border: 'none',
-              borderRadius: '4px 4px 0 0',
-              cursor: 'pointer',
-              fontWeight: tab.id === activeTabId ? 'bold' : 'normal',
-              transition: 'all 0.2s'
-            }}
+            tabIndex={tab.id === activeTabId ? 0 : -1}
+            type="button"
+            className="tab-btn"
           >
             {tab.title}
           </button>
@@ -177,13 +186,7 @@ export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetPro
         id={`tabpanel-${activeTabId}`}
         role="tabpanel"
         aria-labelledby={`tab-${activeTabId}`}
-        style={{
-          padding: '24px',
-          backgroundColor: 'white',
-          borderLeft: '1px solid #e0e0e0',
-          borderRight: '1px solid #e0e0e0',
-          borderBottom: '1px solid #e0e0e0'
-        }}
+        className="tab-panel"
       >
         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(activeTab.content) }} />
       </div>

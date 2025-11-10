@@ -75,9 +75,18 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
 
   if (editMode) {
     return (
-      <div className="video-widget-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="url" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+      <div className="video-widget-editor">
+        <style>{`
+          .video-widget-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .section { margin-bottom: 12px; }
+          .label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .input, .select { width: 100%; padding: 8px; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+          .grid-2-tight { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .checkbox-inline { display: flex; align-items: center; gap: 8px; }
+        `}</style>
+        <div className="section">
+          <label htmlFor="url" className="label">
             Video URL:
           </label>
           <input
@@ -85,21 +94,21 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
             type="url"
             value={config.url}
             onChange={(e) => handleConfigChange({ url: e.target.value })}
-            style={{ width: '100%', padding: '8px' }}
+            className="input"
             placeholder="https://www.youtube.com/watch?v=..."
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+        <div className="grid-2">
           <div>
-            <label htmlFor="source" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="source" className="label">
               Video Source:
             </label>
             <select
               id="source"
               value={config.source}
               onChange={(e) => handleConfigChange({ source: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="youtube">YouTube</option>
               <option value="vimeo">Vimeo</option>
@@ -108,14 +117,14 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
           </div>
 
           <div>
-            <label htmlFor="aspectRatio" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="aspectRatio" className="label">
               Aspect Ratio:
             </label>
             <select
               id="aspectRatio"
               value={config.aspectRatio}
               onChange={(e) => handleConfigChange({ aspectRatio: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="16:9">16:9 (Widescreen)</option>
               <option value="4:3">4:3 (Standard)</option>
@@ -125,7 +134,7 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
           </div>
 
           <div>
-            <label htmlFor="width" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="width" className="label">
               Width: {config.width}%
             </label>
             <input
@@ -135,19 +144,19 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
               max="100"
               value={config.width}
               onChange={(e) => handleConfigChange({ width: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="select"
             />
           </div>
 
           <div>
-            <label htmlFor="alignment" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="alignment" className="label">
               Alignment:
             </label>
             <select
               id="alignment"
               value={config.alignment}
               onChange={(e) => handleConfigChange({ alignment: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="left">Left</option>
               <option value="center">Center</option>
@@ -156,8 +165,8 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="grid-2-tight">
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.autoplay}
@@ -166,7 +175,7 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
             <span>Autoplay</span>
           </label>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.controls}
@@ -175,7 +184,7 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
             <span>Show Controls</span>
           </label>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.muted}
@@ -184,7 +193,7 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
             <span>Muted</span>
           </label>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.loop}
@@ -197,29 +206,14 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
     );
   }
 
-  const containerStyle: React.CSSProperties = {
-    width: `${config.width}%`,
-    margin: config.alignment === 'center' ? '0 auto' : config.alignment === 'right' ? '0 0 0 auto' : '0'
-  };
-
-  const videoWrapperStyle: React.CSSProperties = {
-    position: 'relative',
-    paddingBottom: getAspectRatioPadding(),
-    height: 0,
-    overflow: 'hidden'
-  };
-
-  const videoStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%'
-  };
-
   return (
-    <div className="video-widget" style={containerStyle}>
-      <div style={videoWrapperStyle}>
+    <div className={`video-widget video-${widget.id}`}>
+      <style>{`
+        .video-${widget.id} { width: ${config.width}%; margin: ${config.alignment === 'center' ? '0 auto' : config.alignment === 'right' ? '0 0 0 auto' : '0'}; }
+        .video-${widget.id} .video-wrap { position: relative; padding-bottom: ${getAspectRatioPadding()}; height: 0; overflow: hidden; }
+        .video-${widget.id} .video-el { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+      `}</style>
+      <div className="video-wrap">
         {config.source === 'direct' ? (
           <video
             src={config.url}
@@ -227,14 +221,14 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
             autoPlay={config.autoplay}
             muted={config.muted}
             loop={config.loop}
-            style={videoStyle}
+            className="video-el"
           >
             Your browser does not support the video tag.
           </video>
         ) : (
           <iframe
             src={getEmbedUrl()}
-            style={videoStyle}
+            className="video-el"
             frameBorder="0"
             sandbox="allow-scripts allow-same-origin allow-presentation"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

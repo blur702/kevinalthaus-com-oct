@@ -17,20 +17,23 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
     }
   };
 
-  const headingStyle: React.CSSProperties = {
-    textAlign: config.textAlign,
-    fontSize: config.fontSize ? `${config.fontSize}px` : undefined,
-    fontWeight: config.fontWeight,
-    color: config.textColor,
-    marginTop: `${config.marginTop}px`,
-    marginBottom: `${config.marginBottom}px`
-  };
+  const headingFontSize = config.fontSize ? `${config.fontSize}px` : 'inherit';
 
   if (editMode) {
     return (
-      <div className="heading-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="text" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+      <div className="heading-editor">
+        <style>{`
+          .heading-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .section { margin-bottom: 12px; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+          .label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .input { width: 100%; padding: 8px; font-size: 16px; }
+          .select { width: 100%; padding: 8px; }
+          .color { width: 100%; height: 36px; }
+          .range { width: 100%; }
+        `}</style>
+        <div className="section">
+          <label htmlFor="text" className="label">
             Heading Text:
           </label>
           <input
@@ -38,21 +41,21 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
             type="text"
             value={config.text}
             onChange={(e) => handleConfigChange({ text: e.target.value })}
-            style={{ width: '100%', padding: '8px', fontSize: '16px' }}
+            className="input"
             placeholder="Enter heading text"
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="grid-2">
           <div>
-            <label htmlFor="level" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="level" className="label">
               Heading Level:
             </label>
             <select
               id="level"
               value={config.level}
               onChange={(e) => handleConfigChange({ level: parseInt(e.target.value) as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="1">H1 - Main Title</option>
               <option value="2">H2 - Section</option>
@@ -64,14 +67,14 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
           </div>
 
           <div>
-            <label htmlFor="textAlign" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="textAlign" className="label">
               Alignment:
             </label>
             <select
               id="textAlign"
               value={config.textAlign}
               onChange={(e) => handleConfigChange({ textAlign: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="left">Left</option>
               <option value="center">Center</option>
@@ -80,7 +83,7 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
           </div>
 
           <div>
-            <label htmlFor="fontSize" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="fontSize" className="label">
               Font Size (optional): {config.fontSize || 'Auto'}px
             </label>
             <input
@@ -90,19 +93,19 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
               max="120"
               value={config.fontSize || 32}
               onChange={(e) => handleConfigChange({ fontSize: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="fontWeight" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="fontWeight" className="label">
               Font Weight:
             </label>
             <select
               id="fontWeight"
               value={config.fontWeight}
               onChange={(e) => handleConfigChange({ fontWeight: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="100">Thin (100)</option>
               <option value="200">Extra Light (200)</option>
@@ -117,7 +120,7 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
           </div>
 
           <div>
-            <label htmlFor="textColor" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="textColor" className="label">
               Text Color:
             </label>
             <input
@@ -125,12 +128,12 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
               type="color"
               value={config.textColor || '#000000'}
               onChange={(e) => handleConfigChange({ textColor: e.target.value })}
-              style={{ width: '100%', height: '36px' }}
+              className="color"
             />
           </div>
 
           <div>
-            <label htmlFor="marginTop" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="marginTop" className="label">
               Margin Top: {config.marginTop}px
             </label>
             <input
@@ -140,12 +143,12 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
               max="100"
               value={config.marginTop}
               onChange={(e) => handleConfigChange({ marginTop: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="marginBottom" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="marginBottom" className="label">
               Margin Bottom: {config.marginBottom}px
             </label>
             <input
@@ -155,7 +158,7 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
               max="100"
               value={config.marginBottom}
               onChange={(e) => handleConfigChange({ marginBottom: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
         </div>
@@ -166,7 +169,17 @@ export default function Heading({ widget, editMode, onChange }: HeadingProps) {
   const HeadingTag = `h${config.level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
   return (
-    <HeadingTag className="heading-widget" style={headingStyle}>
+    <HeadingTag className={`heading-widget heading-${widget.id}`}>
+      <style>{`
+        .heading-${widget.id} { 
+          text-align: ${config.textAlign};
+          font-size: ${headingFontSize};
+          font-weight: ${config.fontWeight};
+          color: ${config.textColor};
+          margin-top: ${config.marginTop}px;
+          margin-bottom: ${config.marginBottom}px;
+        }
+      `}</style>
       {config.text}
     </HeadingTag>
   );

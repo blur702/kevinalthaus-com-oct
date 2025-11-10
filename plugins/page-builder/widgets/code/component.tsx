@@ -28,45 +28,37 @@ export default function CodeWidget({ widget, editMode, onChange }: CodeWidgetPro
     }
   };
 
-  const codeBlockStyle: React.CSSProperties = {
-    backgroundColor: config.theme === 'dark' ? '#282c34' : '#f5f5f5',
-    color: config.theme === 'dark' ? '#abb2bf' : '#333',
-    padding: '16px',
-    borderRadius: '4px',
-    overflow: 'auto',
-    fontSize: `${config.fontSize}px`,
-    fontFamily: '"Fira Code", "Courier New", monospace',
-    position: 'relative'
-  };
+  const codeFontFamily = '"Fira Code", "Courier New", monospace';
 
   if (editMode) {
     return (
-      <div className="code-widget-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="code" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+      <div className="code-widget-editor">
+        <style>{`
+          .code-widget-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .section { margin-bottom: 12px; }
+          .label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .textarea { width: 100%; min-height: 200px; padding: 12px; font-family: ${codeFontFamily}; font-size: 14px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; }
+          .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+          .input { width: 100%; padding: 8px; }
+          .range { width: 100%; }
+          .checkbox-inline { display: flex; align-items: center; gap: 8px; }
+        `}</style>
+        <div className="section">
+          <label htmlFor="code" className="label">
             Code:
           </label>
           <textarea
             id="code"
             value={config.code}
             onChange={(e) => handleConfigChange({ code: e.target.value })}
-            style={{
-              width: '100%',
-              minHeight: '200px',
-              padding: '12px',
-              fontFamily: '"Fira Code", "Courier New", monospace',
-              fontSize: '14px',
-              backgroundColor: '#f9f9f9',
-              border: '1px solid #ddd',
-              borderRadius: '4px'
-            }}
+            className="textarea"
             placeholder="Paste your code here..."
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+        <div className="grid-3">
           <div>
-            <label htmlFor="language" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="language" className="label">
               Language:
             </label>
             <input
@@ -74,20 +66,20 @@ export default function CodeWidget({ widget, editMode, onChange }: CodeWidgetPro
               type="text"
               value={config.language}
               onChange={(e) => handleConfigChange({ language: e.target.value })}
-              style={{ width: '100%', padding: '8px' }}
+              className="input"
               placeholder="javascript"
             />
           </div>
 
           <div>
-            <label htmlFor="theme" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="theme" className="label">
               Theme:
             </label>
             <select
               id="theme"
               value={config.theme}
               onChange={(e) => handleConfigChange({ theme: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="input"
             >
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -95,7 +87,7 @@ export default function CodeWidget({ widget, editMode, onChange }: CodeWidgetPro
           </div>
 
           <div>
-            <label htmlFor="fontSize" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="fontSize" className="label">
               Font Size: {config.fontSize}px
             </label>
             <input
@@ -105,13 +97,13 @@ export default function CodeWidget({ widget, editMode, onChange }: CodeWidgetPro
               max="24"
               value={config.fontSize}
               onChange={(e) => handleConfigChange({ fontSize: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
         </div>
 
-        <div style={{ marginTop: '12px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="section">
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.showLineNumbers}
@@ -127,39 +119,31 @@ export default function CodeWidget({ widget, editMode, onChange }: CodeWidgetPro
   const lines = config.code.split('\n');
 
   return (
-    <div className="code-widget" style={{ position: 'relative' }}>
+    <div className={`code-widget code-${widget.id}`}>
+      <style>{`
+        .code-${widget.id} { position: relative; }
+        .code-${widget.id} .copy-btn { position: absolute; top: 8px; right: 8px; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; z-index: 1; }
+        .code-${widget.id} .copy-btn.theme-dark { background-color: #3e4451; color: #abb2bf; }
+        .code-${widget.id} .copy-btn.theme-light { background-color: #e0e0e0; color: #333; }
+        .code-${widget.id} .code-block { background-color: ${config.theme === 'dark' ? '#282c34' : '#f5f5f5'}; color: ${config.theme === 'dark' ? '#abb2bf' : '#333'}; padding: 16px; border-radius: 4px; overflow: auto; font-size: ${config.fontSize}px; font-family: ${codeFontFamily}; }
+        .code-${widget.id} .code-line { display: flex; }
+        .code-${widget.id} .line-number { min-width: 40px; margin-right: 16px; text-align: right; opacity: 0.5; user-select: none; }
+        .code-${widget.id} .lang-label { font-size: 12px; color: #666; margin-top: 4px; font-family: monospace; }
+      `}</style>
       <button
         onClick={handleCopy}
-        style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          padding: '6px 12px',
-          backgroundColor: config.theme === 'dark' ? '#3e4451' : '#e0e0e0',
-          color: config.theme === 'dark' ? '#abb2bf' : '#333',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '12px',
-          zIndex: 1
-        }}
+        className={`copy-btn theme-${config.theme}`}
         aria-label="Copy code to clipboard"
       >
         {copied ? 'Copied!' : 'Copy'}
       </button>
 
-      <pre style={codeBlockStyle}>
+      <pre className="code-block">
         <code>
           {config.showLineNumbers ? (
             lines.map((line, index) => (
-              <div key={index} style={{ display: 'flex' }}>
-                <span style={{
-                  minWidth: '40px',
-                  marginRight: '16px',
-                  textAlign: 'right',
-                  opacity: 0.5,
-                  userSelect: 'none'
-                }}>
+              <div key={index} className="code-line">
+                <span className="line-number">
                   {index + 1}
                 </span>
                 <span>{line}</span>
@@ -171,12 +155,7 @@ export default function CodeWidget({ widget, editMode, onChange }: CodeWidgetPro
         </code>
       </pre>
 
-      <div style={{
-        fontSize: '12px',
-        color: '#666',
-        marginTop: '4px',
-        fontFamily: 'monospace'
-      }}>
+      <div className="lang-label">
         {config.language}
       </div>
     </div>

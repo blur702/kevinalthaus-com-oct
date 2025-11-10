@@ -17,34 +17,36 @@ export default function Divider({ widget, editMode, onChange }: DividerProps) {
     }
   };
 
-  const containerStyle: React.CSSProperties = {
-    marginTop: `${config.marginTop}px`,
-    marginBottom: `${config.marginBottom}px`,
-    textAlign: config.alignment
-  };
-
-  const hrStyle: React.CSSProperties = {
-    width: `${config.width}%`,
-    borderStyle: config.style,
-    borderWidth: `${config.thickness}px 0 0 0`,
-    borderColor: config.color,
-    margin: 0,
-    display: 'inline-block'
-  };
+  const dividerWidth = `${config.width}%`;
 
   if (editMode) {
     return (
-      <div className="divider-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+      <div className="divider-editor">
+        <style>{`
+          .divider-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+          .label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .select, .input { width: 100%; padding: 8px; }
+          .range { width: 100%; }
+          .color { width: 100%; height: 36px; }
+          .preview { margin-top: 16px; padding: 16px; background-color: #f5f5f5; border-radius: 4px; }
+          .preview-title { margin: 0 0 8px 0; font-weight: bold; font-size: 12px; color: #666; }
+          .align-left { text-align: left; }
+          .align-center { text-align: center; }
+          .align-right { text-align: right; }
+          .divider-${widget.id} { margin-top: ${config.marginTop}px; margin-bottom: ${config.marginBottom}px; text-align: ${config.alignment}; }
+          .divider-${widget.id} hr { width: ${dividerWidth}; border-style: ${config.style}; border-width: ${config.thickness}px 0 0 0; border-color: ${config.color}; margin: 0; display: inline-block; }
+        `}</style>
+        <div className="grid-2">
           <div>
-            <label htmlFor="style" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="style" className="label">
               Line Style:
             </label>
             <select
               id="style"
               value={config.style}
               onChange={(e) => handleConfigChange({ style: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="solid">Solid</option>
               <option value="dashed">Dashed</option>
@@ -54,14 +56,14 @@ export default function Divider({ widget, editMode, onChange }: DividerProps) {
           </div>
 
           <div>
-            <label htmlFor="alignment" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="alignment" className="label">
               Alignment:
             </label>
             <select
               id="alignment"
               value={config.alignment}
               onChange={(e) => handleConfigChange({ alignment: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="left">Left</option>
               <option value="center">Center</option>
@@ -70,7 +72,7 @@ export default function Divider({ widget, editMode, onChange }: DividerProps) {
           </div>
 
           <div>
-            <label htmlFor="width" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="width" className="label">
               Width: {config.width}%
             </label>
             <input
@@ -80,12 +82,12 @@ export default function Divider({ widget, editMode, onChange }: DividerProps) {
               max="100"
               value={config.width}
               onChange={(e) => handleConfigChange({ width: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="thickness" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="thickness" className="label">
               Thickness: {config.thickness}px
             </label>
             <input
@@ -95,12 +97,12 @@ export default function Divider({ widget, editMode, onChange }: DividerProps) {
               max="20"
               value={config.thickness}
               onChange={(e) => handleConfigChange({ thickness: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="color" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="color" className="label">
               Color:
             </label>
             <input
@@ -108,14 +110,14 @@ export default function Divider({ widget, editMode, onChange }: DividerProps) {
               type="color"
               value={config.color}
               onChange={(e) => handleConfigChange({ color: e.target.value })}
-              style={{ width: '100%', height: '36px' }}
+              className="color"
             />
           </div>
 
           <div></div>
 
           <div>
-            <label htmlFor="marginTop" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="marginTop" className="label">
               Margin Top: {config.marginTop}px
             </label>
             <input
@@ -125,12 +127,12 @@ export default function Divider({ widget, editMode, onChange }: DividerProps) {
               max="100"
               value={config.marginTop}
               onChange={(e) => handleConfigChange({ marginTop: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="marginBottom" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="marginBottom" className="label">
               Margin Bottom: {config.marginBottom}px
             </label>
             <input
@@ -140,16 +142,16 @@ export default function Divider({ widget, editMode, onChange }: DividerProps) {
               max="100"
               value={config.marginBottom}
               onChange={(e) => handleConfigChange({ marginBottom: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
         </div>
 
         {/* Preview */}
-        <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-          <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', fontSize: '12px', color: '#666' }}>Preview:</p>
-          <div style={containerStyle}>
-            <hr style={hrStyle} />
+        <div className="preview">
+          <p className="preview-title">Preview:</p>
+          <div className={`divider-${widget.id}`}>
+            <hr />
           </div>
         </div>
       </div>
@@ -157,8 +159,12 @@ export default function Divider({ widget, editMode, onChange }: DividerProps) {
   }
 
   return (
-    <div className="divider-widget" style={containerStyle} role="separator">
-      <hr style={hrStyle} />
+    <div className={`divider-widget divider-${widget.id}`} role="separator">
+      <style>{`
+        .divider-${widget.id} { margin-top: ${config.marginTop}px; margin-bottom: ${config.marginBottom}px; text-align: ${config.alignment}; }
+        .divider-${widget.id} hr { width: ${dividerWidth}; border-style: ${config.style}; border-width: ${config.thickness}px 0 0 0; border-color: ${config.color}; margin: 0; display: inline-block; }
+      `}</style>
+      <hr />
     </div>
   );
 }

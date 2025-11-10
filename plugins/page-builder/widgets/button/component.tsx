@@ -71,9 +71,35 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
 
   if (editMode) {
     return (
-      <div className="button-widget-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="text" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+      <div className="button-widget-editor">
+        <style>{`
+          .button-widget-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .section { margin-bottom: 12px; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+          .label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .checkbox-inline { display: flex; align-items: center; gap: 8px; }
+          .checkbox-inline.with-top { height: 100%; padding-top: 24px; }
+          .input { width: 100%; padding: 8px; }
+          .color { width: 100%; height: 36px; }
+          .range { width: 100%; }
+          .preview { margin-top: 16px; padding: 16px; background-color: #f5f5f5; border-radius: 4px; }
+          .preview-title { margin: 0 0 8px 0; font-weight: bold; font-size: 12px; color: #666; }
+          .align-left { text-align: left; }
+          .align-center { text-align: center; }
+          .align-right { text-align: right; }
+          .btn { display: inline-block; text-decoration: none; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease; text-align: center; }
+          .btn.size-small { font-size: 14px; }
+          .btn.size-medium { font-size: 16px; }
+          .btn.size-large { font-size: 18px; }
+          .btn.full { width: 100%; }
+          .btn-${widget.id} { padding: ${config.padding.vertical}px ${config.padding.horizontal}px; border-radius: ${config.borderRadius}px; }
+          .btn-${widget.id}.variant-primary { background-color: ${config.backgroundColor || '#007bff'}; color: ${config.textColor || '#ffffff'}; border: 2px solid transparent; }
+          .btn-${widget.id}.variant-secondary { background-color: ${config.backgroundColor || '#6c757d'}; color: ${config.textColor || '#ffffff'}; border: 2px solid transparent; }
+          .btn-${widget.id}.variant-outline { background-color: transparent; color: ${config.textColor || '#007bff'}; border: 2px solid ${config.textColor || '#007bff'}; }
+          .btn-${widget.id}.variant-text { background-color: transparent; color: ${config.textColor || '#007bff'}; border: 2px solid transparent; }
+        `}</style>
+        <div className="section">
+          <label htmlFor="text" className="label">
             Button Text:
           </label>
           <input
@@ -81,13 +107,13 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
             type="text"
             value={config.text}
             onChange={(e) => handleConfigChange({ text: e.target.value })}
-            style={{ width: '100%', padding: '8px' }}
+            className="input"
             placeholder="Click Here"
           />
         </div>
 
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="url" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+        <div className="section">
+          <label htmlFor="url" className="label">
             Link URL:
           </label>
           <input
@@ -95,13 +121,13 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
             type="url"
             value={config.url}
             onChange={(e) => handleConfigChange({ url: e.target.value })}
-            style={{ width: '100%', padding: '8px' }}
+            className="input"
             placeholder="https://example.com"
           />
         </div>
 
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="section">
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.openInNewTab}
@@ -111,16 +137,16 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
           </label>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+        <div className="grid-2">
           <div>
-            <label htmlFor="size" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="size" className="label">
               Size:
             </label>
             <select
               id="size"
               value={config.size}
               onChange={(e) => handleConfigChange({ size: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="input"
             >
               <option value="small">Small</option>
               <option value="medium">Medium</option>
@@ -129,14 +155,14 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
           </div>
 
           <div>
-            <label htmlFor="variant" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="variant" className="label">
               Variant:
             </label>
             <select
               id="variant"
               value={config.variant}
               onChange={(e) => handleConfigChange({ variant: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="input"
             >
               <option value="primary">Primary (Filled)</option>
               <option value="secondary">Secondary (Filled)</option>
@@ -146,14 +172,14 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
           </div>
 
           <div>
-            <label htmlFor="alignment" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="alignment" className="label">
               Alignment:
             </label>
             <select
               id="alignment"
               value={config.alignment}
               onChange={(e) => handleConfigChange({ alignment: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="input"
             >
               <option value="left">Left</option>
               <option value="center">Center</option>
@@ -162,7 +188,7 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
           </div>
 
           <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '100%', paddingTop: '24px' }}>
+            <label className="checkbox-inline with-top">
               <input
                 type="checkbox"
                 checked={config.fullWidth}
@@ -173,7 +199,7 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
           </div>
 
           <div>
-            <label htmlFor="backgroundColor" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="backgroundColor" className="label">
               Background Color:
             </label>
             <input
@@ -181,12 +207,12 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
               type="color"
               value={config.backgroundColor || '#007bff'}
               onChange={(e) => handleConfigChange({ backgroundColor: e.target.value })}
-              style={{ width: '100%', height: '36px' }}
+              className="color"
             />
           </div>
 
           <div>
-            <label htmlFor="textColor" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="textColor" className="label">
               Text Color:
             </label>
             <input
@@ -194,13 +220,13 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
               type="color"
               value={config.textColor || '#ffffff'}
               onChange={(e) => handleConfigChange({ textColor: e.target.value })}
-              style={{ width: '100%', height: '36px' }}
+              className="color"
             />
           </div>
         </div>
 
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="borderRadius" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+        <div className="section">
+          <label htmlFor="borderRadius" className="label">
             Border Radius: {config.borderRadius}px
           </label>
           <input
@@ -210,13 +236,13 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
             max="50"
             value={config.borderRadius}
             onChange={(e) => handleConfigChange({ borderRadius: parseInt(e.target.value) })}
-            style={{ width: '100%' }}
+            className="range"
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="grid-2">
           <div>
-            <label htmlFor="paddingVertical" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="paddingVertical" className="label">
               Vertical Padding: {config.padding.vertical}px
             </label>
             <input
@@ -228,12 +254,12 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
               onChange={(e) => handleConfigChange({
                 padding: { ...config.padding, vertical: parseInt(e.target.value) }
               })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="paddingHorizontal" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="paddingHorizontal" className="label">
               Horizontal Padding: {config.padding.horizontal}px
             </label>
             <input
@@ -245,16 +271,16 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
               onChange={(e) => handleConfigChange({
                 padding: { ...config.padding, horizontal: parseInt(e.target.value) }
               })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
         </div>
 
         {/* Preview */}
-        <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-          <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', fontSize: '12px', color: '#666' }}>Preview:</p>
-          <div style={{ textAlign: config.alignment }}>
-            <span style={getButtonStyle()}>{config.text}</span>
+        <div className="preview">
+          <p className="preview-title">Preview:</p>
+          <div className={`align-${config.alignment}`}>
+            <span className={`btn btn-${widget.id} variant-${config.variant} size-${config.size} ${config.fullWidth ? 'full' : ''}`}>{config.text}</span>
           </div>
         </div>
       </div>
@@ -262,12 +288,27 @@ export default function ButtonWidget({ widget, editMode, onChange }: ButtonWidge
   }
 
   return (
-    <div className="button-widget" style={{ textAlign: config.alignment }}>
+    <div className={`button-widget align-${config.alignment}`}>
+      <style>{`
+        .align-left { text-align: left; }
+        .align-center { text-align: center; }
+        .align-right { text-align: right; }
+        .btn { display: inline-block; text-decoration: none; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease; text-align: center; }
+        .btn.size-small { font-size: 14px; }
+        .btn.size-medium { font-size: 16px; }
+        .btn.size-large { font-size: 18px; }
+        .btn.full { width: 100%; }
+        .btn-${widget.id} { padding: ${config.padding.vertical}px ${config.padding.horizontal}px; border-radius: ${config.borderRadius}px; }
+        .btn-${widget.id}.variant-primary { background-color: ${config.backgroundColor || '#007bff'}; color: ${config.textColor || '#ffffff'}; border: 2px solid transparent; }
+        .btn-${widget.id}.variant-secondary { background-color: ${config.backgroundColor || '#6c757d'}; color: ${config.textColor || '#ffffff'}; border: 2px solid transparent; }
+        .btn-${widget.id}.variant-outline { background-color: transparent; color: ${config.textColor || '#007bff'}; border: 2px solid ${config.textColor || '#007bff'}; }
+        .btn-${widget.id}.variant-text { background-color: transparent; color: ${config.textColor || '#007bff'}; border: 2px solid transparent; }
+      `}</style>
       <a
         href={config.url}
         target={config.openInNewTab ? '_blank' : '_self'}
         rel={config.openInNewTab ? 'noopener noreferrer' : undefined}
-        style={getButtonStyle()}
+        className={`btn btn-${widget.id} variant-${config.variant} size-${config.size} ${config.fullWidth ? 'full' : ''}`}
         role="button"
       >
         {config.text}

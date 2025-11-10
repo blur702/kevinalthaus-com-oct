@@ -31,11 +31,23 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
 
   if (editMode) {
     return (
-      <div className="map-widget-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <h4 style={{ margin: '0 0 12px 0' }}>Map Settings</h4>
+      <div className="map-widget-editor">
+        <style>{`
+          .map-widget-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .heading { margin: 0 0 12px 0; }
+          .section { margin-bottom: 12px; }
+          .label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .input, .select { width: 100%; padding: 8px; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+          .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+          .range { width: 100%; }
+          .checkbox-inline { display: flex; align-items: center; gap: 8px; }
+          .note { padding: 12px; background-color: #f9f9f9; border-radius: 4px; font-size: 13px; color: #666; }
+        `}</style>
+        <h4 className="heading">Map Settings</h4>
 
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="address" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+        <div className="section">
+          <label htmlFor="address" className="label">
             Address or Location:
           </label>
           <input
@@ -43,14 +55,14 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
             type="text"
             value={config.address}
             onChange={(e) => handleConfigChange({ address: e.target.value })}
-            style={{ width: '100%', padding: '8px' }}
+            className="input"
             placeholder="123 Main St, City, State"
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+        <div className="grid-2">
           <div>
-            <label htmlFor="latitude" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="latitude" className="label">
               Latitude (optional):
             </label>
             <input
@@ -74,13 +86,13 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
                   handleConfigChange({ latitude: undefined });
                 }
               }}
-              style={{ width: '100%', padding: '8px' }}
+              className="input"
               placeholder="37.7749"
             />
           </div>
 
           <div>
-            <label htmlFor="longitude" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="longitude" className="label">
               Longitude (optional):
             </label>
             <input
@@ -103,15 +115,15 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
                   handleConfigChange({ longitude: undefined });
                 }
               }}
-              style={{ width: '100%', padding: '8px' }}
+              className="input"
               placeholder="-122.4194"
             />
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+        <div className="grid-3">
           <div>
-            <label htmlFor="zoom" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="zoom" className="label">
               Zoom Level: {config.zoom}
             </label>
             <input
@@ -121,12 +133,12 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
               max="20"
               value={config.zoom}
               onChange={(e) => handleConfigChange({ zoom: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="height" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="height" className="label">
               Height: {config.height}px
             </label>
             <input
@@ -137,12 +149,12 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
               step="50"
               value={config.height}
               onChange={(e) => handleConfigChange({ height: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="mapType" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="mapType" className="label">
               Map Type:
             </label>
             <select
@@ -151,7 +163,7 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 handleConfigChange({ mapType: e.target.value as MapConfig['mapType'] })
               }
-              style={{ width: '100%', padding: '8px' }}
+              className="select"
             >
               <option value="roadmap">Roadmap</option>
               <option value="satellite">Satellite</option>
@@ -161,8 +173,8 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
           </div>
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="section">
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.showMarker}
@@ -172,7 +184,7 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
           </label>
         </div>
 
-        <div style={{ padding: '12px', backgroundColor: '#f9f9f9', borderRadius: '4px', fontSize: '13px', color: '#666' }}>
+        <div className="note">
           <strong>Note:</strong> This widget uses OpenStreetMap for the preview. In production, integrate with Google Maps API for full functionality and customization.
         </div>
       </div>
@@ -180,27 +192,21 @@ export default function MapWidget({ widget, editMode, onChange }: MapWidgetProps
   }
 
   return (
-    <div className="map-widget" style={{ position: 'relative', height: `${config.height}px`, overflow: 'hidden' }}>
+    <div className={`map-widget map-${widget.id}`}>
+      <style>{`
+        .map-${widget.id} { position: relative; height: ${config.height}px; overflow: hidden; }
+        .map-${widget.id} iframe { width: 100%; height: 100%; border: none; }
+        .map-${widget.id} .addr { position: absolute; bottom: 12px; left: 12px; background-color: #fff; padding: 8px 12px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-size: 14px; max-width: 80%; }
+      `}</style>
       <iframe
         src={getEmbedUrl()}
-        style={{ width: '100%', height: '100%', border: 'none' }}
         title={`Map of ${config.address}`}
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
       />
 
       {config.address && (
-        <div style={{
-          position: 'absolute',
-          bottom: '12px',
-          left: '12px',
-          backgroundColor: 'white',
-          padding: '8px 12px',
-          borderRadius: '4px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-          fontSize: '14px',
-          maxWidth: '80%'
-        }}>
+        <div className="addr">
           📍 {config.address}
         </div>
       )}

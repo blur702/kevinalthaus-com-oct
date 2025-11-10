@@ -18,44 +18,48 @@ export default function TextContent({ widget, editMode, onChange }: TextContentP
     }
   };
 
-  const containerStyle: React.CSSProperties = {
-    textAlign: config.textAlign,
-    fontSize: `${config.fontSize}px`,
-    lineHeight: config.lineHeight,
-    color: config.textColor,
-    backgroundColor: config.backgroundColor,
-    padding: `${config.padding}px`
-  };
+  const fontSize = `${config.fontSize}px`;
 
   if (editMode) {
     return (
-      <div className="text-content-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+      <div className="text-content-editor">
+        <style>{`
+          .text-content-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .section { margin-bottom: 12px; }
+          .label { display: block; margin-bottom: 8px; font-weight: bold; }
+          .textarea { width: 100%; min-height: 150px; padding: 8px; font-family: inherit; }
+          .hint { display: block; margin-top: 4px; color: #666; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+          .select { width: 100%; padding: 6px; }
+          .range { width: 100%; }
+          .color { width: 100%; height: 36px; }
+        `}</style>
+        <div className="section">
+          <label className="label">
             Text Content:
           </label>
           <textarea
             value={config.content}
             onChange={(e) => handleConfigChange({ content: e.target.value })}
-            style={{ width: '100%', minHeight: '150px', padding: '8px', fontFamily: 'inherit' }}
+            className="textarea"
             placeholder="Enter rich text content (HTML supported)..."
             aria-label="Text content"
           />
-          <small style={{ display: 'block', marginTop: '4px', color: '#666' }}>
+          <small className="hint">
             HTML formatting is supported (e.g., &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;, &lt;ol&gt;)
           </small>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="grid-2">
           <div>
-            <label htmlFor="textAlign" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="textAlign" className="label">
               Text Alignment:
             </label>
             <select
               id="textAlign"
               value={config.textAlign}
               onChange={(e) => handleConfigChange({ textAlign: e.target.value as any })}
-              style={{ width: '100%', padding: '6px' }}
+              className="select"
             >
               <option value="left">Left</option>
               <option value="center">Center</option>
@@ -65,7 +69,7 @@ export default function TextContent({ widget, editMode, onChange }: TextContentP
           </div>
 
           <div>
-            <label htmlFor="fontSize" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="fontSize" className="label">
               Font Size: {config.fontSize}px
             </label>
             <input
@@ -75,12 +79,12 @@ export default function TextContent({ widget, editMode, onChange }: TextContentP
               max="72"
               value={config.fontSize}
               onChange={(e) => handleConfigChange({ fontSize: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="lineHeight" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="lineHeight" className="label">
               Line Height: {config.lineHeight}
             </label>
             <input
@@ -91,12 +95,12 @@ export default function TextContent({ widget, editMode, onChange }: TextContentP
               step="0.1"
               value={config.lineHeight}
               onChange={(e) => handleConfigChange({ lineHeight: parseFloat(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="padding" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="padding" className="label">
               Padding: {config.padding}px
             </label>
             <input
@@ -106,12 +110,12 @@ export default function TextContent({ widget, editMode, onChange }: TextContentP
               max="100"
               value={config.padding}
               onChange={(e) => handleConfigChange({ padding: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="range"
             />
           </div>
 
           <div>
-            <label htmlFor="textColor" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="textColor" className="label">
               Text Color:
             </label>
             <input
@@ -119,12 +123,12 @@ export default function TextContent({ widget, editMode, onChange }: TextContentP
               type="color"
               value={config.textColor || '#000000'}
               onChange={(e) => handleConfigChange({ textColor: e.target.value })}
-              style={{ width: '100%', height: '36px' }}
+              className="color"
             />
           </div>
 
           <div>
-            <label htmlFor="backgroundColor" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="backgroundColor" className="label">
               Background Color:
             </label>
             <input
@@ -132,7 +136,7 @@ export default function TextContent({ widget, editMode, onChange }: TextContentP
               type="color"
               value={config.backgroundColor || '#ffffff'}
               onChange={(e) => handleConfigChange({ backgroundColor: e.target.value })}
-              style={{ width: '100%', height: '36px' }}
+              className="color"
             />
           </div>
         </div>
@@ -142,11 +146,21 @@ export default function TextContent({ widget, editMode, onChange }: TextContentP
 
   return (
     <div
-      className="text-content"
-      style={containerStyle}
+      className={`text-content text-${widget.id}`}
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(config.content) }}
       role="article"
       aria-label="Text content"
-    />
+    >
+      <style>{`
+        .text-${widget.id} {
+          text-align: ${config.textAlign};
+          font-size: ${fontSize};
+          line-height: ${config.lineHeight};
+          color: ${config.textColor};
+          background-color: ${config.backgroundColor};
+          padding: ${config.padding}px;
+        }
+      `}</style>
+    </div>
   );
 }

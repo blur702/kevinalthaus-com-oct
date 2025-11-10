@@ -65,12 +65,28 @@ export default function CarouselWidget({ widget, editMode, onChange }: CarouselW
 
   if (editMode) {
     return (
-      <div className="carousel-widget-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <h4 style={{ margin: '0 0 12px 0' }}>Carousel Settings</h4>
+      <div className="carousel-widget-editor">
+        <style>{`
+          .carousel-widget-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .heading { margin: 0 0 12px 0; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+          .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+          .label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .input { width: 100%; }
+          .text { width: 100%; padding: 8px; margin-bottom: 8px; }
+          .btn-remove { padding: 4px 8px; background-color: #dc3545; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+          .btn-remove:disabled { background-color: #ccc; cursor: not-allowed; }
+          .item { margin-bottom: 12px; padding: 12px; background-color: #f9f9f9; border-radius: 4px; }
+          .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+          .slides-title { margin: 16px 0 8px 0; }
+          .btn-add { width: 100%; padding: 8px; background-color: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+          .checkbox-inline { display: flex; align-items: center; gap: 8px; }
+        `}</style>
+        <h4 className="heading">Carousel Settings</h4>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+        <div className="grid-2">
           <div>
-            <label htmlFor="height" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="height" className="label">
               Height: {config.height}px
             </label>
             <input
@@ -80,12 +96,12 @@ export default function CarouselWidget({ widget, editMode, onChange }: CarouselW
               max="1000"
               value={config.height}
               onChange={(e) => handleConfigChange({ height: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="input"
             />
           </div>
 
           <div>
-            <label htmlFor="interval" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor="interval" className="label">
               Interval: {config.interval / 1000}s
             </label>
             <input
@@ -96,13 +112,13 @@ export default function CarouselWidget({ widget, editMode, onChange }: CarouselW
               step="1000"
               value={config.interval}
               onChange={(e) => handleConfigChange({ interval: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              className="input"
             />
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '16px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="grid-3">
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.autoPlay}
@@ -111,7 +127,7 @@ export default function CarouselWidget({ widget, editMode, onChange }: CarouselW
             <span>Auto Play</span>
           </label>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.showDots}
@@ -120,7 +136,7 @@ export default function CarouselWidget({ widget, editMode, onChange }: CarouselW
             <span>Show Dots</span>
           </label>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.showArrows}
@@ -130,67 +146,47 @@ export default function CarouselWidget({ widget, editMode, onChange }: CarouselW
           </label>
         </div>
 
-        <h5 style={{ margin: '16px 0 8px 0' }}>Slides:</h5>
+        <h5 className="slides-title">Slides:</h5>
 
         {config.slides.map((slide, index) => (
-          <div key={slide.id} style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div key={slide.id} className="item">
+            <div className="item-header">
               <strong>Slide {index + 1}</strong>
-              <button
-                onClick={() => removeSlide(slide.id)}
-                disabled={config.slides.length === 1}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: config.slides.length === 1 ? '#ccc' : '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: config.slides.length === 1 ? 'not-allowed' : 'pointer',
-                  fontSize: '12px'
-                }}
-              >
+              <button onClick={() => removeSlide(slide.id)} disabled={config.slides.length === 1} className="btn-remove">
                 Remove
               </button>
             </div>
 
-            <input
+            <label htmlFor={`${slide.id}-image`} className="label">Image URL</label>
+            <input id={`${slide.id}-image`}
               type="url"
               value={slide.imageUrl}
               onChange={(e) => updateSlide(slide.id, { imageUrl: e.target.value })}
               placeholder="Image URL"
-              style={{ width: '100%', padding: '8px', marginBottom: '8px' }}
+              className="text"
             />
 
-            <input
+            <label htmlFor={`${slide.id}-alt`} className="label">Alt text (required)</label>
+            <input id={`${slide.id}-alt`}
               type="text"
               value={slide.alt}
               onChange={(e) => updateSlide(slide.id, { alt: e.target.value })}
               placeholder="Alt text (required)"
-              style={{ width: '100%', padding: '8px', marginBottom: '8px' }}
+              className="text"
             />
 
-            <input
+            <label htmlFor={`${slide.id}-caption`} className="label">Caption (optional)</label>
+            <input id={`${slide.id}-caption`}
               type="text"
               value={slide.caption || ''}
               onChange={(e) => updateSlide(slide.id, { caption: e.target.value })}
               placeholder="Caption (optional)"
-              style={{ width: '100%', padding: '8px' }}
+              className="text"
             />
           </div>
         ))}
 
-        <button
-          onClick={addSlide}
-          style={{
-            width: '100%',
-            padding: '8px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
+        <button onClick={addSlide} className="btn-add">
           + Add Slide
         </button>
       </div>
@@ -200,97 +196,50 @@ export default function CarouselWidget({ widget, editMode, onChange }: CarouselW
   const currentSlide = config.slides[currentIndex];
 
   return (
-    <div className="carousel-widget" style={{ position: 'relative', height: `${config.height}px`, overflow: 'hidden' }}>
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div className={`carousel-widget carousel-${widget.id}`}>
+      <style>{`
+        .carousel-${widget.id} { position: relative; height: ${config.height}px; overflow: hidden; }
+        .carousel-${widget.id} .stage { position: relative; width: 100%; height: 100%; }
+        .carousel-${widget.id} img { width: 100%; height: 100%; object-fit: cover; }
+        .carousel-${widget.id} .caption { position: absolute; bottom: 0; left: 0; right: 0; background-color: rgba(0,0,0,0.7); color: #fff; padding: 12px; text-align: center; }
+        .carousel-${widget.id} .nav { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); background-color: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 20px; }
+        .carousel-${widget.id} .nav.next { left: auto; right: 16px; }
+        .carousel-${widget.id} .dots { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
+        .carousel-${widget.id} .dot { width: 10px; height: 10px; border-radius: 50%; border: none; cursor: pointer; padding: 0; background-color: rgba(255,255,255,0.5); }
+        .carousel-${widget.id} .dot.active { background-color: #fff; }
+      `}</style>
+      <div className="stage">
         <img
           src={currentSlide?.imageUrl}
           alt={currentSlide?.alt}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          
         />
 
         {currentSlide?.caption && (
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '12px',
-            textAlign: 'center'
-          }}>
+          <div className="caption">
             {currentSlide.caption}
           </div>
         )}
 
         {config.showArrows && config.slides.length > 1 && (
           <>
-            <button
-              onClick={goToPrevious}
-              style={{
-                position: 'absolute',
-                left: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                cursor: 'pointer',
-                fontSize: '20px'
-              }}
-              aria-label="Previous slide"
-            >
+            <button onClick={goToPrevious} className="nav prev" aria-label="Previous slide">
               ‹
             </button>
 
-            <button
-              onClick={goToNext}
-              style={{
-                position: 'absolute',
-                right: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                cursor: 'pointer',
-                fontSize: '20px'
-              }}
-              aria-label="Next slide"
-            >
+            <button onClick={goToNext} className="nav next" aria-label="Next slide">
               ›
             </button>
           </>
         )}
 
         {config.showDots && config.slides.length > 1 && (
-          <div style={{
-            position: 'absolute',
-            bottom: '12px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            gap: '8px'
-          }}>
+          <div className="dots">
             {config.slides.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
-                style={{
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  backgroundColor: index === currentIndex ? 'white' : 'rgba(255,255,255,0.5)',
-                  cursor: 'pointer',
-                  padding: 0
-                }}
+                className={`dot ${index === currentIndex ? 'active' : ''}`}
                 aria-label={`Go to slide ${index + 1}`}
               />
             ))}

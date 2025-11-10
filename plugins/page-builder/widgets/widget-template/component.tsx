@@ -36,34 +36,43 @@ export default function WidgetTemplate({ widget, editMode, onChange }: WidgetTem
   // EDIT MODE: Render configuration controls
   if (editMode) {
     return (
-      <div className="widget-template-editor" style={{ padding: '16px', border: '1px dashed #ccc' }}>
+      <div className="widget-template-editor">
+        <style>{`
+          .widget-template-editor { padding: 16px; border: 1px dashed #ccc; }
+          .section { margin-bottom: 12px; }
+          .label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .textarea { width: 100%; min-height: 100px; padding: 8px; }
+          .select { width: 100%; padding: 8px; }
+          .checkbox-inline { display: flex; align-items: center; gap: 8px; }
+          .color { width: 100%; padding: 4px; }
+        `}</style>
         <h3>Widget Template - Edit Mode</h3>
 
         {/* Content input */}
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="content" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+        <div className="section">
+          <label htmlFor="content" className="label">
             Content:
           </label>
           <textarea
             id="content"
             value={config.content || ''}
             onChange={(e) => handleConfigChange({ content: e.target.value })}
-            style={{ width: '100%', minHeight: '100px', padding: '8px' }}
+            className="textarea"
             placeholder="Enter widget content..."
             aria-label="Widget content"
           />
         </div>
 
         {/* Alignment selector */}
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="alignment" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+        <div className="section">
+          <label htmlFor="alignment" className="label">
             Alignment:
           </label>
           <select
             id="alignment"
             value={config.alignment || 'left'}
             onChange={(e) => handleConfigChange({ alignment: e.target.value as 'left' | 'center' | 'right' })}
-            style={{ width: '100%', padding: '8px' }}
+            className="select"
             aria-label="Text alignment"
           >
             <option value="left">Left</option>
@@ -73,8 +82,8 @@ export default function WidgetTemplate({ widget, editMode, onChange }: WidgetTem
         </div>
 
         {/* Border toggle */}
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="section">
+          <label className="checkbox-inline">
             <input
               type="checkbox"
               checked={config.showBorder || false}
@@ -87,8 +96,8 @@ export default function WidgetTemplate({ widget, editMode, onChange }: WidgetTem
 
         {/* Border color (conditional) */}
         {config.showBorder && (
-          <div style={{ marginBottom: '12px' }}>
-            <label htmlFor="borderColor" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+          <div className="section">
+            <label htmlFor="borderColor" className="label">
               Border Color:
             </label>
             <input
@@ -96,7 +105,7 @@ export default function WidgetTemplate({ widget, editMode, onChange }: WidgetTem
               type="color"
               value={config.borderColor || '#000000'}
               onChange={(e) => handleConfigChange({ borderColor: e.target.value })}
-              style={{ width: '100%', padding: '4px' }}
+              className="color"
               aria-label="Border color"
             />
           </div>
@@ -107,16 +116,10 @@ export default function WidgetTemplate({ widget, editMode, onChange }: WidgetTem
 
   // PREVIEW/RENDER MODE: Render clean, semantic HTML
   return (
-    <div
-      className="widget-template"
-      style={{
-        textAlign: config.alignment || 'left',
-        border: config.showBorder ? `2px solid ${config.borderColor || '#000000'}` : 'none',
-        padding: config.showBorder ? '16px' : '0'
-      }}
-      role="region"
-      aria-label="Widget template content"
-    >
+    <div className={`widget-template wtemp-${widget.id}`} role="region" aria-label="Widget template content">
+      <style>{`
+        .wtemp-${widget.id} { text-align: ${config.alignment || 'left'}; ${config.showBorder ? `border: 2px solid ${config.borderColor || '#000000'}; padding: 16px;` : 'border: none; padding: 0;'} }
+      `}</style>
       <div className="widget-template-content">
         {config.content || 'No content provided'}
       </div>

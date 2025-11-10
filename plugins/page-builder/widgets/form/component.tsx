@@ -64,31 +64,48 @@ export default function FormWidget({ widget, editMode, onChange }: FormWidgetPro
 
   if (editMode) {
     return (
-      <div className="form-widget-editor" style={{ padding: '16px', border: '1px solid #e0e0e0' }}>
-        <h4 style={{ margin: '0 0 12px 0' }}>Form Settings</h4>
+      <div className="form-widget-editor">
+        <style>{`
+          .form-widget-editor { padding: 16px; border: 1px solid #e0e0e0; }
+          .form-heading { margin: 0 0 12px 0; }
+          .form-settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+          .form-label { display: block; margin-bottom: 4px; font-weight: bold; }
+          .form-input { width: 100%; padding: 8px; }
+          .form-color { width: 100%; height: 36px; }
+          .form-fields-title { margin: 16px 0 8px 0; }
+          .form-field { margin-bottom: 12px; padding: 12px; background-color: #f9f9f9; border-radius: 4px; }
+          .form-field-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+          .btn-remove { padding: 4px 8px; background-color: #dc3545; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+          .form-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .checkbox-inline { display: flex; align-items: center; gap: 8px; padding-left: 8px; }
+          .btn-add { width: 100%; padding: 8px; background-color: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        `}</style>
+        <h4 className="form-heading">Form Settings</h4>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        <div className="form-settings-grid">
           <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor={`${widget.id}-action-url`} className="form-label">
               Form Action URL:
             </label>
             <input
               type="url"
+              id={`${widget.id}-action-url`}
               value={config.action}
               onChange={(e) => handleConfigChange({ action: e.target.value })}
-              style={{ width: '100%', padding: '8px' }}
+              className="form-input"
               placeholder="/api/forms/submit"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor={`${widget.id}-method`} className="form-label">
               Method:
             </label>
             <select
+              id={`${widget.id}-method`}
               value={config.method}
               onChange={(e) => handleConfigChange({ method: e.target.value as any })}
-              style={{ width: '100%', padding: '8px' }}
+              className="form-input"
             >
               <option value="POST">POST</option>
               <option value="GET">GET</option>
@@ -96,57 +113,53 @@ export default function FormWidget({ widget, editMode, onChange }: FormWidgetPro
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor={`${widget.id}-submit-text`} className="form-label">
               Submit Button Text:
             </label>
             <input
               type="text"
+              id={`${widget.id}-submit-text`}
               value={config.submitButtonText}
               onChange={(e) => handleConfigChange({ submitButtonText: e.target.value })}
-              style={{ width: '100%', padding: '8px' }}
+              className="form-input"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            <label htmlFor={`${widget.id}-button-color`} className="form-label">
               Button Color:
             </label>
             <input
               type="color"
+              id={`${widget.id}-button-color`}
               value={config.submitButtonColor}
               onChange={(e) => handleConfigChange({ submitButtonColor: e.target.value })}
-              style={{ width: '100%', height: '36px' }}
+              className="form-color"
             />
           </div>
         </div>
 
-        <h5 style={{ margin: '16px 0 8px 0' }}>Form Fields:</h5>
+        <h5 className="form-fields-title">Form Fields:</h5>
 
         {config.fields.map((field, index) => (
-          <div key={field.id} style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div key={field.id} className="form-field">
+            <div className="form-field-header">
               <strong>Field {index + 1}</strong>
               <button
                 onClick={() => removeField(field.id)}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '12px'
-                }}
+                className="btn-remove"
               >
                 Remove
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div className="form-field-grid">
               <select
+                id={`${field.id}-type`}
+                aria-label="Field type"
                 value={field.type}
                 onChange={(e) => updateField(field.id, { type: e.target.value as any })}
-                style={{ padding: '6px' }}
+                className="form-input"
               >
                 <option value="text">Text</option>
                 <option value="email">Email</option>
@@ -158,21 +171,25 @@ export default function FormWidget({ widget, editMode, onChange }: FormWidgetPro
 
               <input
                 type="text"
+                id={`${field.id}-label`}
+                aria-label="Field label"
                 value={field.label}
                 onChange={(e) => updateField(field.id, { label: e.target.value })}
                 placeholder="Field label"
-                style={{ padding: '6px' }}
+                className="form-input"
               />
 
               <input
                 type="text"
+                id={`${field.id}-placeholder`}
+                aria-label="Field placeholder"
                 value={field.placeholder || ''}
                 onChange={(e) => updateField(field.id, { placeholder: e.target.value })}
                 placeholder="Placeholder"
-                style={{ padding: '6px' }}
+                className="form-input"
               />
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '8px' }}>
+              <label className="checkbox-inline">
                 <input
                   type="checkbox"
                   checked={field.required}
@@ -186,15 +203,7 @@ export default function FormWidget({ widget, editMode, onChange }: FormWidgetPro
 
         <button
           onClick={addField}
-          style={{
-            width: '100%',
-            padding: '8px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
+          className="btn-add"
         >
           + Add Field
         </button>
@@ -204,10 +213,20 @@ export default function FormWidget({ widget, editMode, onChange }: FormWidgetPro
 
   return (
     <form className="form-widget" onSubmit={handleSubmit}>
+      <style>{`
+        .form-group { margin-bottom: 16px; }
+        .form-label-block { display: block; margin-bottom: 4px; font-weight: bold; }
+        .input-full { width: 100%; padding: 8px; }
+        .textarea-full { width: 100%; padding: 8px; min-height: 100px; font-family: inherit; }
+        .checkbox-row { display: flex; align-items: center; gap: 8px; }
+        .submit-btn { padding: 12px 24px; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        .submit-btn-${widget.id} { background-color: ${config.submitButtonColor}; }
+        .required-asterisk { color: red; }
+      `}</style>
       {config.fields.map((field) => (
-        <div key={field.id} style={{ marginBottom: '16px' }}>
-          <label htmlFor={field.id} style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
-            {field.label} {field.required && <span style={{ color: 'red' }}>*</span>}
+        <div key={field.id} className="form-group">
+          <label htmlFor={field.id} className="form-label-block">
+            {field.label} {field.required && <span className="required-asterisk">*</span>}
           </label>
 
           {field.type === 'textarea' ? (
@@ -218,10 +237,10 @@ export default function FormWidget({ widget, editMode, onChange }: FormWidgetPro
               required={field.required}
               value={formData[field.id] || ''}
               onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
-              style={{ width: '100%', padding: '8px', minHeight: '100px', fontFamily: 'inherit' }}
+              className="textarea-full"
             />
           ) : field.type === 'checkbox' ? (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label className="checkbox-row">
               <input
                 type="checkbox"
                 id={field.id}
@@ -239,7 +258,7 @@ export default function FormWidget({ widget, editMode, onChange }: FormWidgetPro
               required={field.required}
               value={formData[field.id] || ''}
               onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
-              style={{ width: '100%', padding: '8px' }}
+              className="input-full"
             >
               <option value="">Select an option...</option>
               {field.options?.map((option, idx) => (
@@ -257,7 +276,7 @@ export default function FormWidget({ widget, editMode, onChange }: FormWidgetPro
               required={field.required}
               value={formData[field.id] || ''}
               onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
-              style={{ width: '100%', padding: '8px' }}
+              className="input-full"
             />
           )}
         </div>
@@ -265,16 +284,7 @@ export default function FormWidget({ widget, editMode, onChange }: FormWidgetPro
 
       <button
         type="submit"
-        style={{
-          padding: '12px 24px',
-          backgroundColor: config.submitButtonColor,
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontWeight: 'bold',
-          fontSize: '16px'
-        }}
+        className={`submit-btn submit-btn-${widget.id}`}
       >
         {config.submitButtonText}
       </button>

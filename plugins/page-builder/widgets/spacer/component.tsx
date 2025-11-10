@@ -19,9 +19,17 @@ export default function Spacer({ widget, editMode, onChange }: SpacerProps) {
 
   if (editMode) {
     return (
-      <div className="spacer-editor" style={{ padding: '16px', border: '1px dashed #ccc', backgroundColor: '#f9f9f9' }}>
+      <div className="spacer-editor">
+        <style>{`
+          .spacer-editor { padding: 16px; border: 1px dashed #ccc; background-color: #f9f9f9; }
+          .label { display: block; margin-bottom: 8px; font-weight: bold; }
+          .range { width: 100%; }
+          .hint { margin-top: 8px; font-size: 12px; color: #666; }
+          .preview { margin-top: 16px; }
+          .preview-box { background-color: #e3f2fd; border: 1px dashed #2196f3; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #1976d2; }
+        `}</style>
         <div>
-          <label htmlFor="height" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+          <label htmlFor="height" className="label">
             Spacer Height: {config.height}px
           </label>
           <input
@@ -31,27 +39,17 @@ export default function Spacer({ widget, editMode, onChange }: SpacerProps) {
             max="500"
             value={config.height}
             onChange={(e) => handleConfigChange({ height: parseInt(e.target.value) })}
-            style={{ width: '100%' }}
+            className="range"
           />
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+          <div className="hint">
             Drag the slider to adjust vertical spacing
           </div>
         </div>
 
         {/* Visual preview */}
-        <div style={{ marginTop: '16px' }}>
-          <div
-            style={{
-              height: `${Math.min(config.height, 200)}px`,
-              backgroundColor: '#e3f2fd',
-              border: '1px dashed #2196f3',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '12px',
-              color: '#1976d2'
-            }}
-          >
+        <div className="preview">
+          <style>{`.preview-box-${widget.id}{ height: ${Math.min(config.height, 200)}px; }`}</style>
+          <div className={`preview-box preview-box-${widget.id}`}>
             {config.height}px {config.height > 200 && `(preview capped at 200px)`}
           </div>
         </div>
@@ -60,11 +58,8 @@ export default function Spacer({ widget, editMode, onChange }: SpacerProps) {
   }
 
   return (
-    <div
-      className="spacer-widget"
-      style={{ height: `${config.height}px` }}
-      role="presentation"
-      aria-hidden="true"
-    />
+    <div className={`spacer-widget spacer-${widget.id}`} role="presentation" aria-hidden="true">
+      <style>{`.spacer-${widget.id}{ height: ${config.height}px; }`}</style>
+    </div>
   );
 }
