@@ -15,6 +15,8 @@ interface AdminMenuListResponse {
 
 const PUBLIC_MENU_BASE = '/api/public-menus';
 const ADMIN_MENU_BASE = '/api/menus';
+const MENU_CACHE_MS = 60000;
+const menuCache = new Map<string, { data: PublicMenuItem[]; expiresAt: number }>();
 
 function isValidMenuItem(item: unknown): item is PublicMenuItem {
   if (!item || typeof item !== 'object') return false;
@@ -36,6 +38,33 @@ function validateMenuData(data: unknown): PublicMenuItem[] {
   return menu.items.filter(isValidMenuItem);
 }
 
+function getCachedMenuItems(slug: string): PublicMenuItem[] | null {
+  const cached = menuCache.get(slug);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+  return null;
+}
+
+async function fetchMenuItems(slug: string, signal?: AbortSignal): Promise<PublicMenuItem[]> {
+  const response = await fetch(`${PUBLIC_MENU_BASE}/${encodeURIComponent(slug)}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load menu (${response.status})`);
+  }
+  const data = await response.json();
+  const validatedItems = validateMenuData(data);
+  if (validatedItems.length === 0 && data?.menu?.items?.length > 0) {
+    console.warn('[MenuWidget] Received invalid menu data, items failed validation');
+  }
+  menuCache.set(slug, { data: validatedItems, expiresAt: Date.now() + MENU_CACHE_MS });
+  return validatedItems;
+}
+
 export default function MenuWidget({ widget, editMode, onChange }: MenuWidgetProps) {
   const config = widget.config as MenuWidgetConfig;
   const [menuItems, setMenuItems] = React.useState<PublicMenuItem[]>([]);
@@ -52,24 +81,18 @@ export default function MenuWidget({ widget, editMode, onChange }: MenuWidgetPro
   const loadMenu = React.useCallback(
     async (slug: string, signal?: AbortSignal) => {
       if (!slug) return;
+      const cached = getCachedMenuItems(slug);
+      if (cached) {
+        setMenuItems(cached);
+        setLoading(false);
+        setError(null);
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${PUBLIC_MENU_BASE}/${encodeURIComponent(slug)}`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: { Accept: 'application/json' },
-          signal,
-        });
-        if (!response.ok) {
-          throw new Error(`Failed to load menu (${response.status})`);
-        }
-        const data = await response.json();
-        const validatedItems = validateMenuData(data);
-        if (validatedItems.length === 0 && data?.menu?.items?.length > 0) {
-          console.warn('[MenuWidget] Received invalid menu data, items failed validation');
-        }
-        setMenuItems(validatedItems);
+        const items = await fetchMenuItems(slug, signal);
+        setMenuItems(items);
       } catch (err) {
         if ((err as Error).name === 'AbortError') {
           return;

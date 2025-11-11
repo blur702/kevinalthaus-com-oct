@@ -36,6 +36,42 @@ async function getSettings(keys: string[]): Promise<Record<string, unknown>> {
   return settings;
 }
 
+const PUBLIC_SETTINGS_CACHE_MS = Number(process.env.PUBLIC_SETTINGS_CACHE_MS || 60000);
+const PUBLIC_SETTINGS_CACHE_S = Math.max(1, Math.floor(PUBLIC_SETTINGS_CACHE_MS / 1000));
+
+type PublicSettingsResponse = {
+  site_name: string;
+  site_description: string;
+  site_url: string;
+  language: string;
+};
+
+let cachedResponse: { data: PublicSettingsResponse; expiresAt: number } | null = null;
+
+async function getPublicSettings(): Promise<PublicSettingsResponse> {
+  const now = Date.now();
+  if (cachedResponse && cachedResponse.expiresAt > now) {
+    return cachedResponse.data;
+  }
+
+  const keys = ['site_name', 'site_description', 'site_url', 'language'];
+  const settings = await getSettings(keys);
+
+  const response: PublicSettingsResponse = {
+    site_name: (settings.site_name as string) || 'Kevin Althaus',
+    site_description: (settings.site_description as string) || '',
+    site_url: (settings.site_url as string) || '',
+    language: (settings.language as string) || 'en',
+  };
+
+  cachedResponse = {
+    data: response,
+    expiresAt: now + PUBLIC_SETTINGS_CACHE_MS,
+  };
+
+  return response;
+}
+
 /**
  * GET /api/settings/public
  * Fetch public settings (site name, description, etc.)
@@ -45,16 +81,8 @@ router.get(
   '/',
   async (_req: Request, res: Response): Promise<void> => {
     try {
-      const keys = ['site_name', 'site_description', 'site_url', 'language'];
-      const settings = await getSettings(keys);
-
-      const response = {
-        site_name: (settings.site_name as string) || 'Kevin Althaus',
-        site_description: (settings.site_description as string) || '',
-        site_url: (settings.site_url as string) || '',
-        language: (settings.language as string) || 'en',
-      };
-
+      const response = await getPublicSettings();
+      res.setHeader('Cache-Control', `public, max-age=${PUBLIC_SETTINGS_CACHE_S}`);
       res.json(response);
     } catch (error) {
       logger.error('Error fetching public settings', error as Error, {});
