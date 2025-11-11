@@ -40,7 +40,9 @@ import {
   ContentCopy as CopyIcon,
   Visibility,
   VisibilityOff,
+  Palette as PaletteIcon,
 } from '@mui/icons-material';
+import { ThemeEditor } from '../components/ThemeEditor';
 import {
   getSiteSettings,
   updateSiteSettings,
@@ -667,6 +669,13 @@ const Settings: React.FC = () => {
           <Tab label="Email Settings" id="settings-tab-2" aria-controls="settings-tabpanel-2" />
           <Tab label="External APIs" id="settings-tab-3" aria-controls="settings-tabpanel-3" />
           <Tab label="API Keys" id="settings-tab-4" aria-controls="settings-tabpanel-4" />
+          <Tab
+            label="Appearance"
+            id="settings-tab-5"
+            aria-controls="settings-tabpanel-5"
+            icon={<PaletteIcon />}
+            iconPosition="start"
+          />
         </Tabs>
 
         {/* Site Configuration Tab */}
@@ -1364,6 +1373,11 @@ const Settings: React.FC = () => {
               </CardContent>
             </Card>
           )}
+        </TabPanel>
+
+        {/* Appearance Tab */}
+        <TabPanel value={activeTab} index={5}>
+          <ThemeEditor target="admin" />
         </TabPanel>
       </Paper>
 

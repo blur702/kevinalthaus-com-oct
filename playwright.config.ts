@@ -22,11 +22,11 @@ const sharedE2EEnv = {
 };
 
 export default defineConfig({
-  // Test directory
-  testDir: './e2e',
+  // Allow specs in legacy e2e folder and new tests/e2e comp_ suites
+  testDir: '.',
 
-  // Test files pattern
-  testMatch: '**/*.spec.ts',
+  // Explicit spec globs keep other source files from being picked up
+  testMatch: ['e2e/**/*.spec.ts', 'tests/e2e/**/*.spec.ts'],
 
   // Timeout for each test (30 seconds)
   timeout: 30000,

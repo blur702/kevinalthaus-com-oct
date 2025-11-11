@@ -1,3 +1,19 @@
+# E2E Test Status
+
+## 2025-11-10 — comp_ baseline suites
+- Added dedicated comp_ Playwright suites under `tests/e2e/` (`comp_auth`, `comp_dashboard`, `comp_smoke`) with `@smoke`/`@regression` annotations so CI can run `npm run test:smoke` fast.
+- Introduced shared helper `tests/e2e/utils/comp_helpers.ts` that wraps legacy `e2e/utils` login utilities.
+- New unit coverage for:
+  - `packages/main-app/src/routes/__tests__/comp_settings-public.test.ts`
+  - `packages/admin/src/services/__tests__/comp_menusService.test.ts`
+  - `plugins/page-builder/widgets/{tabs,menu}/__tests__/comp_*.test.tsx`
+  - `plugins/ssdd-validator/frontend/src/components/__tests__/comp_addressValidatorForm.test.tsx`
+- Repo root scripts:
+  - `npm run test:unit` (lerna fan-out)
+  - `npm run test:smoke` (Playwright `@smoke`)
+  - `npm run test:regression` (Playwright `@regression`)
+- Pending follow-up: wire `.github/workflows` job gating on `test:smoke`, publish coverage artifact, and seed deterministic fixtures for CRUD specs (Phase 2).
+
 # E2E Test Status - Change Site Name to "kevin"
 
 **Date**: 2025-11-10

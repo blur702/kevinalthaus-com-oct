@@ -11,6 +11,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop trigger if exists to make migration idempotent
+DROP TRIGGER IF EXISTS prevent_kevin_deletion ON users;
+
 CREATE TRIGGER prevent_kevin_deletion
 BEFORE DELETE ON users
 FOR EACH ROW

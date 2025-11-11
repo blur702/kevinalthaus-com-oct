@@ -29,6 +29,7 @@ import settingsPublicRouter from './routes/settings-public';
 import menusRouter from './routes/menus';
 import publicMenusRouter from './routes/public-menus';
 import aiServicesRouter from './routes/ai-services';
+import themesRouter from './routes/themes';
 import { editorRouter } from './routes/editor';
 import { taxonomyRouter } from './routes/taxonomy';
 import { createLogger, LogLevel } from '@monorepo/shared';
@@ -381,6 +382,7 @@ app.use('/api/public-settings', settingsPublicRouter);
 app.use('/api/public-menus', publicMenusRouter);
 // Authenticated settings endpoints
 app.use('/api/settings', settingsRouter);
+app.use('/api/themes', themesRouter);
 app.use('/api/ai', aiServicesRouter);
 app.use('/api/editor', editorRouter);
 app.use('/api/taxonomy', taxonomyRouter);

@@ -159,6 +159,15 @@ test.describe('Admin Panel Comprehensive Test', () => {
     await addItemDialog.getByLabel('Label').fill(menuLinkLabel);
     await addItemDialog.getByLabel('URL').fill(menuLinkPath);
     await addItemDialog.getByRole('button', { name: 'Add Item' }).click();
+
+    // Wait for dialog to close and success message
+    await expect(addItemDialog).not.toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(500);
+
+    // Click the menu again to expand and show the new item (UI might not auto-refresh)
+    await page.locator('li:has-text("Main Navigation")').click();
+    await page.waitForTimeout(500);
+
     await expect(page.getByRole('treeitem', { name: new RegExp(menuLinkLabel, 'i') })).toBeVisible();
 
     await page.goto('http://localhost:3001', { waitUntil: 'load' });

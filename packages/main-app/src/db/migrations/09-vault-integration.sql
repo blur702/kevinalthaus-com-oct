@@ -8,35 +8,14 @@ ADD COLUMN IF NOT EXISTS vault_path TEXT;
 
 COMMENT ON COLUMN system_settings.vault_path IS 'Vault path for encrypted sensitive settings (e.g., secret/email/brevo)';
 
--- Create api_keys table for API key management
-CREATE TABLE IF NOT EXISTS api_keys (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  key_prefix VARCHAR(20) NOT NULL UNIQUE, -- First 10 chars for identification
-  scopes JSONB NOT NULL DEFAULT '[]'::jsonb,
-  vault_path TEXT NOT NULL, -- Path to full key in Vault
-  last_used_at TIMESTAMP,
-  expires_at TIMESTAMP,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create indexes for api_keys table
-CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
-CREATE INDEX IF NOT EXISTS idx_api_keys_key_prefix ON api_keys(key_prefix);
-CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at) WHERE expires_at IS NOT NULL;
+-- Extend api_keys table for Vault integration (table created in migration 12)
+-- Add vault_path column to support optional Vault-based storage
+ALTER TABLE api_keys
+ADD COLUMN IF NOT EXISTS vault_path TEXT;
 
 -- Add comments
-COMMENT ON TABLE api_keys IS 'API keys for programmatic access - full keys stored in Vault';
-COMMENT ON COLUMN api_keys.id IS 'Unique identifier for API key';
-COMMENT ON COLUMN api_keys.user_id IS 'User who created the API key';
-COMMENT ON COLUMN api_keys.name IS 'Human-readable name for the API key';
-COMMENT ON COLUMN api_keys.key_prefix IS 'First 10 characters of the API key for identification';
-COMMENT ON COLUMN api_keys.scopes IS 'JSON array of permission scopes (read, write, admin, etc.)';
-COMMENT ON COLUMN api_keys.vault_path IS 'Vault path where full API key is stored';
-COMMENT ON COLUMN api_keys.last_used_at IS 'Last time this API key was used';
-COMMENT ON COLUMN api_keys.expires_at IS 'Expiration timestamp (NULL = never expires)';
+COMMENT ON TABLE api_keys IS 'API keys for programmatic access - can store keys directly (key_hash) or in Vault (vault_path)';
+COMMENT ON COLUMN api_keys.vault_path IS 'Optional: Vault path where full API key is stored (alternative to key_hash)';
 
 -- Create audit_log table if it doesn't exist
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -100,7 +79,7 @@ DO $$
 BEGIN
   RAISE NOTICE 'Migration 09: Vault integration completed successfully';
   RAISE NOTICE '  - Added vault_path column to system_settings';
-  RAISE NOTICE '  - Created api_keys table with Vault integration';
+  RAISE NOTICE '  - Extended api_keys table with Vault integration';
   RAISE NOTICE '  - Created audit_log table for security tracking';
   RAISE NOTICE '  - Inserted default security settings';
 END $$;

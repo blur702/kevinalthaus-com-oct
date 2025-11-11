@@ -1,6 +1,8 @@
 import { query, transaction, pool } from './index';
 import { PoolClient } from 'pg';
 import { createHash } from 'crypto';
+import fs from 'fs/promises';
+import path from 'path';
 
 // Advisory lock ID derived from application namespace to prevent collisions
 // If multiple apps share the same database, they should use different lock IDs
@@ -538,6 +540,27 @@ export async function runMigrations(): Promise<void> {
       `);
     });
 
+    // Migration 22: Settings table for application configuration
+    await runMigration('22-create-settings-table', async (client: PoolClient) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS settings (
+          id SERIAL PRIMARY KEY,
+          config_key VARCHAR(255) UNIQUE NOT NULL,
+          config_value TEXT NOT NULL,
+          description TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_settings_config_key ON settings(config_key);
+      `);
+    });
+
+    // Migration 23: Menus tables (from SQL file)
+    await runSQLFileMigration('23-menus', '14-menus.sql');
+
     // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');
   } catch (error) {
@@ -603,6 +626,36 @@ async function runMigration(
     });
     await postMigration();
     await query('INSERT INTO migrations (name) VALUES ($1)', [name]);
+    console.log(`[Migrations] Completed ${name}`);
+  } catch (error) {
+    console.error(`[Migrations] Failed ${name}:`, error);
+    throw error;
+  }
+}
+
+async function runSQLFileMigration(name: string, filename: string): Promise<void> {
+  const result = await query<{ name: string }>('SELECT name FROM migrations WHERE name = $1', [
+    name,
+  ]);
+
+  if (result.rows.length > 0) {
+    // eslint-disable-next-line no-console
+    console.log(`[Migrations] Skipping ${name} (already executed)`);
+    return;
+  }
+
+  // eslint-disable-next-line no-console
+  console.log(`[Migrations] Running ${name} from ${filename}...`);
+
+  try {
+    const migrationPath = path.join(__dirname, 'migrations', filename);
+    const sql = await fs.readFile(migrationPath, 'utf-8');
+
+    await transaction(async (client) => {
+      await client.query(sql);
+      await client.query('INSERT INTO migrations (name) VALUES ($1)', [name]);
+    });
+
     console.log(`[Migrations] Completed ${name}`);
   } catch (error) {
     console.error(`[Migrations] Failed ${name}:`, error);

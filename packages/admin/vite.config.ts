@@ -39,12 +39,20 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        // Point to API Gateway in development
-        target: 'http://localhost:3000',
+        // Point directly to Main App (bypassing gateway for reliability)
+        target: 'http://localhost:3003',
         changeOrigin: true,
-        secure: process.env.NODE_ENV === 'production' || process.env.VITE_PROXY_SECURE === 'true',
+        secure: false,
         cookieDomainRewrite: 'localhost',
         ws: true,
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('[Proxy Error]', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('[Proxy Request]', req.method, req.url, '-> http://localhost:3003' + req.url);
+          });
+        },
       },
     },
   },

@@ -24,7 +24,10 @@
     "test:e2e:chromium": "playwright test --project=chromium",
     "test:e2e:firefox": "playwright test --project=firefox",
     "test:e2e:webkit": "playwright test --project=webkit",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:unit": "lerna run test --stream",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
