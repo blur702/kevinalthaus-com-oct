@@ -316,7 +316,9 @@ app.use((req, res, next) => {
     '/health/',
     '/health/live',
     '/health/ready',
-    '/api/public-settings'
+    '/api/public-settings',
+    '/api/blog/public',
+    '/api/public-menus'
   ];
   if (allowedPublicPaths.includes(req.path)) {
     next();

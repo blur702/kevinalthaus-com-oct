@@ -2,13 +2,14 @@ import express, { Request, Response, NextFunction } from 'express';
 import type {} from '@monorepo/shared/src/types/express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { createProxyMiddleware, Options } from 'http-proxy-middleware';
 import { randomBytes } from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import http from 'http';
+import https from 'https';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import {
   compressionMiddleware,
@@ -102,7 +103,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is required for API Gateway. Set the same secret for both gateway and main-app.');
 }
-const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3001';
+const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3003';
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 const PLUGIN_ENGINE_URL = process.env.PLUGIN_ENGINE_URL || 'http://localhost:3004';
 
@@ -146,6 +147,8 @@ const ALLOWED_PROXY_TARGETS = [MAIN_APP_URL, PYTHON_SERVICE_URL, PLUGIN_ENGINE_U
 const corsOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
   : ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003'];
+const allowAllCors = corsOrigins.includes('*');
+const corsOriginSet = new Set(corsOrigins);
 
 const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
 
@@ -213,25 +216,30 @@ app.use(securityHeadersMiddleware);
 app.use(keepAliveMiddleware);
 app.use(
   cors((req, callback) => {
-    const allowAll = corsOrigins.includes('*');
-    if (allowAll) {
+    if (allowAllCors) {
       callback(null, { origin: '*', credentials: false });
       return;
     }
     const origin = req.header('Origin');
+    const normalizedOrigin = origin?.trim();
     // Require a present Origin header and membership in the allowlist
-    const isAllowed = Boolean(origin) && corsOrigins.includes(String(origin));
-    callback(null, { origin: isAllowed ? origin : false, credentials: corsCredentials });
+    const isAllowed = normalizedOrigin ? corsOriginSet.has(normalizedOrigin) : false;
+    callback(null, { origin: isAllowed ? normalizedOrigin : false, credentials: corsCredentials });
   })
 );
-app.use(morgan('combined'));
+
+if (process.env.REQUEST_LOGGING === 'morgan') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+  const morgan = require('morgan') as typeof import('morgan');
+  app.use(morgan('combined'));
+}
 
 // Cache middleware for GET requests
 app.use(cacheMiddleware);
 
 // Stricter rate limit for auth endpoints
 // In development/test mode, use more permissive limits to allow automated testing
-const shouldBypassRateLimit = (): boolean => {
+const RATE_LIMIT_BYPASS_ENABLED = (() => {
   if (process.env.DISABLE_AUTH_RATE_LIMIT === 'true') {
     return true;
   }
@@ -240,7 +248,7 @@ const shouldBypassRateLimit = (): boolean => {
     process.env.E2E_TESTING ??
     (process.env.NODE_ENV !== 'production' ? 'true' : 'false');
   return String(explicitFlag).toLowerCase() !== 'false';
-};
+})();
 
 const baseAuthRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -254,7 +262,7 @@ const baseAuthRateLimit = rateLimit({
 }) as express.RequestHandler;
 
 const authRateLimit: express.RequestHandler = (req, res, next) => {
-  if (shouldBypassRateLimit()) {
+  if (RATE_LIMIT_BYPASS_ENABLED) {
     return next();
   }
   return baseAuthRateLimit(req, res, next);
@@ -287,9 +295,37 @@ async function checkServiceHealth(url: string, timeoutMs: number = 5000): Promis
 }
 
 // Health check endpoints
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
-app.get('/health', async (_req, res): Promise<void> => {
-  // Check downstream services in parallel with independent timeouts
+const HEALTH_CACHE_MS = Number(process.env.HEALTH_CACHE_MS || 5000);
+
+interface HealthCacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+type HealthPayload = {
+  status: 'healthy' | 'degraded';
+  service: string;
+  timestamp: string;
+  version: string;
+  uptime: number;
+  checks: Record<string, 'healthy' | 'unhealthy'>;
+};
+
+type ReadyPayload =
+  | { status: 'ready'; dependencies: { mainApp: 'healthy' } }
+  | { status: 'not ready'; dependencies: { mainApp: 'unhealthy' } };
+
+const healthCache: {
+  overall?: HealthCacheEntry<HealthPayload>;
+  ready?: HealthCacheEntry<ReadyPayload>;
+} = {};
+
+async function getOverallHealth(): Promise<HealthPayload> {
+  const now = Date.now();
+  if (healthCache.overall && healthCache.overall.expiresAt > now) {
+    return healthCache.overall.data;
+  }
+
   const [mainAppHealthy, pythonServiceHealthy] = await Promise.all([
     checkServiceHealth(MAIN_APP_URL),
     checkServiceHealth(PYTHON_SERVICE_URL),
@@ -301,16 +337,38 @@ app.get('/health', async (_req, res): Promise<void> => {
   };
 
   const allHealthy = Object.values(checks).every((status) => status === 'healthy');
-  const status = allHealthy ? 'healthy' : 'degraded';
-
-  res.status(allHealthy ? 200 : 503).json({
-    status,
+  const payload: HealthPayload = {
+    status: allHealthy ? 'healthy' : 'degraded',
     service: 'api-gateway',
     timestamp: new Date().toISOString(),
     version: process.env.VERSION || '1.0.0',
     uptime: process.uptime(),
     checks,
-  });
+  };
+
+  healthCache.overall = { data: payload, expiresAt: now + HEALTH_CACHE_MS };
+  return payload;
+}
+
+async function getReadiness(): Promise<ReadyPayload> {
+  const now = Date.now();
+  if (healthCache.ready && healthCache.ready.expiresAt > now) {
+    return healthCache.ready.data;
+  }
+
+  const mainAppHealthy = await checkServiceHealth(MAIN_APP_URL);
+  const payload: ReadyPayload = mainAppHealthy
+    ? { status: 'ready', dependencies: { mainApp: 'healthy' } }
+    : { status: 'not ready', dependencies: { mainApp: 'unhealthy' } };
+
+  healthCache.ready = { data: payload, expiresAt: now + HEALTH_CACHE_MS };
+  return payload;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+app.get('/health', async (_req, res): Promise<void> => {
+  const payload = await getOverallHealth();
+  res.status(payload.status === 'healthy' ? 200 : 503).json(payload);
 });
 
 app.get('/health/live', (_req, res) => {
@@ -320,15 +378,8 @@ app.get('/health/live', (_req, res) => {
 // Readiness should probe downstream dependencies
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 app.get('/health/ready', async (_req, res) => {
-  // Check critical dependencies (main-app is required for readiness)
-  const mainAppHealthy = await checkServiceHealth(MAIN_APP_URL);
-
-  if (!mainAppHealthy) {
-    res.status(503).json({ status: 'not ready', dependencies: { mainApp: 'unhealthy' } });
-    return;
-  }
-
-  res.json({ status: 'ready', dependencies: { mainApp: 'healthy' } });
+  const payload = await getReadiness();
+  res.status(payload.status === 'ready' ? 200 : 503).json(payload);
 });
 
 // Root endpoint
@@ -348,6 +399,15 @@ interface ProxyOptions {
   timeout?: number;
 }
 
+const keepAliveAgents = {
+  http: new http.Agent({ keepAlive: true, maxSockets: 128 }),
+  https: new https.Agent({ keepAlive: true, maxSockets: 128 }),
+};
+
+function getAgentForTarget(target: string): http.Agent | https.Agent {
+  return target.startsWith('https') ? keepAliveAgents.https : keepAliveAgents.http;
+}
+
 function createProxy(options: ProxyOptions): express.RequestHandler {
   const { target, pathRewrite, includeForwardingHeaders = false, timeout } = options;
 
@@ -361,6 +421,7 @@ function createProxy(options: ProxyOptions): express.RequestHandler {
     changeOrigin: true,
     logLevel: 'warn',
     pathRewrite,
+    agent: getAgentForTarget(target),
     ...(timeout && { timeout, proxyTimeout: timeout }),
     onProxyReq: (proxyReq, req) => {
       // Set internal gateway token to verify request origin
@@ -745,7 +806,18 @@ app.use(
   })
 );
 
-// Blog routes
+// Public blog routes (no authentication required)
+app.use(
+  '/api/blog/public',
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/blog/public': '/api/blog/public' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
+// Blog routes (protected)
 app.use(
   '/api/blog',
   jwtMiddleware,
