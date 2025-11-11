@@ -18,6 +18,7 @@ const sharedE2EEnv = {
   API_GATEWAY_BASE_URL: 'http://localhost:3000',
   MAIN_APP_BASE_URL: 'http://localhost:3003',
   MAIN_APP_URL: 'http://localhost:3003',
+  PLUGIN_ENGINE_URL: 'http://localhost:3004',
 };
 
 export default defineConfig({
@@ -156,6 +157,17 @@ export default defineConfig({
       env: {
         ...sharedE2EEnv,
         PORT: '3002',
+      },
+    },
+    {
+      command: 'npm run dev --workspace=@monorepo/plugin-engine',
+      port: 3004,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        ...sharedE2EEnv,
+        PLUGIN_ENGINE_PORT: '3004',
+        PORT: '3004',
       },
     },
   ],
