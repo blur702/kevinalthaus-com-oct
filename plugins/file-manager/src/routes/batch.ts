@@ -10,15 +10,16 @@ import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import type { PluginLogger } from '@monorepo/shared';
 import { BatchService } from '../services/batchService';
+import type { StorageWrapper } from '../services/storageWrapper';
 import Joi from 'joi';
 
 // Rate limiting constants
 const MAX_BATCH_SIZE = 100; // Maximum items per batch operation
 const MAX_TAG_COUNT = 50; // Maximum tags per operation
 
-export function createBatchRouter(pool: Pool, logger: PluginLogger): Router {
+export function createBatchRouter(pool: Pool, logger: PluginLogger, storageService: StorageWrapper): Router {
   const router = Router();
-  const batchService = new BatchService(pool, logger);
+  const batchService = new BatchService(pool, logger, storageService);
 
   /**
    * POST /move - Move multiple files/folders
@@ -60,7 +61,7 @@ export function createBatchRouter(pool: Pool, logger: PluginLogger): Router {
         return;
       }
 
-      let result = { successful: [], failed: [], total: 0 };
+      let result: { successful: string[]; failed: Array<{ id: string; error: string }>; total: number } = { successful: [], failed: [], total: 0 };
 
       // Move files
       if (value.file_ids && value.file_ids.length > 0) {
@@ -258,7 +259,7 @@ export function createBatchRouter(pool: Pool, logger: PluginLogger): Router {
         return;
       }
 
-      let result = { successful: [], failed: [], total: 0 };
+      let result: { successful: string[]; failed: Array<{ id: string; error: string }>; total: number } = { successful: [], failed: [], total: 0 };
 
       // Delete files
       if (value.file_ids && value.file_ids.length > 0) {

@@ -8,12 +8,10 @@ import { login, TEST_CREDENTIALS } from './utils/auth';
 test('Debug: Click Create New Post and see what happens', async ({ page }) => {
   // Enable console logging
   page.on('console', (msg) => {
-    console.log(`BROWSER ${msg.type()}: ${msg.text()}`);
   });
 
   // Enable page error logging
   page.on('pageerror', (error) => {
-    console.log(`PAGE ERROR: ${error.message}`);
   });
 
   // Login
@@ -30,12 +28,10 @@ test('Debug: Click Create New Post and see what happens', async ({ page }) => {
   const createButton = page.locator('button').filter({ hasText: /create new post/i });
   await createButton.waitFor({ state: 'visible', timeout: 10000 });
 
-  console.log('Create New Post button is visible');
 
   // Click the button
   await createButton.click();
 
-  console.log('Clicked Create New Post button');
 
   // Wait a bit for any state changes
   await page.waitForTimeout(2000);
@@ -47,16 +43,13 @@ test('Debug: Click Create New Post and see what happens', async ({ page }) => {
   const titleInput = page.locator('input[name="title"]');
   const formVisible = await titleInput.isVisible().catch(() => false);
 
-  console.log(`Form visible: ${formVisible}`);
 
   // Check what's on the page
   const bodyText = await page.textContent('body');
-  console.log('Page content after click:', bodyText?.substring(0, 500));
 
   // Take another screenshot
   await page.screenshot({ path: 'test-results/debug-final.png', fullPage: true });
 
   // Check for any React errors
   const reactErrors = await page.locator('[class*="error"]').count();
-  console.log(`React error elements found: ${reactErrors}`);
 });

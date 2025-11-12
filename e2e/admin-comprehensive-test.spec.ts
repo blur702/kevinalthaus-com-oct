@@ -66,9 +66,7 @@ test.describe('Admin Panel Comprehensive Test', () => {
     // Step 1: Ensure authenticated (use storageState if available; otherwise login)
     await page.goto('/', { waitUntil: 'load', timeout: 30000 });
     const cookies = await page.context().cookies();
-    console.log('Auth cookies at start:', cookies.map((c) => ({ name: c.name, domain: c.domain, expires: c.expires })));
     if (page.url().includes('/login')) {
-      console.log('No auth state; logging in...');
       await loginAsAdmin(page);
     }
 
@@ -80,62 +78,52 @@ test.describe('Admin Panel Comprehensive Test', () => {
       path: 'e2e/screenshots/admin-dashboard.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-dashboard.png');
 
     // Step 2: Navigate to Users page
-    console.log('Step 2: Testing Users page...');
     await page.click('a[href="/users"]');
     await page.waitForLoadState('load');
     await page.screenshot({
       path: 'e2e/screenshots/admin-users.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-users.png');
 
     // Verify users page elements
     await expect(page.locator('h1:has-text("Users")')).toBeVisible();
 
     // Step 3: Navigate to Content page
-    console.log('Step 3: Testing Content page...');
     await page.click('a[href="/content"]');
     await page.waitForLoadState('load');
     await page.screenshot({
       path: 'e2e/screenshots/admin-content.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-content.png');
 
     // Verify content page elements
     await expect(page.locator('h1:has-text("Content")')).toBeVisible();
 
     // Step 4: Navigate to Taxonomy page
-    console.log('Step 4: Testing Taxonomy page...');
     await page.click('a[href="/taxonomy"]');
     await page.waitForLoadState('load');
     await page.screenshot({
       path: 'e2e/screenshots/admin-taxonomy.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-taxonomy.png');
 
     // Verify taxonomy page elements
     await expect(page.locator('h1:has-text("Taxonomy")')).toBeVisible();
 
     // Step 5: Navigate to Files page
-    console.log('Step 5: Testing Files page...');
     await page.click('a[href="/files"]');
     await page.waitForLoadState('load');
     await page.screenshot({
       path: 'e2e/screenshots/admin-files.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-files.png');
 
     // Verify files page elements
     await expect(page.locator('h1:has-text("File Management")')).toBeVisible();
 
     // Step 6: Manage menus and verify public navigation
-    console.log('Step 6: Testing Menu Manager...');
     await page.click('a[href="/menus"]');
     await page.waitForLoadState('load');
     await expect(page.locator('h1:has-text("Menu Manager")')).toBeVisible();
@@ -146,7 +134,6 @@ test.describe('Admin Panel Comprehensive Test', () => {
     const hasMainNav = await page.locator('li:has-text("Main Navigation")').isVisible().catch(() => false);
 
     if (hasMenuError || !hasMainNav) {
-      console.log('⚠ Menus failed to load (likely database migration issue), skipping menu test');
       // Continue to next step
     } else {
       await page.locator('li:has-text("Main Navigation")').click();
@@ -188,20 +175,17 @@ test.describe('Admin Panel Comprehensive Test', () => {
     }
 
     // Step 7: Navigate to Analytics page
-    console.log('Step 7: Testing Analytics page...');
     await page.click('a[href="/analytics"]');
     await page.waitForLoadState('load');
     await page.screenshot({
       path: 'e2e/screenshots/admin-analytics.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-analytics.png');
 
     // Verify analytics page elements
     await expect(page.locator('h1:has-text("Analytics")')).toBeVisible();
 
     // Step 8: Navigate to Settings page
-    console.log('Step 8: Testing Settings page...');
     await page.click('a[href="/settings"]');
     await page.waitForLoadState('load');
     await page.waitForTimeout(2000); // Give settings time to load
@@ -209,7 +193,6 @@ test.describe('Admin Panel Comprehensive Test', () => {
       path: 'e2e/screenshots/admin-settings.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-settings.png');
 
     // Verify settings page elements (with error boundary)
     const hasSettings = await page.locator('text=Settings').isVisible();
@@ -217,20 +200,17 @@ test.describe('Admin Panel Comprehensive Test', () => {
     expect(hasSettings || hasError).toBeTruthy();
 
     // Step 9: Navigate to Editor Test page
-    console.log('Step 9: Testing Editor Test page...');
     await page.click('a[href="/editor-test"]');
     await page.waitForLoadState('load');
     await page.screenshot({
       path: 'e2e/screenshots/admin-editor-test.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-editor-test.png');
 
     // Verify editor test page elements
     await expect(page.locator('text=Editor Test')).toBeVisible();
 
     // Step 10: Test navigation menu
-    console.log('Step 10: Verifying navigation menu...');
     await expect(page.locator('text=Dashboard')).toBeVisible();
     await expect(page.locator('text=Users')).toBeVisible();
     await expect(page.locator('text=Content')).toBeVisible();
@@ -239,11 +219,9 @@ test.describe('Admin Panel Comprehensive Test', () => {
     await expect(page.locator('text=Analytics')).toBeVisible();
     await expect(page.locator('text=Settings')).toBeVisible();
 
-    console.log('✓ All admin pages tested successfully!');
   });
 
   test('Verify Sentry integration in admin panel', async ({ page }) => {
-    console.log('Testing Sentry integration...');
 
     // Login first
     await loginAsAdmin(page);
@@ -260,7 +238,6 @@ test.describe('Admin Panel Comprehensive Test', () => {
       return typeof (window as any).Sentry !== 'undefined';
     });
 
-    console.log('Sentry SDK initialized:', sentryInitialized);
 
     // If we can access a test error trigger, use it
     // Otherwise, verify the SDK is at least loaded
@@ -276,25 +253,19 @@ test.describe('Admin Panel Comprehensive Test', () => {
       await page.waitForTimeout(3000);
 
       // Verify Sentry received the message
-      console.log('Sentry requests captured:', sentryRequests.length);
       if (sentryRequests.length > 0) {
-        console.log('✓ Sentry is properly integrated and receiving events');
       } else {
-        console.log('⚠ Sentry SDK is initialized but no events captured in this test');
       }
     } else {
-      console.log('⚠ Sentry SDK not found in window object');
     }
 
     await page.screenshot({
       path: 'e2e/screenshots/admin-sentry-test.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-sentry-test.png');
   });
 
   test('Test error handling and error boundary', async ({ page }) => {
-    console.log('Testing error boundaries...');
 
     // Login first
     await loginAsAdmin(page);
@@ -309,25 +280,21 @@ test.describe('Admin Panel Comprehensive Test', () => {
     const hasSettings = await page.locator('h1:has-text("Settings")').isVisible().catch(() => false);
 
     if (hasError) {
-      console.log('✓ Error boundary is active (as expected for Settings page)');
 
       // Take screenshot of error boundary
       await page.screenshot({
         path: 'e2e/screenshots/admin-error-boundary.png',
         fullPage: true
       });
-      console.log('✓ Screenshot saved: admin-error-boundary.png');
 
       // Check if Try Again button exists
       const tryAgainButton = await page.locator('button:has-text("Try Again")').isVisible();
       expect(tryAgainButton).toBeTruthy();
     } else if (hasSettings) {
-      console.log('✓ Settings page loaded successfully (no errors)');
     }
   });
 
   test('Test logout functionality', async ({ page }) => {
-    console.log('Testing logout...');
 
     // Login first
     await loginAsAdmin(page);
@@ -348,12 +315,9 @@ test.describe('Admin Panel Comprehensive Test', () => {
       path: 'e2e/screenshots/admin-logout.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-logout.png');
-    console.log('✓ Logout successful');
   });
 
   test('Test responsive navigation drawer', async ({ page }) => {
-    console.log('Testing responsive navigation...');
 
     // Login first
     await loginAsAdmin(page);
@@ -367,14 +331,12 @@ test.describe('Admin Panel Comprehensive Test', () => {
       path: 'e2e/screenshots/admin-mobile-view.png',
       fullPage: true
     });
-    console.log('✓ Screenshot saved: admin-mobile-view.png');
 
     // Look for menu icon (should be visible on mobile)
     const menuButton = page.locator('button[aria-label="open drawer"]');
     const isMenuVisible = await menuButton.isVisible();
 
     if (isMenuVisible) {
-      console.log('✓ Mobile menu button is visible');
 
       // Click to open drawer
       await menuButton.click();
@@ -385,9 +347,7 @@ test.describe('Admin Panel Comprehensive Test', () => {
         path: 'e2e/screenshots/admin-mobile-drawer-open.png',
         fullPage: true
       });
-      console.log('✓ Screenshot saved: admin-mobile-drawer-open.png');
     } else {
-      console.log('⚠ Mobile menu button not found (may use different viewport breakpoint)');
     }
 
     // Reset viewport

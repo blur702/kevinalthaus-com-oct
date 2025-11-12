@@ -17,7 +17,6 @@ test.describe('Sentry Integration', () => {
       const text = msg.text();
       if (text.includes('Sentry') || text.includes('sentry')) {
         sentryLogs.push(text);
-        console.log('Sentry log:', text);
       }
     });
 
@@ -30,8 +29,6 @@ test.describe('Sentry Integration', () => {
       return typeof (window as any).Sentry !== 'undefined';
     });
 
-    console.log('Sentry initialized:', sentryInitialized);
-    console.log('Sentry logs captured:', sentryLogs);
 
     // Validate required environment variables
     if (!process.env.TEST_ADMIN_USERNAME || !process.env.TEST_ADMIN_PASSWORD) {
@@ -54,12 +51,10 @@ test.describe('Sentry Integration', () => {
       return typeof (window as any).Sentry !== 'undefined';
     });
 
-    console.log('Sentry active after login:', sentryStillActive);
 
     // Test error capture by triggering a test error
     await page.evaluate(() => {
       if ((window as any).Sentry) {
-        console.log('Sentry is available - capturing test message');
         (window as any).Sentry.captureMessage('Test Sentry integration from Playwright');
       }
     });
@@ -85,12 +80,10 @@ test.describe('Sentry Integration', () => {
       return typeof (window as any).Sentry !== 'undefined';
     });
 
-    console.log('Frontend Sentry initialized:', sentryInitialized);
 
     // Test error capture
     await page.evaluate(() => {
       if ((window as any).Sentry) {
-        console.log('Frontend Sentry is available');
         (window as any).Sentry.captureMessage('Test frontend Sentry integration');
       }
     });

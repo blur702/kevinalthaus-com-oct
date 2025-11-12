@@ -25,6 +25,7 @@ import type {
   ImageResult,
 } from '@monorepo/shared';
 import { JSDOM } from 'jsdom';
+import { storageService } from '../server';
 
 /**
  * Editor Service
@@ -234,12 +235,57 @@ export class EditorService implements IEditorService {
 
   /**
    * Handle image upload
-   * Note: This is a placeholder that should integrate with the upload service
+   * Integrates with StorageService for file upload and processing
    */
-  async uploadImage(_file: File | Buffer, _metadata?: ImageMetadata): Promise<ImageResult> {
-    // TODO: Integrate with existing upload service
-    // For now, throw error to indicate implementation needed
-    throw new Error('Image upload not yet implemented - integrate with upload service');
+  async uploadImage(file: File | Buffer, metadata?: ImageMetadata): Promise<ImageResult> {
+    if (!this.initialized) {
+      throw new Error('EditorService not initialized');
+    }
+
+    // Convert File to Buffer if needed
+    let buffer: Buffer;
+    let originalName: string;
+    let mimeType: string;
+
+    if (Buffer.isBuffer(file)) {
+      buffer = file;
+      originalName = metadata?.filename || 'image.jpg';
+      mimeType = metadata?.mimeType || 'image/jpeg';
+    } else {
+      // Handle File object (browser environment)
+      const arrayBuffer = await file.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      originalName = file.name;
+      mimeType = file.type;
+    }
+
+    // Upload to storage service
+    const uploadResult = await storageService.uploadFile(
+      'editor', // plugin ID for editor uploads
+      {
+        buffer,
+        originalname: originalName,
+        mimetype: mimeType,
+        size: buffer.length,
+      },
+      metadata?.userId || 'system',
+      {
+        generateThumbnail: true,
+        thumbnailWidth: 300,
+        thumbnailHeight: 300,
+        quality: 80,
+      }
+    );
+
+    return {
+      id: uploadResult.id,
+      url: uploadResult.url,
+      thumbnailUrl: uploadResult.thumbnailUrl,
+      width: uploadResult.width,
+      height: uploadResult.height,
+      alt: metadata?.alt,
+      title: metadata?.title,
+    };
   }
 
   /**

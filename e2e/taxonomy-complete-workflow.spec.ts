@@ -57,7 +57,6 @@ test.describe('Complete Taxonomy Workflow', () => {
     if (response.status() === 201) {
       const data = await response.json();
       categoriesVocabId = data.vocabulary.id;
-      console.log('✓ Created Categories vocabulary:', categoriesVocabId);
     } else {
       // Get existing vocabulary
       const getResponse = await request.get(`${API_URL}/api/taxonomy/vocabularies/machine-name/categories`, {
@@ -65,7 +64,6 @@ test.describe('Complete Taxonomy Workflow', () => {
       });
       const data = await getResponse.json();
       categoriesVocabId = data.vocabulary.id;
-      console.log('✓ Using existing Categories vocabulary:', categoriesVocabId);
     }
   });
 
@@ -88,14 +86,12 @@ test.describe('Complete Taxonomy Workflow', () => {
     if (response.status() === 201) {
       const data = await response.json();
       tagsVocabId = data.vocabulary.id;
-      console.log('✓ Created Tags vocabulary:', tagsVocabId);
     } else {
       const getResponse = await request.get(`${API_URL}/api/taxonomy/vocabularies/machine-name/tags`, {
         headers: { Cookie: `accessToken=${accessToken}` },
       });
       const data = await getResponse.json();
       tagsVocabId = data.vocabulary.id;
-      console.log('✓ Using existing Tags vocabulary:', tagsVocabId);
     }
   });
 
@@ -115,7 +111,6 @@ test.describe('Complete Taxonomy Workflow', () => {
     expect(techResponse.status()).toBe(201);
     const techData = await techResponse.json();
     techCategoryId = techData.term.id;
-    console.log('✓ Created Technology category:', techCategoryId);
 
     // Create "Tutorial" category
     const tutorialResponse = await request.post(`${API_URL}/api/taxonomy/terms`, {
@@ -132,7 +127,6 @@ test.describe('Complete Taxonomy Workflow', () => {
     expect(tutorialResponse.status()).toBe(201);
     const tutorialData = await tutorialResponse.json();
     tutorialCategoryId = tutorialData.term.id;
-    console.log('✓ Created Tutorial category:', tutorialCategoryId);
   });
 
   test('should create tag terms', async ({ request }) => {
@@ -151,7 +145,6 @@ test.describe('Complete Taxonomy Workflow', () => {
     expect(jsResponse.status()).toBe(201);
     const jsData = await jsResponse.json();
     jsTagId = jsData.term.id;
-    console.log('✓ Created JavaScript tag:', jsTagId);
 
     // Create "React" tag
     const reactResponse = await request.post(`${API_URL}/api/taxonomy/terms`, {
@@ -168,7 +161,6 @@ test.describe('Complete Taxonomy Workflow', () => {
     expect(reactResponse.status()).toBe(201);
     const reactData = await reactResponse.json();
     reactTagId = reactData.term.id;
-    console.log('✓ Created React tag:', reactTagId);
   });
 
   test('should create blog post', async ({ request }) => {
@@ -186,7 +178,6 @@ test.describe('Complete Taxonomy Workflow', () => {
     expect(response.status()).toBe(201);
     const data = await response.json();
     blogPostId = data.id;
-    console.log('✓ Created blog post:', blogPostId);
   });
 
   test('should associate categories with blog post', async ({ request }) => {
@@ -198,7 +189,6 @@ test.describe('Complete Taxonomy Workflow', () => {
       }
     );
     expect(techResponse.status()).toBe(201);
-    console.log('✓ Associated Technology category');
 
     // Associate Tutorial category
     const tutorialResponse = await request.post(
@@ -208,7 +198,6 @@ test.describe('Complete Taxonomy Workflow', () => {
       }
     );
     expect(tutorialResponse.status()).toBe(201);
-    console.log('✓ Associated Tutorial category');
   });
 
   test('should associate tags with blog post', async ({ request }) => {
@@ -220,7 +209,6 @@ test.describe('Complete Taxonomy Workflow', () => {
       }
     );
     expect(jsResponse.status()).toBe(201);
-    console.log('✓ Associated JavaScript tag');
 
     // Associate React tag
     const reactResponse = await request.post(
@@ -230,7 +218,6 @@ test.describe('Complete Taxonomy Workflow', () => {
       }
     );
     expect(reactResponse.status()).toBe(201);
-    console.log('✓ Associated React tag');
   });
 
   test('should retrieve blog post with taxonomy terms', async ({ request }) => {
@@ -254,7 +241,6 @@ test.describe('Complete Taxonomy Workflow', () => {
     expect(termNames).toContain('JavaScript');
     expect(termNames).toContain('React');
 
-    console.log('✓ Retrieved all taxonomy terms for blog post');
   });
 
   test('should list entities by term', async ({ request }) => {
@@ -271,7 +257,6 @@ test.describe('Complete Taxonomy Workflow', () => {
     expect(Array.isArray(data.entity_ids)).toBeTruthy();
     expect(data.entity_ids).toContain(blogPostId);
 
-    console.log('✓ Found blog post by Technology category');
   });
 
   test('should remove taxonomy association', async ({ request }) => {
@@ -283,7 +268,6 @@ test.describe('Complete Taxonomy Workflow', () => {
     );
 
     expect(response.ok()).toBeTruthy();
-    console.log('✓ Removed React tag association');
 
     // Verify removal
     const getResponse = await request.get(

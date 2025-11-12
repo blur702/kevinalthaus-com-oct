@@ -56,7 +56,6 @@ test.describe('Taxonomy API Tests', () => {
     // Store for use in other tests
     testVocabularyId = data.vocabulary.id;
 
-    console.log('✓ Created vocabulary:', testVocabularyId);
   });
 
   test('should retrieve all vocabularies', async ({ request }) => {
@@ -71,31 +70,29 @@ test.describe('Taxonomy API Tests', () => {
     expect(data.vocabularies).toBeDefined();
     expect(Array.isArray(data.vocabularies)).toBeTruthy();
 
-    console.log(`✓ Retrieved ${data.vocabularies.length} vocabularies`);
   });
 
   test('should create a term within a vocabulary', async ({ request }) => {
-    // First ensure we have a vocabulary
-    if (!testVocabularyId) {
-      const vocabResponse = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
-        headers: {
-          Cookie: `accessToken=${accessToken}`
-        },
-        data: {
-          name: 'Temp Vocab',
-          machine_name: `temp_vocab_${Date.now()}`,
-        },
-      });
-      const vocabData = await vocabResponse.json();
-      testVocabularyId = vocabData.vocabulary.id;
-    }
+    // Create a vocabulary for this test to be independent
+    const vocabResponse = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        name: 'Term Test Vocab',
+        machine_name: `term_test_vocab_${Date.now()}`,
+      },
+    });
+    expect(vocabResponse.status()).toBe(201);
+    const vocabData = await vocabResponse.json();
+    const vocabularyId = vocabData.vocabulary.id;
 
     const response = await request.post(`${API_URL}/api/taxonomy/terms`, {
       headers: {
         Cookie: `accessToken=${accessToken}`
       },
       data: {
-        vocabulary_id: testVocabularyId,
+        vocabulary_id: vocabularyId,
         name: 'Test Term',
         slug: `test-term-${Date.now()}`,
         description: 'Test term for Playwright',
@@ -109,15 +106,36 @@ test.describe('Taxonomy API Tests', () => {
 
     testTermId = data.term.id;
 
-    console.log('✓ Created term:', testTermId);
   });
 
   test('should retrieve terms for a vocabulary', async ({ request }) => {
-    if (!testVocabularyId) {
-      test.skip(true, 'No vocabulary ID available');
-    }
+    // Create a vocabulary with a term for this test to be independent
+    const vocabResponse = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        name: 'Retrieve Terms Vocab',
+        machine_name: `retrieve_terms_vocab_${Date.now()}`,
+      },
+    });
+    expect(vocabResponse.status()).toBe(201);
+    const vocabData = await vocabResponse.json();
+    const vocabularyId = vocabData.vocabulary.id;
 
-    const response = await request.get(`${API_URL}/api/taxonomy/vocabularies/${testVocabularyId}/terms`, {
+    // Create a term in this vocabulary
+    await request.post(`${API_URL}/api/taxonomy/terms`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        vocabulary_id: vocabularyId,
+        name: 'Test Term for Retrieval',
+        slug: `test-term-retrieval-${Date.now()}`,
+      },
+    });
+
+    const response = await request.get(`${API_URL}/api/taxonomy/vocabularies/${vocabularyId}/terms`, {
       headers: {
         Cookie: `accessToken=${accessToken}`
       }
@@ -127,16 +145,39 @@ test.describe('Taxonomy API Tests', () => {
     const data = await response.json();
     expect(data.terms).toBeDefined();
     expect(Array.isArray(data.terms)).toBeTruthy();
+    expect(data.terms.length).toBeGreaterThan(0);
 
-    console.log(`✓ Retrieved ${data.terms.length} terms for vocabulary`);
   });
 
   test('should retrieve a specific term', async ({ request }) => {
-    if (!testTermId) {
-      test.skip(true, 'No term ID available');
-    }
+    // Create a vocabulary and term for this test to be independent
+    const vocabResponse = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        name: 'Specific Term Vocab',
+        machine_name: `specific_term_vocab_${Date.now()}`,
+      },
+    });
+    expect(vocabResponse.status()).toBe(201);
+    const vocabData = await vocabResponse.json();
 
-    const response = await request.get(`${API_URL}/api/taxonomy/terms/${testTermId}`, {
+    const termResponse = await request.post(`${API_URL}/api/taxonomy/terms`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        vocabulary_id: vocabData.vocabulary.id,
+        name: 'Specific Test Term',
+        slug: `specific-test-term-${Date.now()}`,
+      },
+    });
+    expect(termResponse.status()).toBe(201);
+    const termData = await termResponse.json();
+    const termId = termData.term.id;
+
+    const response = await request.get(`${API_URL}/api/taxonomy/terms/${termId}`, {
       headers: {
         Cookie: `accessToken=${accessToken}`
       }
@@ -145,9 +186,8 @@ test.describe('Taxonomy API Tests', () => {
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.term).toBeDefined();
-    expect(data.term.id).toBe(testTermId);
+    expect(data.term.id).toBe(termId);
 
-    console.log('✓ Retrieved term:', data.term.name);
   });
 
   test('should get vocabulary by machine name', async ({ request }) => {
@@ -161,20 +201,29 @@ test.describe('Taxonomy API Tests', () => {
     if (response.status() === 200) {
       const data = await response.json();
       expect(data.vocabulary).toBeDefined();
-      console.log('✓ Found vocabulary by machine name: categories');
     } else if (response.status() === 404) {
-      console.log('ℹ Vocabulary "categories" does not exist yet (expected for new setup)');
     } else {
       throw new Error(`Unexpected status: ${response.status()}`);
     }
   });
 
   test('should update a vocabulary', async ({ request }) => {
-    if (!testVocabularyId) {
-      test.skip(true, 'No vocabulary ID available');
-    }
+    // Create a vocabulary for this test to be independent
+    const createResponse = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        name: 'Update Test Vocab',
+        machine_name: `update_test_vocab_${Date.now()}`,
+        description: 'Original description',
+      },
+    });
+    expect(createResponse.status()).toBe(201);
+    const createData = await createResponse.json();
+    const vocabularyId = createData.vocabulary.id;
 
-    const response = await request.put(`${API_URL}/api/taxonomy/vocabularies/${testVocabularyId}`, {
+    const response = await request.put(`${API_URL}/api/taxonomy/vocabularies/${vocabularyId}`, {
       headers: {
         Cookie: `accessToken=${accessToken}`
       },
@@ -188,15 +237,38 @@ test.describe('Taxonomy API Tests', () => {
     const data = await response.json();
     expect(data.vocabulary.name).toBe('Updated Test Categories');
 
-    console.log('✓ Updated vocabulary');
   });
 
   test('should update a term', async ({ request }) => {
-    if (!testTermId) {
-      test.skip(true, 'No term ID available');
-    }
+    // Create a vocabulary and term for this test to be independent
+    const vocabResponse = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        name: 'Update Term Vocab',
+        machine_name: `update_term_vocab_${Date.now()}`,
+      },
+    });
+    expect(vocabResponse.status()).toBe(201);
+    const vocabData = await vocabResponse.json();
 
-    const response = await request.put(`${API_URL}/api/taxonomy/terms/${testTermId}`, {
+    const termResponse = await request.post(`${API_URL}/api/taxonomy/terms`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        vocabulary_id: vocabData.vocabulary.id,
+        name: 'Original Term Name',
+        slug: `original-term-${Date.now()}`,
+        description: 'Original description',
+      },
+    });
+    expect(termResponse.status()).toBe(201);
+    const termData = await termResponse.json();
+    const termId = termData.term.id;
+
+    const response = await request.put(`${API_URL}/api/taxonomy/terms/${termId}`, {
       headers: {
         Cookie: `accessToken=${accessToken}`
       },
@@ -210,37 +282,67 @@ test.describe('Taxonomy API Tests', () => {
     const data = await response.json();
     expect(data.term.name).toBe('Updated Test Term');
 
-    console.log('✓ Updated term');
   });
 
   test('should delete a term', async ({ request }) => {
-    if (!testTermId) {
-      test.skip(true, 'No term ID available');
-    }
+    // Create a vocabulary and term for this test to be independent
+    const vocabResponse = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        name: 'Delete Term Vocab',
+        machine_name: `delete_term_vocab_${Date.now()}`,
+      },
+    });
+    expect(vocabResponse.status()).toBe(201);
+    const vocabData = await vocabResponse.json();
 
-    const response = await request.delete(`${API_URL}/api/taxonomy/terms/${testTermId}`, {
+    const termResponse = await request.post(`${API_URL}/api/taxonomy/terms`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        vocabulary_id: vocabData.vocabulary.id,
+        name: 'Term To Delete',
+        slug: `term-to-delete-${Date.now()}`,
+      },
+    });
+    expect(termResponse.status()).toBe(201);
+    const termData = await termResponse.json();
+    const termId = termData.term.id;
+
+    const response = await request.delete(`${API_URL}/api/taxonomy/terms/${termId}`, {
       headers: {
         Cookie: `accessToken=${accessToken}`
       }
     });
 
     expect(response.ok()).toBeTruthy();
-    console.log('✓ Deleted term');
   });
 
   test('should delete a vocabulary', async ({ request }) => {
-    if (!testVocabularyId) {
-      test.skip(true, 'No vocabulary ID available');
-    }
+    // Create a vocabulary for this test to be independent
+    const createResponse = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`
+      },
+      data: {
+        name: 'Vocab To Delete',
+        machine_name: `vocab_to_delete_${Date.now()}`,
+      },
+    });
+    expect(createResponse.status()).toBe(201);
+    const createData = await createResponse.json();
+    const vocabularyId = createData.vocabulary.id;
 
-    const response = await request.delete(`${API_URL}/api/taxonomy/vocabularies/${testVocabularyId}`, {
+    const response = await request.delete(`${API_URL}/api/taxonomy/vocabularies/${vocabularyId}`, {
       headers: {
         Cookie: `accessToken=${accessToken}`
       }
     });
 
     expect(response.ok()).toBeTruthy();
-    console.log('✓ Deleted vocabulary');
   });
 });
 
@@ -275,6 +377,5 @@ test.describe('Taxonomy Integration Tests', () => {
     expect(data.vocabularies).toBeDefined();
     expect(Array.isArray(data.vocabularies)).toBeTruthy();
 
-    console.log('✓ Taxonomy service is operational');
   });
 });

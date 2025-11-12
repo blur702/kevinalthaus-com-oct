@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import DOMPurify from 'isomorphic-dompurify';
 import { WidgetInstance, WidgetConfig } from '../../src/types';
 import { TabsConfig, TabItem } from './types';
@@ -16,27 +16,17 @@ function generateTabId(): string {
   return `tab-${tabIdCounter}`;
 }
 
-export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetProps) {
+export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetProps): JSX.Element {
   const config = widget.config as TabsConfig;
   const [activeTabId, setActiveTabId] = useState(config.tabs[0]?.id);
 
-  const dynamicTabStyles = useMemo(
-    () =>
-      ({
-        '--tabs-active-bg': config.activeTabBackgroundColor,
-        '--tabs-inactive-bg': config.inactiveTabBackgroundColor,
-        '--tabs-text-color': config.tabTextColor,
-      }) as React.CSSProperties,
-    [config.activeTabBackgroundColor, config.inactiveTabBackgroundColor, config.tabTextColor]
-  );
-
-  const handleConfigChange = (updates: Partial<TabsConfig>) => {
+  const handleConfigChange = (updates: Partial<TabsConfig>): void => {
     if (onChange) {
       onChange({ ...config, ...updates });
     }
   };
 
-  const addTab = () => {
+  const addTab = (): void => {
     const newTab: TabItem = {
       id: generateTabId(),
       title: `Tab ${config.tabs.length + 1}`,
@@ -45,7 +35,7 @@ export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetPro
     handleConfigChange({ tabs: [...config.tabs, newTab] });
   };
 
-  const removeTab = (id: string) => {
+  const removeTab = (id: string): void => {
     const updatedTabs = config.tabs.filter(tab => tab.id !== id);
     if (activeTabId === id && updatedTabs.length > 0) {
       setActiveTabId(updatedTabs[0].id);
@@ -53,7 +43,7 @@ export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetPro
     handleConfigChange({ tabs: updatedTabs });
   };
 
-  const updateTab = (id: string, updates: Partial<TabItem>) => {
+  const updateTab = (id: string, updates: Partial<TabItem>): void => {
     handleConfigChange({
       tabs: config.tabs.map(tab => tab.id === id ? { ...tab, ...updates } : tab)
     });
@@ -155,14 +145,14 @@ export default function TabsWidget({ widget, editMode, onChange }: TabsWidgetPro
   const activeTab = config.tabs.find(tab => tab.id === activeTabId) || config.tabs[0];
 
   return (
-    <div className={styles.widget} style={dynamicTabStyles}>
+  <div className={styles.widget}>
       <div className={styles.tabsHeader} role="tablist">
         {config.tabs.map((tab) => (
           <button
             key={tab.id}
             role="tab"
             id={`tab-${tab.id}`}
-            aria-selected={tab.id === activeTabId ? "true" : "false"}
+            aria-selected={tab.id === activeTabId ? 'true' : 'false'}
             aria-controls={`tabpanel-${tab.id}`}
             onClick={() => setActiveTabId(tab.id)}
             tabIndex={tab.id === activeTabId ? 0 : -1}

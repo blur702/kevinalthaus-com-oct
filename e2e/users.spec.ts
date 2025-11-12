@@ -111,6 +111,7 @@ test.describe('User Management', () => {
       const totalMatch = pageInfo?.match(/of (\d+)/);
       const total = totalMatch ? parseInt(totalMatch[1]) : 0;
 
+      // Only test if there are enough users for pagination
       if (total > 25) {
         // Wait for response when navigating to next page
         const responsePromise = page.waitForResponse((response) =>
@@ -129,8 +130,9 @@ test.describe('User Management', () => {
           .textContent();
         expect(newPageInfo).not.toBe(pageInfo);
       } else {
-        // Skip test if not enough data
-        test.skip();
+        // If not enough users exist, verify pagination is disabled
+        const nextButton = page.locator(selectors.users.pagination.nextButton);
+        await expect(nextButton).toBeDisabled();
       }
     });
 
@@ -140,6 +142,7 @@ test.describe('User Management', () => {
       const totalMatch = pageInfo?.match(/of (\d+)/);
       const total = totalMatch ? parseInt(totalMatch[1]) : 0;
 
+      // Only test if there are enough users for pagination
       if (total > 25) {
         // Wait for response when going to next page
         let responsePromise = page.waitForResponse((response) =>
@@ -165,7 +168,9 @@ test.describe('User Management', () => {
           .textContent();
         expect(newPageInfo).toContain('1-');
       } else {
-        test.skip();
+        // If not enough users exist, verify we're on the first page and previous is disabled
+        const previousButton = page.locator(selectors.users.pagination.previousButton);
+        await expect(previousButton).toBeDisabled();
       }
     });
   });

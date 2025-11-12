@@ -7,34 +7,26 @@ import { test, expect } from '@playwright/test';
 test.describe('Create Cats Blog Post', () => {
   test('should create a blog post about cats with 3 paragraphs', async ({ page }) => {
     // Step 1: Login as kevin
-    console.log('Step 1: Logging in as kevin...');
     await page.goto('/login');
     await page.locator('input[name="identifier"]').fill('kevin');
     await page.locator('input[name="password"]').fill('(130Bpm)');
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL('/', { timeout: 10000 });
-    console.log('✓ Logged in successfully');
 
     // Step 2: Navigate to Content page
-    console.log('Step 2: Navigating to Content page...');
     await page.goto('/content');
     await expect(page).toHaveURL('/content', { timeout: 5000 });
-    console.log('✓ Content page loaded');
 
     // Step 3: Click Create New Post button
-    console.log('Step 3: Opening blog post form...');
     const createButton = page.locator('button:has-text("New Post"), button:has-text("Create Post"), button:has-text("Add Post")').first();
     await createButton.waitFor({ state: 'visible', timeout: 10000 });
     await createButton.click();
-    console.log('✓ Blog post form opened');
 
     // Step 4: Wait for form to be ready
     await page.waitForSelector('input[name="title"]', { timeout: 10000 });
     await page.waitForSelector('textarea[name="body_html"]', { timeout: 5000 });
-    console.log('✓ Form fields loaded');
 
     // Step 5: Fill in the blog post about cats
-    console.log('Step 5: Creating blog post about cats...');
 
     const title = 'Pawsitively Purrfect: Why Cats Are the Ultimate Companion';
     const content = `<h2>The Independent Charm of Feline Friends</h2>
@@ -53,22 +45,18 @@ test.describe('Create Cats Blog Post', () => {
 
     // Fill in title
     await page.locator('input[name="title"]').fill(title);
-    console.log(`✓ Title: ${title}`);
 
     // Fill in content
     await page.locator('textarea[name="body_html"]').fill(content);
-    console.log('✓ Content: 3 paragraphs about cats with HTML formatting');
 
     // Fill in excerpt if available
     const excerptField = page.locator('textarea[name="excerpt"]');
     const excerptCount = await excerptField.count();
     if (excerptCount > 0) {
       await excerptField.fill(excerpt);
-      console.log('✓ Excerpt added');
     }
 
     // Step 6: Submit the blog post
-    console.log('Step 6: Submitting blog post...');
     const submitButton = page.locator('button:has-text("Create"), button:has-text("Save")').first();
     await expect(submitButton).toBeEnabled();
 
@@ -78,20 +66,12 @@ test.describe('Create Cats Blog Post', () => {
     // Wait for either redirect to blog list or success message
     try {
       await expect(page).toHaveURL('/content', { timeout: 10000 });
-      console.log('✓ Redirected back to content list');
     } catch {
       // Check for success message instead
       const successMessage = page.locator('text=/success|created|saved/i');
       await expect(successMessage).toBeVisible({ timeout: 5000 });
-      console.log('✓ Success message displayed');
     }
 
-    console.log('\n✅ BLOG POST CREATED SUCCESSFULLY!');
-    console.log('-----------------------------------');
-    console.log('Title: Pawsitively Purrfect: Why Cats Are the Ultimate Companion');
-    console.log('Paragraphs: 3 well-crafted paragraphs about cats');
-    console.log('Content includes: HTML formatting, headers, and proper structure');
-    console.log('-----------------------------------');
   });
 
   test('should verify the cats post appears in the blog list', async ({ page }) => {
@@ -111,13 +91,10 @@ test.describe('Create Cats Blog Post', () => {
     // Wait for the post to appear
     try {
       await catsPost.waitFor({ state: 'visible', timeout: 5000 });
-      console.log('✓ Cats blog post found in the list!');
 
       // Try to click on it to view details
       await catsPost.click();
-      console.log('✓ Successfully opened cats post');
     } catch (error) {
-      console.log('ℹ Post might not be visible yet or pagination may be needed');
     }
   });
 });

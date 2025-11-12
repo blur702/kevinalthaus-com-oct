@@ -39,7 +39,6 @@ test.describe('Manual Taxonomy Verification', () => {
     const taxonomyHeading = page.locator('text=/Taxonomy/i').first();
     await expect(taxonomyHeading).toBeVisible({ timeout: 10000 });
 
-    console.log('✓ Taxonomy page is accessible');
 
     // Take a screenshot for verification
     await page.screenshot({ path: 'test-results/taxonomy-page-screenshot.png', fullPage: true });
@@ -66,7 +65,6 @@ test.describe('Manual Taxonomy Verification', () => {
     const contentHeading = page.locator('text=/Content/i').first();
     await expect(contentHeading).toBeVisible({ timeout: 10000 });
 
-    console.log('✓ Content page is accessible');
 
     // Take a screenshot
     await page.screenshot({ path: 'test-results/content-page-screenshot.png', fullPage: true });
@@ -101,7 +99,6 @@ test.describe('Manual Taxonomy Verification', () => {
     const titleField = page.locator('input[name="title"]');
     await expect(titleField).toBeVisible({ timeout: 10000 });
 
-    console.log('✓ Blog post creation form loaded');
 
     // Take a screenshot
     await page.screenshot({ path: 'test-results/blog-form-screenshot.png', fullPage: true });

@@ -9,10 +9,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { createFoldersRouter, createFilesFolderRouter } from './routes/folders';
 import { createBatchRouter } from './routes/batch';
+import { StorageWrapper } from './services/storageWrapper';
 
 export default class FileManagerPlugin implements PluginLifecycleHooks {
   private pool: Pool | null = null;
   private logger: PluginLogger | null = null;
+  private storageService: StorageWrapper | null = null;
 
   /**
    * Called when plugin is first installed
@@ -44,11 +46,15 @@ export default class FileManagerPlugin implements PluginLifecycleHooks {
     this.logger.info('Activating File Manager Plugin...');
 
     try {
+      // Initialize StorageWrapper for file operations
+      this.storageService = new StorageWrapper(this.pool, this.logger);
+      this.logger.info('StorageWrapper initialized');
+
       // Register API routes
       if (context.app) {
         const foldersRouter = createFoldersRouter(this.pool, this.logger);
         const filesFolderRouter = createFilesFolderRouter(this.pool, this.logger);
-        const batchRouter = createBatchRouter(this.pool, this.logger);
+        const batchRouter = createBatchRouter(this.pool, this.logger, this.storageService);
 
         context.app.use('/api/file-manager/folders', foldersRouter);
         context.app.use('/api/file-manager/files', filesFolderRouter);
@@ -76,6 +82,9 @@ export default class FileManagerPlugin implements PluginLifecycleHooks {
     this.logger.info('Deactivating File Manager Plugin...');
 
     try {
+      // Release reference to StorageService (managed by main app)
+      this.storageService = null;
+
       // Routes are automatically unregistered by plugin engine
       this.logger.info('File Manager Plugin deactivated successfully');
     } catch (error) {

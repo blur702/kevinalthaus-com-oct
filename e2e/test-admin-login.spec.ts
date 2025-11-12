@@ -22,7 +22,6 @@ test.describe('Admin Login Test', () => {
     // Take a screenshot for verification
     await page.screenshot({ path: 'e2e/screenshots/admin-dashboard.png', fullPage: true });
 
-    console.log('✅ Successfully logged in to admin panel');
   });
 
   test('should display user info after login', async ({ page }) => {
@@ -36,7 +35,6 @@ test.describe('Admin Login Test', () => {
     // Check for user-specific elements (adjust selectors based on your UI)
     // This might be a user menu, username display, etc.
     const pageContent = await page.content();
-    console.log('Page loaded successfully');
 
     // Verify the dashboard has loaded
     await expect(page).toHaveURL(/\/(dashboard)?$/);

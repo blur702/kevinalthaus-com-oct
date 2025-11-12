@@ -18,6 +18,7 @@ import {
   apiKeyCreationRateLimit,
   emailRateLimit
 } from '../middleware/rateLimit';
+import { emailService } from '../services/emailService';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -677,23 +678,55 @@ router.post(
         return;
       }
 
+      // Get user email to send test to
+      const userResult = await query('SELECT email FROM users WHERE id = $1', [userId]);
+      if (!userResult.rows.length) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+        return;
+      }
+
+      const userEmail = userResult.rows[0].email;
+
       // Log audit event
       await logAudit(userId, 'email_test', 'email_settings', undefined, {
         smtp_host,
-        smtp_from_email
+        smtp_from_email,
+        test_recipient: userEmail
       });
 
-      // TODO: Implement actual email sending with nodemailer
-      logger.info('Test email requested', {
+      // Send test email
+      logger.info('Sending test email', {
         smtp_host,
         smtp_from_email,
+        to: userEmail,
         userId
       });
 
-      res.json({
-        success: true,
-        message: 'Test email sent successfully'
-      });
+      try {
+        const result = await emailService.sendTestEmail(userEmail);
+
+        if (result.success) {
+          res.json({
+            success: true,
+            message: `Test email sent successfully to ${userEmail}`,
+            messageId: result.messageId
+          });
+        } else {
+          res.status(500).json({
+            success: false,
+            message: `Failed to send test email: ${result.error || 'Unknown error'}`
+          });
+        }
+      } catch (emailError) {
+        logger.error('Failed to send test email', emailError as Error);
+        res.status(500).json({
+          success: false,
+          message: `Email service error: ${(emailError as Error).message}`
+        });
+      }
     } catch (error) {
       logger.error('Error testing email settings', error as Error, {});
       res.status(500).json({

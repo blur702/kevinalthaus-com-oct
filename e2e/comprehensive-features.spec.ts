@@ -97,40 +97,47 @@ test.describe('Comprehensive Admin Feature Tests', () => {
   });
 
   test('should edit an existing blog post', async ({ page }) => {
-    // Navigate to Content page
+    // First create a post to edit, making this test independent
     await page.goto('/content');
     await expect(page).toHaveURL('/content');
 
-    // Find first blog post in the list and click edit
-    const firstEditButton = page.locator('button[aria-label="Edit"], button:has-text("Edit")').first();
+    // Create a new post
+    const createButton = page.locator('button:has-text("New Post"), button:has-text("Create Post"), button:has-text("Add Post")').first();
+    await createButton.click({ timeout: 5000 });
 
-    // Check if there are any posts
-    const editButtonCount = await firstEditButton.count();
-    if (editButtonCount === 0) {
-      test.skip();
-      return;
-    }
+    await page.waitForSelector('input[name="title"]', { timeout: 5000 });
 
-    await firstEditButton.click({ timeout: 5000 });
+    const originalTitle = `Test Post for Editing ${Date.now()}`;
+    const originalContent = 'This is content that will be edited.';
+
+    await page.locator('input[name="title"]').fill(originalTitle);
+    await page.locator('textarea[name="body_html"]').fill(originalContent);
+    await page.locator('textarea[name="excerpt"]').fill('Test excerpt');
+
+    const saveButton = page.locator('button:has-text("Create"), button:has-text("Save")').first();
+    await saveButton.click();
+    await page.waitForTimeout(2000);
+
+    // Now find and edit the post we just created
+    const postRow = page.locator(`text=${originalTitle}`).first();
+    await expect(postRow).toBeVisible({ timeout: 10000 });
+
+    const editButton = page.locator(`tr:has-text("${originalTitle}") button[aria-label="Edit"], tr:has-text("${originalTitle}") button:has-text("Edit")`).first();
+    await editButton.click({ timeout: 5000 });
 
     // Wait for edit form to load
     await page.waitForSelector('input[name="title"]', { timeout: 5000 });
 
-    // Get current title and append to it
-    const titleField = page.locator('input[name="title"]');
-    const currentTitle = await titleField.inputValue();
-    const updatedTitle = `${currentTitle} - Edited`;
+    // Update the title and content
+    const updatedTitle = `${originalTitle} - Edited`;
+    await page.locator('input[name="title"]').fill(updatedTitle);
 
-    await titleField.fill(updatedTitle);
-
-    // Update content
     const editorField = page.locator('textarea[name="body_html"]');
-    const currentContent = await editorField.inputValue();
-    await editorField.fill(`${currentContent}\n\nEdited content added.`);
+    await editorField.fill(`${originalContent}\n\nEdited content added.`);
 
     // Save changes
-    const saveButton = page.locator('button:has-text("Update"), button:has-text("Save")').first();
-    await saveButton.click();
+    const updateButton = page.locator('button:has-text("Update"), button:has-text("Save")').first();
+    await updateButton.click();
 
     // Wait for save operation
     await page.waitForTimeout(2000);
@@ -140,23 +147,31 @@ test.describe('Comprehensive Admin Feature Tests', () => {
   });
 
   test('should delete a blog post', async ({ page }) => {
-    // Navigate to Content page
+    // First create a post to delete, making this test independent
     await page.goto('/content');
     await expect(page).toHaveURL('/content');
 
-    // Get the first post title before deleting
-    const firstPostTitle = page.locator('td, div[role="cell"]').first();
-    const titleText = await firstPostTitle.textContent();
+    // Create a new post
+    const createButton = page.locator('button:has-text("New Post"), button:has-text("Create Post"), button:has-text("Add Post")').first();
+    await createButton.click({ timeout: 5000 });
 
-    // Find and click delete button
-    const deleteButton = page.locator('button[aria-label="Delete"], button:has-text("Delete")').first();
+    await page.waitForSelector('input[name="title"]', { timeout: 5000 });
 
-    const deleteButtonCount = await deleteButton.count();
-    if (deleteButtonCount === 0) {
-      test.skip();
-      return;
-    }
+    const titleToDelete = `Test Post for Deletion ${Date.now()}`;
 
+    await page.locator('input[name="title"]').fill(titleToDelete);
+    await page.locator('textarea[name="body_html"]').fill('This content will be deleted.');
+    await page.locator('textarea[name="excerpt"]').fill('Test excerpt');
+
+    const saveButton = page.locator('button:has-text("Create"), button:has-text("Save")').first();
+    await saveButton.click();
+    await page.waitForTimeout(2000);
+
+    // Verify the post was created
+    await expect(page.locator(`text=${titleToDelete}`)).toBeVisible({ timeout: 10000 });
+
+    // Now delete the post we just created
+    const deleteButton = page.locator(`tr:has-text("${titleToDelete}") button[aria-label="Delete"], tr:has-text("${titleToDelete}") button:has-text("Delete")`).first();
     await deleteButton.click({ timeout: 5000 });
 
     // Confirm deletion in dialog if present
@@ -169,11 +184,9 @@ test.describe('Comprehensive Admin Feature Tests', () => {
     // Wait for deletion
     await page.waitForTimeout(2000);
 
-    // Verify post is removed (if we had a title)
-    if (titleText && titleText.trim()) {
-      const deletedPost = page.locator(`text="${titleText.trim()}"`);
-      await expect(deletedPost).not.toBeVisible({ timeout: 5000 });
-    }
+    // Verify post is removed
+    const deletedPost = page.locator(`text="${titleToDelete}"`);
+    await expect(deletedPost).not.toBeVisible({ timeout: 5000 });
   });
 
   test('should handle blog post status changes', async ({ page }) => {

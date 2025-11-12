@@ -294,52 +294,151 @@ test.describe('Taxonomy Integration with Blog Posts', () => {
   });
 
   test('should persist taxonomy assignments after editing', async ({ page }) => {
-    // Prerequisites: vocabularies and terms should exist from previous test
-    // This test verifies that taxonomy terms persist across page reloads and edits
+    // Create a complete post with taxonomy from scratch for this test
+    await page.goto('/taxonomy');
 
+    // Create categories vocabulary
+    let createVocabButton = page.locator('button:has-text("Create"), button:has-text("Add Vocabulary"), button:has-text("New Vocabulary")').first();
+    await createVocabButton.click({ timeout: 5000 });
+
+    await page.waitForSelector('input[name="name"]', { timeout: 5000 });
+    await page.locator('input[name="name"]').fill('Persist Categories');
+    await page.locator('input[name="machine_name"]').fill(`persist_categories_${Date.now()}`);
+
+    let saveButton = page.locator('button:has-text("Save"), button:has-text("Create")').first();
+    await saveButton.click();
+    await page.waitForTimeout(1000);
+
+    // Add a term
+    await page.locator('text=Persist Categories').click();
+    await page.waitForTimeout(500);
+
+    let createTermButton = page.locator('button:has-text("Add Term"), button:has-text("Create Term"), button:has-text("New Term")').first();
+    await createTermButton.click({ timeout: 5000 });
+
+    await page.waitForSelector('input[name="name"]:visible', { timeout: 5000 });
+    await page.locator('input[name="name"]:visible').fill('Persist Tutorials');
+
+    saveButton = page.locator('button:has-text("Save"), button:has-text("Create")').last();
+    await saveButton.click();
+    await page.waitForTimeout(1000);
+
+    // Create a blog post with this taxonomy term
     await page.goto('/content');
 
-    // Find the most recent blog post
-    const firstPost = page.locator('tr:has-text("Blog Post with Taxonomy")').first();
-    if (await firstPost.count() === 0) {
-      test.skip(true, 'No blog posts with taxonomy found - run previous test first');
+    const createPostButton = page.locator('button:has-text("New Post"), button:has-text("Create Post"), button:has-text("Add Post")').first();
+    await createPostButton.click({ timeout: 5000 });
+
+    await page.waitForSelector('input[name="title"]', { timeout: 5000 });
+
+    const testTitle = `Persist Test Post ${Date.now()}`;
+    await page.locator('input[name="title"]').fill(testTitle);
+    await page.locator('textarea[name="body_html"]').fill('Testing taxonomy persistence.');
+    await page.locator('textarea[name="excerpt"]').fill('Test excerpt');
+
+    // Select taxonomy term
+    const categoryField = page.locator('[aria-label*="Persist Categories" i], select:near(label:has-text("Persist Categories")), div:has-text("Persist Categories") + div [role="combobox"]');
+    if (await categoryField.count() > 0) {
+      await categoryField.click();
+      await page.waitForTimeout(500);
+      await page.locator('li:has-text("Persist Tutorials"), [role="option"]:has-text("Persist Tutorials")').first().click();
     }
 
-    // Click edit button
-    const editButton = firstPost.locator('button:has-text("Edit"), a:has-text("Edit")').first();
+    const submitButton = page.locator('button:has-text("Create"), button:has-text("Save")').first();
+    await submitButton.click();
+    await page.waitForTimeout(2000);
+
+    // Now edit the post and verify taxonomy persists
+    const postRow = page.locator(`text=${testTitle}`).first();
+    await expect(postRow).toBeVisible({ timeout: 10000 });
+
+    const editButton = page.locator(`tr:has-text("${testTitle}") button:has-text("Edit"), tr:has-text("${testTitle}") a:has-text("Edit")`).first();
     await editButton.click({ timeout: 5000 });
 
     await page.waitForTimeout(1000);
 
     // Verify taxonomy terms are still selected
-    // Check for chips or selected options
-    const tutorialsChip = page.locator('[role="button"]:has-text("Tutorials"), .MuiChip-label:has-text("Tutorials")');
-    const beginnerChip = page.locator('[role="button"]:has-text("Beginner"), .MuiChip-label:has-text("Beginner")');
+    const tutorialsChip = page.locator('[role="button"]:has-text("Persist Tutorials"), .MuiChip-label:has-text("Persist Tutorials")');
 
-    // At least one of the taxonomy terms should be visible
-    const hasTaxonomy = (await tutorialsChip.count() > 0) || (await beginnerChip.count() > 0);
-    expect(hasTaxonomy).toBeTruthy();
-
-    // If visible, verify they're displayed
+    // The taxonomy term should be visible
     if (await tutorialsChip.count() > 0) {
       await expect(tutorialsChip.first()).toBeVisible({ timeout: 5000 });
-    }
-    if (await beginnerChip.count() > 0) {
-      await expect(beginnerChip.first()).toBeVisible({ timeout: 5000 });
+    } else {
+      // Check if it's selected in a dropdown instead
+      const selectedValue = page.locator('[aria-label*="Persist Categories" i]:has-text("Persist Tutorials")');
+      await expect(selectedValue).toBeVisible({ timeout: 5000 });
     }
   });
 
   test('should allow changing taxonomy terms on existing posts', async ({ page }) => {
+    // Create a complete post with taxonomy from scratch for this test
+    await page.goto('/taxonomy');
+
+    // Create a vocabulary with two terms
+    let createVocabButton = page.locator('button:has-text("Create"), button:has-text("Add Vocabulary"), button:has-text("New Vocabulary")').first();
+    await createVocabButton.click({ timeout: 5000 });
+
+    await page.waitForSelector('input[name="name"]', { timeout: 5000 });
+    await page.locator('input[name="name"]').fill('Change Categories');
+    await page.locator('input[name="machine_name"]').fill(`change_categories_${Date.now()}`);
+
+    let saveButton = page.locator('button:has-text("Save"), button:has-text("Create")').first();
+    await saveButton.click();
+    await page.waitForTimeout(1000);
+
+    // Add first term
+    await page.locator('text=Change Categories').click();
+    await page.waitForTimeout(500);
+
+    let createTermButton = page.locator('button:has-text("Add Term"), button:has-text("Create Term"), button:has-text("New Term")').first();
+    await createTermButton.click({ timeout: 5000 });
+
+    await page.waitForSelector('input[name="name"]:visible', { timeout: 5000 });
+    await page.locator('input[name="name"]:visible').fill('Term One');
+
+    saveButton = page.locator('button:has-text("Save"), button:has-text("Create")').last();
+    await saveButton.click();
+    await page.waitForTimeout(1000);
+
+    // Add second term
+    await createTermButton.click({ timeout: 5000 });
+    await page.waitForSelector('input[name="name"]:visible', { timeout: 5000 });
+    await page.locator('input[name="name"]:visible').fill('Term Two');
+
+    saveButton = page.locator('button:has-text("Save"), button:has-text("Create")').last();
+    await saveButton.click();
+    await page.waitForTimeout(1000);
+
+    // Create a blog post with first term
     await page.goto('/content');
 
-    // Find a blog post with taxonomy
-    const firstPost = page.locator('tr:has-text("Blog Post with Taxonomy")').first();
-    if (await firstPost.count() === 0) {
-      test.skip(true, 'No blog posts with taxonomy found - run previous tests first');
+    const createPostButton = page.locator('button:has-text("New Post"), button:has-text("Create Post"), button:has-text("Add Post")').first();
+    await createPostButton.click({ timeout: 5000 });
+
+    await page.waitForSelector('input[name="title"]', { timeout: 5000 });
+
+    const testTitle = `Change Terms Post ${Date.now()}`;
+    await page.locator('input[name="title"]').fill(testTitle);
+    await page.locator('textarea[name="body_html"]').fill('Testing taxonomy term changes.');
+    await page.locator('textarea[name="excerpt"]').fill('Test excerpt');
+
+    // Select first term
+    const categoryField = page.locator('[aria-label*="Change Categories" i], select:near(label:has-text("Change Categories")), div:has-text("Change Categories") + div [role="combobox"]');
+    if (await categoryField.count() > 0) {
+      await categoryField.click();
+      await page.waitForTimeout(500);
+      await page.locator('li:has-text("Term One"), [role="option"]:has-text("Term One")').first().click();
     }
 
-    // Click edit button
-    const editButton = firstPost.locator('button:has-text("Edit"), a:has-text("Edit")').first();
+    const submitButton = page.locator('button:has-text("Create"), button:has-text("Save")').first();
+    await submitButton.click();
+    await page.waitForTimeout(2000);
+
+    // Now edit and change the term
+    const postRow = page.locator(`text=${testTitle}`).first();
+    await expect(postRow).toBeVisible({ timeout: 10000 });
+
+    const editButton = page.locator(`tr:has-text("${testTitle}") button:has-text("Edit"), tr:has-text("${testTitle}") a:has-text("Edit")`).first();
     await editButton.click({ timeout: 5000 });
 
     await page.waitForTimeout(1000);
@@ -351,22 +450,17 @@ test.describe('Taxonomy Integration with Blog Posts', () => {
       await page.waitForTimeout(500);
     }
 
-    // Add a different term (assuming more terms exist)
-    const categoryField = page.locator('[aria-label*="Categories" i], div:has-text("Categories") + div [role="combobox"]');
-    if (await categoryField.count() > 0) {
-      await categoryField.click();
+    // Add the second term
+    const editCategoryField = page.locator('[aria-label*="Change Categories" i], div:has-text("Change Categories") + div [role="combobox"]');
+    if (await editCategoryField.count() > 0) {
+      await editCategoryField.click();
       await page.waitForTimeout(500);
-
-      // Select any available option
-      const option = page.locator('[role="option"]').first();
-      if (await option.count() > 0) {
-        await option.click();
-      }
+      await page.locator('li:has-text("Term Two"), [role="option"]:has-text("Term Two")').first().click();
     }
 
     // Save changes
-    const saveButton = page.locator('button:has-text("Update"), button:has-text("Save")').first();
-    await saveButton.click();
+    const updateButton = page.locator('button:has-text("Update"), button:has-text("Save")').first();
+    await updateButton.click();
 
     await page.waitForTimeout(2000);
 

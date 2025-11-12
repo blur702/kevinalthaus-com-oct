@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import DOMPurify from 'dompurify';
 import {
   Editor,
   BoldPlugin,
@@ -129,7 +130,7 @@ const EditorTest: React.FC = () => {
         }}
       >
         <h3>Preview:</h3>
-        <div dangerouslySetInnerHTML={{ __html: content }} />
+        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} />
       </div>
     </div>
   );

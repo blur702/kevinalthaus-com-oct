@@ -94,7 +94,6 @@ test.describe('Admin Authentication with CSRF Protection', () => {
 
     // Note: This might be false if no POST request is made, which is OK
     // The important part is that IF a POST is made, it has the CSRF token
-    console.log('POST/PUT request had CSRF token:', hasCSRFToken);
   });
 
   test('should reject requests without CSRF token', async ({ request }) => {

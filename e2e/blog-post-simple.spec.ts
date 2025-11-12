@@ -18,26 +18,14 @@ test.describe('Blog Post API', () => {
   test('should create a blog post via authenticated API', async ({ page }) => {
     // Debug: Check ALL cookies in context with full details
     const allCookies = await page.context().cookies();
-    console.log('\n=== ALL COOKIES IN CONTEXT ===');
     allCookies.forEach(c => {
-      console.log(`Cookie: ${c.name}`);
-      console.log(`  Domain: ${c.domain}`);
-      console.log(`  Path: ${c.path}`);
-      console.log(`  Secure: ${c.secure}`);
-      console.log(`  HttpOnly: ${c.httpOnly}`);
-      console.log(`  SameSite: ${c.sameSite}`);
-      console.log(`  Value: ${c.value.substring(0, 30)}...`);
     });
 
     // Debug: Check cookies for specific URL
     const urlCookies = await page.context().cookies('http://localhost:3003/api/blog');
-    console.log(`\n=== COOKIES FOR http://localhost:3003/api/blog ===`);
-    console.log(`Count: ${urlCookies.length}`);
     urlCookies.forEach(c => console.log(`  - ${c.name}`));
 
     // Debug: Current page URL
-    console.log(`\n=== CURRENT PAGE ===`);
-    console.log(`URL: ${page.url()}`);
 
     // Debug: Try making request directly in the browser to see what headers are sent
     const requestDebug = await page.evaluate(async () => {
@@ -64,10 +52,6 @@ test.describe('Blog Post API', () => {
       };
     });
 
-    console.log('\n=== REQUEST DEBUG ===');
-    console.log('Response status:', requestDebug.status);
-    console.log('Response ok:', requestDebug.ok);
-    console.log('Document cookies:', requestDebug.cookies);
 
     // Create a blog post using apiRequest helper
     const createResponse = await apiRequest(page, '/api/blog', {
@@ -80,11 +64,7 @@ test.describe('Blog Post API', () => {
       },
     });
 
-    console.log('\n=== APIRESQUEST RESULT ===');
-    console.log('Response status:', createResponse.status);
-    console.log('Response ok:', createResponse.ok);
     const responseBody = await createResponse.json();
-    console.log('Response body:', responseBody);
 
     expect(createResponse.ok).toBeTruthy();
     expect(responseBody).toHaveProperty('id');

@@ -25,7 +25,6 @@ test.describe('Complete User Management Workflow', () => {
 
   test('should complete full workflow: login, create user, verify listing, login as new user', async ({ page }) => {
     // Step 1: Login as admin
-    console.log('Step 1: Logging in as admin...');
     await page.goto('/login');
     await page.fill('input[name="identifier"]', adminUsername);
     await page.fill('input[name="password"]', adminPassword);
@@ -33,10 +32,8 @@ test.describe('Complete User Management Workflow', () => {
 
     // Wait for successful login (redirect to dashboard)
     await page.waitForURL(/\/(dashboard)?$/);
-    console.log('✓ Admin login successful');
 
     // Step 2: Navigate to Users page
-    console.log('Step 2: Navigating to Users page...');
 
     // Set up response listener BEFORE navigation
     const responsePromise = page.waitForResponse((response) =>
@@ -48,10 +45,8 @@ test.describe('Complete User Management Workflow', () => {
 
     // Wait for users list to load
     await responsePromise;
-    console.log('✓ Users page loaded');
 
     // Step 3: Create new user
-    console.log('Step 3: Creating new test user...');
     await page.click('button:has-text("Create User")');
 
     // Wait for dialog to appear
@@ -76,10 +71,8 @@ test.describe('Complete User Management Workflow', () => {
     );
     await createResponsePromise;
 
-    console.log(`✓ Test user created: ${testUser.username}`);
 
     // Step 4: Verify user appears in listing
-    console.log('Step 4: Verifying user appears in list...');
 
     // Search for the new user
     await page.fill('input[placeholder*="Search"]', testUser.username);
@@ -95,42 +88,31 @@ test.describe('Complete User Management Workflow', () => {
     await expect(userRow.locator(`td:has-text("${testUser.email}")`)).toBeVisible();
     await expect(userRow.locator(`td:has-text("${testUser.role}")`)).toBeVisible();
 
-    console.log('✓ User appears in listing with correct details');
 
     // Step 5: Logout
-    console.log('Step 5: Logging out...');
     await page.click('button[aria-label="Account"]');
     await page.click('text=Logout');
     await page.waitForURL('/login');
-    console.log('✓ Logged out successfully');
 
     // Step 6: Login as new user
-    console.log('Step 6: Logging in as new user...');
     await page.fill('input[name="identifier"]', testUser.username);
     await page.fill('input[name="password"]', testUser.password);
     await page.click('button[type="submit"]');
 
     // Wait for successful login
     await page.waitForURL(/\/(dashboard)?$/);
-    console.log(`✓ Successfully logged in as new user: ${testUser.username}`);
 
     // Step 7: Verify user is authenticated
-    console.log('Step 7: Verifying authentication...');
 
     // Check for dashboard or user menu presence
     const isAuthenticated = await page.locator('button[aria-label="Account"]').isVisible();
     expect(isAuthenticated).toBe(true);
-    console.log('✓ New user is authenticated and can access the application');
 
     // Final verification: Check dashboard loads
     await page.goto('/dashboard');
     await page.waitForURL('/dashboard');
     const dashboardTitle = page.locator('h1:has-text("Dashboard")');
     await expect(dashboardTitle).toBeVisible();
-    console.log('✓ Dashboard accessible by new user');
 
-    console.log('\n=== WORKFLOW COMPLETE ===');
-    console.log(`Created user: ${testUser.username} (${testUser.email})`);
-    console.log('All steps passed successfully!');
   });
 });

@@ -1,0 +1,86 @@
+name: comments
+version: 1.0.0
+displayName: Comments
+description: Comments system for blog posts with authentication and moderation
+author:
+  name: Kevin Althaus
+  email: contact@kevinalthaus.com
+license: MIT
+keywords:
+  - comments
+  - blog
+  - discussion
+  - engagement
+
+capabilities:
+  - database:read
+  - database:write
+  - api:call
+
+entrypoint: dist/index.js
+
+backend:
+  routes:
+    - path: /api/comments
+      method: GET
+      handler: listCommentsHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: List comments with optional filtering
+
+    - path: /api/comments/:id
+      method: GET
+      handler: getCommentHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get a specific comment by ID
+
+    - path: /api/comments
+      method: POST
+      handler: createCommentHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Create a new comment
+
+    - path: /api/comments/:id
+      method: PUT
+      handler: updateCommentHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Update a comment
+
+    - path: /api/comments/:id
+      method: DELETE
+      handler: deleteCommentHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Delete a comment
+
+    - path: /api/comments/post/:postId/count
+      method: GET
+      handler: getCommentCountHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get comment count for a post
+
+database:
+  migrations:
+    - 001_create_comments_schema.sql
+
+hooks:
+  install: onInstall
+  activate: onActivate
+  deactivate: onDeactivate
+  uninstall: onUninstall

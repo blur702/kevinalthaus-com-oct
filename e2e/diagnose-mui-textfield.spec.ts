@@ -23,7 +23,6 @@ test('Deep dive: MUI TextField structure', async ({ page }) => {
   await page.screenshot({ path: 'test-results/mui-structure.png', fullPage: true });
 
   // Get ALL textareas on the page
-  console.log('\n========== ALL TEXTAREAS ==========');
   const allTextareas = await page.evaluate(() => {
     const textareas = Array.from(document.querySelectorAll('textarea'));
     return textareas.map((ta, index) => {
@@ -48,21 +47,9 @@ test('Deep dive: MUI TextField structure', async ({ page }) => {
   });
 
   allTextareas.forEach((ta) => {
-    console.log(`\nTextarea #${ta.index}:`);
-    console.log(`  Name: ${ta.name}`);
-    console.log(`  ID: ${ta.id}`);
-    console.log(`  Class: ${ta.className}`);
-    console.log(`  Visible: ${ta.visible}`);
-    console.log(`  Opacity: ${ta.opacity}`);
-    console.log(`  Position: ${ta.position}`);
-    console.log(`  Z-Index: ${ta.zIndex}`);
-    console.log(`  Size: ${ta.width} x ${ta.height}`);
-    console.log(`  Location: top=${ta.top}, left=${ta.left}`);
-    console.log(`  BoundingBox:`, ta.boundingBox);
   });
 
   // Check if there's a shadow input or hidden div
-  console.log('\n========== MUI TEXTFIELD STRUCTURE ==========');
   const muiStructure = await page.evaluate(() => {
     // Find the Content label
     const labels = Array.from(document.querySelectorAll('label'));
@@ -90,10 +77,8 @@ test('Deep dive: MUI TextField structure', async ({ page }) => {
     return { children };
   });
 
-  console.log('MUI Structure:', JSON.stringify(muiStructure, null, 2));
 
   // Try clicking where the user would click
-  console.log('\n========== CLICK TEST ==========');
   const contentLabel = page.locator('label:has-text("Content")');
   const boundingBox = await contentLabel.boundingBox();
 
@@ -102,7 +87,6 @@ test('Deep dive: MUI TextField structure', async ({ page }) => {
     const clickX = boundingBox.x + 100;
     const clickY = boundingBox.y + boundingBox.height + 50;
 
-    console.log(`Clicking at coordinates: (${clickX}, ${clickY})`);
     await page.mouse.click(clickX, clickY);
     await page.waitForTimeout(500);
 
@@ -122,7 +106,6 @@ test('Deep dive: MUI TextField structure', async ({ page }) => {
       };
     });
 
-    console.log('Focused element after click:', JSON.stringify(focusedElement, null, 2));
 
     // Take screenshot after click
     await page.screenshot({ path: 'test-results/after-click.png', fullPage: true });
@@ -133,7 +116,6 @@ test('Deep dive: MUI TextField structure', async ({ page }) => {
 
     // Check textarea value
     const textareaValue = await page.locator('textarea').first().inputValue();
-    console.log(`Textarea value after typing: "${textareaValue}"`);
 
     // Take final screenshot
     await page.screenshot({ path: 'test-results/after-typing.png', fullPage: true });

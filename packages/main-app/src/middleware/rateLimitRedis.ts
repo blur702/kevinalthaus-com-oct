@@ -426,9 +426,21 @@ export function rateLimit(options: RateLimitOptions = {}) {
         const originalSend = res.send;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         res.send = function(data: any): Response {
-          // TODO: Implement decrement logic for Redis
-          // For now, this only works with memory fallback
-          if (!isRedisAvailable()) {
+          // Decrement logic for both Redis and memory fallback
+          if (isRedisAvailable()) {
+            // Redis decrement logic
+            const shouldDecrement =
+              (res.statusCode >= 400 && skipFailedRequests) ||
+              (res.statusCode < 400 && skipSuccessfulRequests);
+
+            if (shouldDecrement) {
+              // Use DECR to atomically decrement the counter
+              redisClient.decr(key).catch((err) => {
+                logger.warn(`Failed to decrement rate limit for key: ${key}`, { error: err.message });
+              });
+            }
+          } else {
+            // Memory fallback decrement logic
             const entry = fallbackStore.get(key);
             if (entry) {
               if (res.statusCode >= 400 && skipFailedRequests) {

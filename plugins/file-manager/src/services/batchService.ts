@@ -1,23 +1,20 @@
 /**
  * Batch Service
  * Business logic for batch operations on files and folders
- *
- * TODO: Integrate with StorageService for physical file operations
- * FIXME: batchCopyFiles currently creates duplicate database records
- *        pointing to the same physical file. This must be implemented
- *        before production use to properly copy files on disk.
- * FIXME: batchDeleteFiles with hard_delete doesn't remove physical files.
- *        Must integrate with StorageService.hardDeleteFile().
  */
 
 import { Pool, PoolClient } from 'pg';
 import type { PluginLogger } from '@monorepo/shared';
 import type { BatchOperationResult } from '../types';
+import type { StorageWrapper } from './storageWrapper';
+import * as crypto from 'crypto';
+import * as path from 'path';
 
 export class BatchService {
   constructor(
     private pool: Pool,
-    private logger: PluginLogger
+    private logger: PluginLogger,
+    private storageService: StorageWrapper
   ) {}
 
   /**
@@ -201,15 +198,29 @@ export class BatchService {
 
           const originalFile = fileResult.rows[0];
 
-          // CRITICAL WARNING: This implementation does NOT copy physical files
-          // It only creates a duplicate database record pointing to the same file
-          // This creates a shared file reference - deleting one will break the other
-          // TODO: Integrate with StorageService to actually copy files on disk
-          //       - Call StorageService.copyFile(originalPath, newPath)
-          //       - Generate new unique filename
-          //       - Update storage_path with new file path
+          // Generate unique filename for the copy
+          const randomPrefix = crypto.randomBytes(8).toString('hex');
+          const parsedPath = path.parse(originalFile.filename);
+          const newFilename = `${randomPrefix}-copy-${parsedPath.name}${parsedPath.ext}`;
 
-          // Create new file record (currently points to same physical file!)
+          // Parse the storage path to get directory and construct new path
+          const storagePathDir = path.dirname(originalFile.storage_path);
+          const newStoragePath = path.join(storagePathDir, newFilename);
+
+          // Copy physical file on disk
+          const uploadsDir = process.env.STORAGE_PATH || './storage/uploads';
+          const sourcePath = path.join(uploadsDir, originalFile.storage_path);
+          const destPath = path.join(uploadsDir, newStoragePath);
+
+          try {
+            await this.storageService.copyFile(sourcePath, destPath);
+            this.logger.debug(`Physical file copied: ${sourcePath} -> ${destPath}`);
+          } catch (copyError) {
+            this.logger.error(`Failed to copy physical file: ${sourcePath}`, copyError as Error);
+            throw new Error(`Failed to copy physical file: ${(copyError as Error).message}`);
+          }
+
+          // Create new file record with new storage path
           const newFileResult = await client.query(
             `INSERT INTO public.files (
               plugin_id, filename, original_name, mime_type, file_extension,
@@ -219,12 +230,12 @@ export class BatchService {
             RETURNING id`,
             [
               originalFile.plugin_id,
-              originalFile.filename, // In production, generate new filename
+              newFilename,
               originalFile.original_name + ' (Copy)',
               originalFile.mime_type,
               originalFile.file_extension,
               originalFile.file_size,
-              originalFile.storage_path, // In production, use new path
+              newStoragePath,
               originalFile.storage_provider,
               originalFile.width,
               originalFile.height,
@@ -254,8 +265,7 @@ export class BatchService {
       }
 
       await client.query('COMMIT');
-      this.logger.info(`Batch copied ${successful.length} files, ${failed.length} failed`);
-      this.logger.warn('Note: Physical file copies were not created. Only database records were duplicated.');
+      this.logger.info(`Batch copied ${successful.length} files (including physical copies), ${failed.length} failed`);
     } catch (error) {
       await client.query('ROLLBACK');
       this.logger.error('Batch copy files failed', error as Error);
@@ -353,9 +363,9 @@ export class BatchService {
 
       for (const fileId of fileIds) {
         try {
-          // Check file exists
+          // Check file exists and get file metadata
           const fileCheck = await client.query(
-            `SELECT id FROM public.files WHERE id = $1 AND deleted_at IS NULL`,
+            `SELECT id, storage_path FROM public.files WHERE id = $1 AND deleted_at IS NULL`,
             [fileId]
           );
 
@@ -365,11 +375,14 @@ export class BatchService {
           }
 
           if (hardDelete) {
-            // Hard delete
-            await client.query(`DELETE FROM public.files WHERE id = $1`, [fileId]);
-            // CRITICAL TODO: Delete physical file via StorageService
-            // Must call: await storageService.hardDeleteFile(fileId)
-            // Current implementation leaves orphaned files on disk
+            // Hard delete - remove physical file first, then database record
+            try {
+              await this.storageService.hardDeleteFile(fileId, userId);
+              this.logger.debug(`Physical file and database record deleted for file: ${fileId}`);
+            } catch (deleteError) {
+              this.logger.error(`Failed to hard delete file: ${fileId}`, deleteError as Error);
+              throw new Error(`Failed to hard delete file: ${(deleteError as Error).message}`);
+            }
           } else {
             // Soft delete
             await client.query(

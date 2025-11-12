@@ -36,13 +36,14 @@ test.describe('Change Site Name', () => {
     await page.waitForURL(/dashboard|\/$/,{ timeout: 10000 });
 
     // Wait for dashboard elements to load
-    await page.waitForSelector('nav, [role="navigation"]', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('nav, [role="navigation"]', { timeout: 5000 }).catch(() => {
+      // Intentionally silent - navigation elements are optional on dashboard
+    });
 
     // Take screenshot of dashboard
     await page.screenshot({ path: 'screenshots/change-name-03-dashboard.png' });
 
     // Navigate to Settings page (use page.goto with relative or look for Settings link)
-    console.log('Navigating to Settings...');
     // Try to find and click a Settings link/button in the navigation
     const settingsLink = page.locator('a:has-text("Settings"), button:has-text("Settings")');
     const settingsLinkCount = await settingsLink.count();
@@ -55,7 +56,9 @@ test.describe('Change Site Name', () => {
     }
 
     // Wait for settings page to load by looking for a settings element
-    await page.waitForSelector('text=Site Name, text=Site Configuration', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('text=Site Name, text=Site Configuration', { timeout: 5000 }).catch(() => {
+      // Intentionally silent - settings elements may load with different text
+    });
 
     // Take screenshot of settings page
     await page.screenshot({ path: 'screenshots/change-name-04-settings.png' });
@@ -79,7 +82,9 @@ test.describe('Change Site Name', () => {
     await saveButton.click();
 
     // Wait for save to complete by checking for success indicator or network idle
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {
+      // Intentionally silent - save may complete before network idle state
+    });
 
     // Take screenshot after saving
     await page.screenshot({ path: 'screenshots/change-name-06-saved.png' });
@@ -88,7 +93,6 @@ test.describe('Change Site Name', () => {
     const savedValue = await siteNameInput.inputValue();
     expect(savedValue).toBe('kevin');
 
-    console.log('✅ Successfully changed site name to "kevin"');
 
     // Take final screenshot
     await page.screenshot({ path: 'screenshots/change-name-07-complete.png' });

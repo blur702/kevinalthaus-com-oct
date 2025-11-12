@@ -8,7 +8,6 @@ import { test, expect } from '@playwright/test';
 test.describe('Page Builder - Full Workflow with Auth', () => {
   test('should login, create page, and view on frontend', async ({ page }) => {
     // Step 1: Navigate to login
-    console.log('Step 1: Navigating to login page...');
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
 
@@ -19,12 +18,10 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
     });
 
     // Step 2: Perform login
-    console.log('Step 2: Attempting login...');
 
     // Check if already logged in
     const currentUrl = page.url();
     if (currentUrl.includes('/dashboard') || currentUrl.includes('/admin')) {
-      console.log('Already logged in, skipping login step');
     } else {
       // Wait for login form
       await page.waitForSelector('input[name="identifier"], input[name="username"], input[name="email"]', { timeout: 5000 });
@@ -56,7 +53,6 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
     }
 
     // Step 3: Navigate to Page Builder
-    console.log('Step 3: Navigating to Page Builder...');
     await page.goto('/admin/page-builder');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
@@ -68,7 +64,6 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
     });
 
     // Step 4: Create a new page
-    console.log('Step 4: Creating new page...');
 
     // Click Create New Page button
     await page.click('button:has-text("Create New Page")');
@@ -91,7 +86,6 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
     });
 
     // Submit the form
-    console.log('Step 5: Submitting page creation form...');
     await page.click('button[type="submit"]:has-text("Save Page")');
 
     // Wait for modal to close
@@ -107,10 +101,8 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
     // Verify the page appears in the list
     const pageCard = page.locator(`.page-card:has-text("${pageTitle}")`);
     await expect(pageCard).toBeVisible({ timeout: 5000 });
-    console.log('✅ Page created and visible in list!');
 
     // Step 6: Click on the page to edit it
-    console.log('Step 6: Opening page for editing...');
     await pageCard.click();
     await page.waitForSelector('#pageModal.active', { timeout: 5000 });
 
@@ -128,7 +120,6 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
     await page.waitForSelector('#pageModal:not(.active)');
 
     // Step 7: View the page on the frontend
-    console.log('Step 7: Viewing page on frontend...');
 
     // Navigate to the public rendering endpoint
     await page.goto(`/api/page-builder/render/${pageSlug}`);
@@ -144,10 +135,8 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
     const content = await page.content();
     expect(content).toContain(pageTitle);
     expect(content).toContain(pageSlug);
-    console.log('✅ Page accessible on frontend!');
 
     // Step 8: Final verification - go back to page builder and verify page is still there
-    console.log('Step 8: Final verification...');
     await page.goto('/admin/page-builder');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
@@ -161,9 +150,6 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
       fullPage: true
     });
 
-    console.log('✅ All steps completed successfully!');
-    console.log(`📄 Created page: "${pageTitle}" with slug: "${pageSlug}"`);
-    console.log('📸 Screenshots saved in screenshots/ directory');
   });
 
   test('should handle page with custom layout', async ({ page }) => {
@@ -179,7 +165,6 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
       await page.waitForTimeout(2000);
     } catch (e) {
       // Already logged in or login not needed
-      console.log('Skipping login - already authenticated or not required');
     }
 
     // Navigate to Page Builder
@@ -206,6 +191,5 @@ test.describe('Page Builder - Full Workflow with Auth', () => {
     await page.click('button[type="submit"]:has-text("Save Page")');
     await page.waitForSelector('#pageModal:not(.active)', { timeout: 10000 });
 
-    console.log('✅ Layout test page created!');
   });
 });

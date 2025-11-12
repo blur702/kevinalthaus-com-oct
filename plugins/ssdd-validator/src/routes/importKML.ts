@@ -298,7 +298,11 @@ export function importKMLHandler(context: PluginExecutionContext) {
       await client.query('COMMIT');
       client.release();
       } catch (dbErr) {
-        try { await client.query('ROLLBACK'); } catch {}
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackErr) {
+          // Intentionally silent - rollback failure on already-failed transaction is not critical
+        }
         client.release();
         throw dbErr;
       }

@@ -10,42 +10,34 @@ test('Complete blog post creation workflow', async ({ page }) => {
   // Enable console logging
   page.on('console', (msg) => {
     if (msg.type() === 'error') {
-      console.log(`BROWSER ERROR: ${msg.text()}`);
     }
   });
 
   // Step 1: Ensure backend is up, then login
-  console.log('Step 1: Logging in...');
   for (let i = 0; i < 30; i++) {
     try {
       const res = await page.request.get('http://localhost:3001/health');
       if (res.ok()) {break;}
-    } catch {}
+    } catch (error) {
+      // Intentionally silent - health check retries expected during backend startup
+    }
     await page.waitForTimeout(1000);
   }
   await login(page, TEST_CREDENTIALS.ADMIN.username, TEST_CREDENTIALS.ADMIN.password);
-  console.log('✓ Login successful');
 
   // Step 2: Navigate to Content page
-  console.log('Step 2: Navigating to Content page...');
   await page.goto('/content');
   // Wait for a reliable UI element instead of networkidle
   await page.waitForSelector('text=Create New Post', { timeout: 20000 });
   expect(page.url()).toContain('/content');
-  console.log('✓ On Content page');
 
   // Step 3: Click "Create New Post"
-  console.log('Step 3: Clicking Create New Post...');
   await page.getByRole('button', { name: /create new post/i }).click();
-  console.log('✓ Clicked Create New Post button');
 
   // Step 4: Wait for form to appear
-  console.log('Step 4: Waiting for form...');
   await page.waitForSelector('input[name="title"]', { state: 'visible', timeout: 10000 });
-  console.log('✓ Form is visible');
 
   // Step 5: Fill in the form
-  console.log('Step 5: Filling in form...');
   const timestamp = new Date().toISOString();
   const testTitle = `Automated Test Post ${timestamp}`;
 
@@ -56,15 +48,15 @@ test('Complete blog post creation workflow', async ({ page }) => {
     await excerptField.fill('Automated test excerpt');
   }
 
-  console.log('✓ Form filled');
 
   // Step 6: Submit the form
-  console.log('Step 6: Submitting form...');
   // Ensure CSRF token cookie is fresh in the browser context before submit
   await page.evaluate(async () => {
     try {
       await fetch('/api/auth/csrf-token', { credentials: 'include' });
-    } catch {}
+    } catch (error) {
+      // Intentionally silent - CSRF token fetch is best-effort before submit
+    }
   });
   await page.locator('button', { hasText: /create|save|publish/i }).first().click();
 
@@ -73,16 +65,13 @@ test('Complete blog post creation workflow', async ({ page }) => {
   await page.waitForSelector('text=Blog Posts', { timeout: 20000 });
 
   // Step 7: Verify we're back on the list page
-  console.log('Step 7: Verifying post creation...');
 
   // Check if we can see the blog posts list
   const blogPostsHeading = page.locator('text=Blog Posts');
   await blogPostsHeading.waitFor({ state: 'visible', timeout: 20000 });
 
-  console.log('✓ Back on list page');
 
   // Step 8: Verify the post appears in the list
-  console.log('Step 8: Looking for created post...');
 
   // Wait a bit for the list to refresh
   await page.waitForTimeout(1000);
@@ -92,11 +81,7 @@ test('Complete blog post creation workflow', async ({ page }) => {
   const postExists = await postTitle.count() > 0;
 
   if (postExists) {
-    console.log('✓ Post found in list!');
-    console.log(`✅ SUCCESS! Blog post "${testTitle}" created successfully!`);
   } else {
-    console.log('⚠ Post not found in list (may need to refresh or pagination)');
-    console.log('Checking API for confirmation...');
 
     // Alternative: Check via API
     const response = await page.request.get('/api/blog', {
@@ -109,7 +94,6 @@ test('Complete blog post creation workflow', async ({ page }) => {
 
     if (response.ok()) {
       const data = await response.json();
-      console.log('API Response:', data);
     }
   }
 
@@ -117,12 +101,9 @@ test('Complete blog post creation workflow', async ({ page }) => {
   await page.screenshot({ path: 'test-results/final-success.png', fullPage: true });
 
   // Step 9: Logout
-  console.log('Step 9: Logging out...');
   try {
     await logout(page);
-    console.log('✓ Logged out successfully');
   } catch (error) {
-    console.log('⚠ Logout helper failed, trying alternative method...');
     // Fallback: Look for any logout-related button or link
     const logoutSelectors = [
       'button:has-text("Logout")',
@@ -135,7 +116,6 @@ test('Complete blog post creation workflow', async ({ page }) => {
       try {
         await page.click(selector, { timeout: 2000 });
         await page.waitForURL('/login', { timeout: 5000 });
-        console.log('✓ Logged out using fallback method');
         break;
       } catch {
         continue;
@@ -147,9 +127,4 @@ test('Complete blog post creation workflow', async ({ page }) => {
   const loginButton = page.locator('button[type="submit"]');
   await expect(loginButton).toBeVisible({ timeout: 5000 });
 
-  console.log('\n=== TEST COMPLETE ===');
-  console.log('✓ Login completed');
-  console.log('✓ Blog post created');
-  console.log('✓ Logout completed');
-  console.log('All steps passed successfully!');
 });

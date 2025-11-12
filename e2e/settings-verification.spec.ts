@@ -221,21 +221,18 @@ test.describe('Settings Verification', () => {
     expect(siteSettings).toHaveProperty('language');
 
     // Log settings for verification
-    console.log('Backend Site Settings:', JSON.stringify(siteSettings, null, 2));
 
     // Verify security settings
     const securityResponse = await page.request.get('http://localhost:3000/api/settings/security');
     expect(securityResponse.ok()).toBeTruthy();
 
     const securitySettings = await securityResponse.json();
-    console.log('Backend Security Settings:', JSON.stringify(securitySettings, null, 2));
 
     // Verify email settings
     const emailResponse = await page.request.get('http://localhost:3000/api/settings/email');
     expect(emailResponse.ok()).toBeTruthy();
 
     const emailSettings = await emailResponse.json();
-    console.log('Backend Email Settings:', JSON.stringify(emailSettings, null, 2));
   });
 
   test('should create comprehensive settings report', async () => {

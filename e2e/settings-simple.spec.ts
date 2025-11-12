@@ -26,7 +26,6 @@ test.describe('Settings Simple Verification', () => {
       const adminPassword = process.env.ADMIN_PASSWORD || process.env.TEST_ADMIN_PASSWORD || 'Admin123!';
 
       if (!process.env.ADMIN_EMAIL && !process.env.TEST_ADMIN_USERNAME) {
-        console.warn('⚠ Using default admin credentials. Set ADMIN_EMAIL and ADMIN_PASSWORD env vars for production!');
       }
 
       await page.fill('input[type="email"], input[name="email"]', adminEmail);
@@ -75,10 +74,8 @@ test.describe('Settings Simple Verification', () => {
             fullPage: true
           });
 
-          console.log(`✓ Captured screenshot for ${tab.name}`);
         }
       } catch (error) {
-        console.log(`✗ Failed to capture ${tab.name}: ${error}`);
       }
     }
 
@@ -91,7 +88,6 @@ test.describe('Settings Simple Verification', () => {
       const siteNameInput = page.locator('input[value], input').filter({ has: page.locator('text=/site name/i') }).first();
       const currentValue = await siteNameInput.inputValue().catch(() => '');
 
-      console.log(`Current site name: ${currentValue}`);
 
       // Update site name
       const newSiteName = `Test Site ${Date.now()}`;
@@ -111,9 +107,7 @@ test.describe('Settings Simple Verification', () => {
         fullPage: true
       });
 
-      console.log(`✓ Updated site name to: ${newSiteName}`);
     } catch (error) {
-      console.log(`✗ Failed to update site settings: ${error}`);
     }
   });
 
@@ -128,7 +122,6 @@ test.describe('Settings Simple Verification', () => {
       // Test without authentication - should return 401
       const unauthResponse = await request.get(`http://localhost:3000${endpoint.path}`);
       expect(unauthResponse.status()).toBeOneOf([401, 403]);
-      console.log(`✓ ${endpoint.name}: Authentication required (${unauthResponse.status()})`);
 
       // Note: Testing with authentication would require setting up proper session/JWT
       // In a real test suite, you would:

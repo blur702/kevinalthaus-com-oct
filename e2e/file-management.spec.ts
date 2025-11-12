@@ -24,7 +24,6 @@ test.describe('File Management', () => {
     test('should upload file with spaces and special characters - verify URL-friendly name', async ({ page }) => {
       // Listen to browser console
       page.on('console', (msg) => {
-        console.log(`[BROWSER ${msg.type()}]`, msg.text());
       });
 
       // Create a test file with spaces and special characters
@@ -92,7 +91,6 @@ test.describe('File Management', () => {
 
         // Verify the stored filename is URL-friendly (lowercase, hyphens instead of spaces)
         // The actual storage path should contain "test-file-with-spaces-specialchars.txt"
-        console.log('File upload with special characters successful');
 
       } finally {
         // Cleanup
@@ -477,7 +475,6 @@ test.describe('File Management', () => {
       // We can test that the file list loads
       await expect(page.locator('table')).toBeVisible();
 
-      console.log('Image transformation endpoints ready for testing with actual image files');
     });
   });
 });

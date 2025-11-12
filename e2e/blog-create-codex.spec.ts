@@ -12,7 +12,9 @@ test('Create blog post via WYSIWYG: Here, there, and Codex', async ({ page }) =>
     try {
       const res = await page.request.get('http://localhost:3001/health');
       if (res.ok()) {break;}
-    } catch {}
+    } catch (error) {
+      // Intentionally silent - health check retries expected during backend startup
+    }
     await page.waitForTimeout(1000);
   }
 
@@ -53,7 +55,13 @@ test('Create blog post via WYSIWYG: Here, there, and Codex', async ({ page }) =>
   await page.fill('textarea[name="body_html"]', 'This post was created via Playwright using the WYSIWYG editor.');
 
   // Ensure CSRF is fresh before submit
-  await page.evaluate(async () => { try { await fetch('/api/auth/csrf-token', { credentials: 'include' }); } catch {} });
+  await page.evaluate(async () => {
+    try {
+      await fetch('/api/auth/csrf-token', { credentials: 'include' });
+    } catch (error) {
+      // Intentionally silent - CSRF token fetch is best-effort before submit
+    }
+  });
 
   // Submit
   await page.locator('button', { hasText: /create|save|publish/i }).first().click();

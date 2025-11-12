@@ -19,7 +19,9 @@ const MENU_CACHE_MS = 60000;
 const menuCache = new Map<string, { data: PublicMenuItem[]; expiresAt: number }>();
 
 function isValidMenuItem(item: unknown): item is PublicMenuItem {
-  if (!item || typeof item !== 'object') return false;
+  if (!item || typeof item !== 'object') {
+    return false;
+  }
   const obj = item as Record<string, unknown>;
   return (
     typeof obj.id === 'string' &&
@@ -30,11 +32,17 @@ function isValidMenuItem(item: unknown): item is PublicMenuItem {
 }
 
 function validateMenuData(data: unknown): PublicMenuItem[] {
-  if (!data || typeof data !== 'object') return [];
+  if (!data || typeof data !== 'object') {
+    return [];
+  }
   const obj = data as Record<string, unknown>;
-  if (!obj.menu || typeof obj.menu !== 'object') return [];
+  if (!obj.menu || typeof obj.menu !== 'object') {
+    return [];
+  }
   const menu = obj.menu as Record<string, unknown>;
-  if (!Array.isArray(menu.items)) return [];
+  if (!Array.isArray(menu.items)) {
+    return [];
+  }
   return menu.items.filter(isValidMenuItem);
 }
 
@@ -65,14 +73,14 @@ async function fetchMenuItems(slug: string, signal?: AbortSignal): Promise<Publi
   return validatedItems;
 }
 
-export default function MenuWidget({ widget, editMode, onChange }: MenuWidgetProps) {
+export default function MenuWidget({ widget, editMode, onChange }: MenuWidgetProps): JSX.Element {
   const config = widget.config as MenuWidgetConfig;
   const [menuItems, setMenuItems] = React.useState<PublicMenuItem[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [menuOptions, setMenuOptions] = React.useState<Array<{ id: string; name: string; slug: string }>>([]);
 
-  const handleConfigChange = (updates: Partial<MenuWidgetConfig>) => {
+  const handleConfigChange = (updates: Partial<MenuWidgetConfig>): void => {
     if (onChange) {
       onChange({ ...config, ...updates });
     }
@@ -80,7 +88,9 @@ export default function MenuWidget({ widget, editMode, onChange }: MenuWidgetPro
 
   const loadMenu = React.useCallback(
     async (slug: string, signal?: AbortSignal) => {
-      if (!slug) return;
+      if (!slug) {
+        return;
+      }
       const cached = getCachedMenuItems(slug);
       if (cached) {
         setMenuItems(cached);
@@ -114,7 +124,9 @@ export default function MenuWidget({ widget, editMode, onChange }: MenuWidgetPro
   }, [config.menuSlug, loadMenu]);
 
   React.useEffect(() => {
-    if (!editMode) return;
+    if (!editMode) {
+      return;
+    }
     const controller = new AbortController();
     fetch(`${ADMIN_MENU_BASE}?includeItems=false`, {
       credentials: 'include',
@@ -122,20 +134,25 @@ export default function MenuWidget({ widget, editMode, onChange }: MenuWidgetPro
       signal: controller.signal,
     })
       .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to load menus');
+        if (!res.ok) {
+          throw new Error('Failed to load menus');
+        }
         const data = (await res.json()) as AdminMenuListResponse;
         setMenuOptions(data.menus ?? []);
       })
       .catch((err) => {
-        if ((err as Error).name === 'AbortError') return;
-        console.warn('[MenuWidget] Failed to load admin menus, using default', err);
+        if ((err as Error).name === 'AbortError') {
+          return;
+        }
         setMenuOptions([]);
       });
     return () => controller.abort();
   }, [editMode]);
 
   const renderMenuItems = (items: PublicMenuItem[], depth = 0): React.ReactNode => {
-    if (!items || items.length === 0) return null;
+    if (!items || items.length === 0) {
+      return null;
+    }
     return (
       <ul className={`${styles.list} ${depth > 0 ? styles.depth1 : ''}`}>
         {items.map((item) => {
@@ -149,7 +166,9 @@ export default function MenuWidget({ widget, editMode, onChange }: MenuWidgetPro
           return (
             <li key={item.id} className={styles.item}>
               <a className={styles.link} {...linkProps}>
-                {config.showIcons && item.icon && <span className={styles.icon} aria-hidden="true">{item.icon}</span>}
+                {config.showIcons && item.icon && (
+                  <span className={styles.icon} aria-hidden="true">{item.icon}</span>
+                )}
                 <span>{item.label}</span>
               </a>
               {item.children && item.children.length > 0 && renderMenuItems(item.children, depth + 1)}
@@ -243,20 +262,8 @@ export default function MenuWidget({ widget, editMode, onChange }: MenuWidgetPro
     );
   }
 
-  const customProps = {
-    '--menu-alignment': config.alignment,
-    '--menu-display': config.orientation === 'horizontal' ? 'flex' : 'block',
-    '--menu-gap': config.orientation === 'horizontal' ? '16px' : '0',
-    '--menu-flex-wrap': config.orientation === 'horizontal' ? 'wrap' : 'nowrap',
-    '--menu-item-margin': config.orientation === 'vertical' ? '8px' : '0',
-    '--menu-link-padding': config.variant === 'buttons' ? '8px 16px' : '0',
-    '--menu-link-radius': config.variant === 'buttons' ? '999px' : '0',
-    '--menu-link-bg': config.variant === 'buttons' ? '#1976d2' : 'transparent',
-    '--menu-link-color': config.variant === 'buttons' ? '#fff' : 'inherit',
-  } as React.CSSProperties;
-
   return (
-    <nav className={styles.widget} style={customProps}>
+    <nav className={styles.widget}>
       {loading && <p>Loading navigation…</p>}
       {error && <p>{error}</p>}
       {!loading && menuItems.length > 0 && renderMenuItems(menuItems)}

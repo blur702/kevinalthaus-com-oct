@@ -13,7 +13,9 @@ test.describe('Blog Post UI', () => {
       try {
         const res = await page.request.get('http://127.0.0.1:3000/health');
         if (res.ok()) {break;}
-      } catch {}
+      } catch (error) {
+        // Intentionally silent - health check retries expected during backend startup
+      }
       await page.waitForTimeout(1000);
     }
     await login(
@@ -53,7 +55,9 @@ test.describe('Blog Post UI', () => {
     await page.evaluate(async () => {
       try {
         await fetch('/api/auth/csrf-token', { credentials: 'include' });
-      } catch {}
+      } catch (error) {
+        // Intentionally silent - CSRF token fetch is best-effort before submit
+      }
     });
     await page.locator('button', { hasText: /create|save|publish/i }).first().click();
 

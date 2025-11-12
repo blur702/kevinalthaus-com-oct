@@ -119,7 +119,9 @@ test.describe('Blog Post Creation Workflow', () => {
     // If redirected back to list, verify the new post appears
     if (isBackOnList) {
       // Wait for the blog list to load
-      await page.waitForSelector('table', { timeout: 5000 }).catch(() => {});
+      await page.waitForSelector('table', { timeout: 5000 }).catch(() => {
+        // Intentionally silent - table may use different structure
+      });
 
       // Look for the test post in the list
       const testPostTitle = page.locator('text="Test Blog Post"');

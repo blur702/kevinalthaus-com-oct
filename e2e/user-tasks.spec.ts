@@ -21,35 +21,25 @@ test.describe('User Tasks', () => {
 
     page.on('request', request => {
       if (request.url().includes('/api/auth/login')) {
-        console.log('LOGIN REQUEST:', request.method(), request.url());
         if (debugAuth) {
-          console.log('LOGIN REQUEST BODY:', request.postData());
-          console.log('LOGIN REQUEST HEADERS:', request.headers());
         } else {
-          console.log('LOGIN REQUEST BODY: [REDACTED - set DEBUG_AUTH_LOGGING=true to view]');
         }
       }
     });
 
     page.on('response', async response => {
       if (response.url().includes('/api/auth/login')) {
-        console.log('LOGIN RESPONSE:', response.status());
         if (debugAuth) {
-          console.log('LOGIN RESPONSE HEADERS:', response.headers());
           try {
             const body = await response.text();
-            console.log('LOGIN RESPONSE BODY:', body);
           } catch (e) {
-            console.log('Could not read response body');
           }
         } else {
-          console.log('LOGIN RESPONSE BODY: [REDACTED - set DEBUG_AUTH_LOGGING=true to view]');
         }
       }
     });
 
     // Task 1: Login to admin and create blog post about playwright testing
-    console.log('Task 1: Creating blog post...');
     await page.goto('http://localhost:3007/login');
 
     // Login - wait for the form to be ready
@@ -242,10 +232,8 @@ Playwright is the future of modern web testing!`;
       path: `${screenshotsDir}/task1-blog-post-published.png`,
       fullPage: true
     });
-    console.log('✓ Task 1 complete - Screenshot saved: task1-blog-post-published.png');
 
     // Task 2: Change site title to 'Kevin Althaus Site'
-    console.log('Task 2: Changing site title...');
 
     // Navigate to settings
     const settingsSelectors = [
@@ -319,10 +307,8 @@ Playwright is the future of modern web testing!`;
       path: `${screenshotsDir}/task2-frontend-title-change.png`,
       fullPage: true
     });
-    console.log('✓ Task 2 complete - Screenshot saved: task2-frontend-title-change.png');
 
     // Task 3: Change API keys (Google Maps, USPS, Census.gov)
-    console.log('Task 3: Changing API keys...');
 
     // Go back to admin settings
     await page.goto('http://localhost:3007/settings');
@@ -377,7 +363,6 @@ Playwright is the future of modern web testing!`;
       path: `${screenshotsDir}/task3-google-maps-api-key.png`,
       fullPage: true
     });
-    console.log('✓ Google Maps API key saved - Screenshot: task3-google-maps-api-key.png');
 
     // Scroll to ensure USPS field is visible
     const uspsInput = page.getByLabel(/USPS API Key/i);
@@ -413,7 +398,6 @@ Playwright is the future of modern web testing!`;
       path: `${screenshotsDir}/task3-usps-api-key.png`,
       fullPage: true
     });
-    console.log('✓ USPS API key saved - Screenshot: task3-usps-api-key.png');
 
     // Scroll to ensure Census field is visible
     const censusInput = page.getByLabel(/Census\.gov API Key/i);
@@ -449,14 +433,6 @@ Playwright is the future of modern web testing!`;
       path: `${screenshotsDir}/task3-census-api-key.png`,
       fullPage: true
     });
-    console.log('✓ Census.gov API key saved - Screenshot: task3-census-api-key.png');
 
-    console.log('\n=== ALL TASKS COMPLETE ===');
-    console.log('Screenshots saved:');
-    console.log('1. task1-blog-post-published.png');
-    console.log('2. task2-frontend-title-change.png');
-    console.log('3. task3-google-maps-api-key.png');
-    console.log('4. task3-usps-api-key.png');
-    console.log('5. task3-census-api-key.png');
   });
 });

@@ -2,6 +2,10 @@
 // This ensures Sentry can instrument Express properly
 import { Sentry } from './instrument';
 
+// Validate environment secrets at startup (production only)
+import { validateSecretsOrThrow } from './utils/validateSecrets';
+validateSecretsOrThrow();
+
 // Now import Express and other dependencies after Sentry is initialized
 import express from 'express';
 import cors from 'cors';

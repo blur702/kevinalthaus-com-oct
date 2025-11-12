@@ -205,8 +205,19 @@ test.describe('Editor Formatting', () => {
 
 test.describe('Editor Keyboard Shortcuts', () => {
   test.beforeEach(async ({ page, browserName }) => {
-    // Skip keyboard shortcut tests in Firefox due to browser limitation with execCommand
-    test.skip(browserName === 'firefox', 'Firefox does not support execCommand via keyboard shortcuts');
+    /**
+     * Skip keyboard shortcut tests in Firefox due to browser-specific limitation.
+     *
+     * Firefox has known issues with execCommand when triggered via keyboard shortcuts
+     * in automated testing environments. This is a browser implementation detail, not
+     * a test interdependency issue.
+     *
+     * The toolbar button tests in "Editor Formatting" describe block verify the same
+     * functionality works in Firefox when triggered via UI clicks.
+     *
+     * See: https://bugzilla.mozilla.org/show_bug.cgi?id=1490323
+     */
+    test.skip(browserName === 'firefox', 'Firefox does not support execCommand via keyboard shortcuts in automated testing');
 
     await login(page);
     await page.goto(EDITOR_TEST_URL);
