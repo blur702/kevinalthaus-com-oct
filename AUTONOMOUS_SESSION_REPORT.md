@@ -87,13 +87,17 @@ Successfully completed autonomous bug fixing session addressing all HIGH and MED
 
 ## CodeRabbit Review
 
-**Status**: 🔄 IN PROGRESS
+**Status**: ⚠️ BLOCKED - CLI Not Installed
 
-CodeRabbit review has been initiated for commit `f79b9f1`:
+CodeRabbit review was attempted for commit `f79b9f1`:
 - Review type: Committed changes
-- Files under review: 6
-- Test execution: Running
-- Expected completion: Automated
+- Files staged: 6
+- **Issue**: CodeRabbit CLI not found at `/c/Users/kevin/.local/bin/coderabbit`
+- **Required action**: Install CodeRabbit CLI with:
+  ```bash
+  curl -fsSL https://cli.coderabbit.ai/install.sh | sh
+  ```
+- Alternative: Manual review via web interface
 
 ---
 
@@ -130,8 +134,8 @@ CodeRabbit review has been initiated for commit `f79b9f1`:
 1. ✅ All critical bugs fixed
 2. ✅ Comprehensive testing complete
 3. ✅ Changes committed with detailed message
-4. 🔄 CodeRabbit review in progress
-5. ⏳ Awaiting user review upon waking
+4. ⚠️ CodeRabbit CLI needs installation (or use web interface)
+5. ⏳ Ready for user review
 
 ---
 
