@@ -3,6 +3,11 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
+// Import Sentry instrumentation IMMEDIATELY after dotenv, before any other imports
+// This ensures Sentry can instrument all subsequent imports properly
+import { Sentry, isSentryEnabled } from './instrument';
+
+// NOW import all other dependencies - Sentry is already initialized and will instrument them
 import { Server } from 'http';
 import { runMigrations } from './db/migrations';
 import { pool, closePool } from './db';
@@ -16,11 +21,10 @@ import { EditorService } from './services/EditorService';
 import { TaxonomyService } from './services/TaxonomyService';
 import { StorageService } from './services/StorageService';
 import { MenuService } from './services/MenuService';
-import * as Sentry from '@sentry/node';
 
 // Load application after environment configuration to ensure env flags take effect
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { default: app, isSentryEnabled } = require('./index');
+const { default: app } = require('./index');
 
 function getLogLevel(): LogLevel {
   const envLevel = process.env.LOG_LEVEL;

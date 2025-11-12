@@ -12,7 +12,9 @@
       "Bash(npm ls:*)",
       "Bash(cat:*)",
       "Bash(mkdir:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(node -e:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [
       "Bash(powershell.exe:*)",

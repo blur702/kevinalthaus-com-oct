@@ -6,8 +6,7 @@
 import { Router, Response, Request } from 'express';
 import { defaultLogger as logger } from '@monorepo/shared';
 import { query } from '../db';
-import * as Sentry from '@sentry/node';
-import { isSentryEnabled } from '../index';
+import { Sentry, isSentryEnabled } from '../instrument';
 
 const router = Router();
 

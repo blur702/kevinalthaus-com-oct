@@ -30,6 +30,7 @@
     "test:regression": "playwright test --grep @regression"
   },
   "devDependencies": {
+    "@mapbox/node-pre-gyp": "^2.0.0",
     "@playwright/test": "^1.56.1",
     "@sentry/vite-plugin": "^4.6.0",
     "@types/dompurify": "^3.0.5",
