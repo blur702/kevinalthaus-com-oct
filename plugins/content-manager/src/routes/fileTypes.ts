@@ -50,8 +50,7 @@ export function createFileTypesRouter(pool: Pool, logger: PluginLogger): Router 
   });
 
   // PUT/PATCH /:id - Update file type
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  router.put('/:id', async (req: Request, res: Response): Promise<void> => {
+  const updateFileTypeHandler = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const { mime_type, file_extension, category, description, max_file_size, is_enabled } = req.body;
@@ -119,10 +118,14 @@ export function createFileTypesRouter(pool: Pool, logger: PluginLogger): Router 
       logger.error('Failed to update file type', error as Error);
       res.status(500).json({ success: false, error: 'Failed to update file type' });
     }
-  });
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  router.put('/:id', updateFileTypeHandler);
 
   // PATCH /:id - Partial update (alias for PUT for flexibility)
-  router.patch('/:id', router.stack.find(layer => layer.route?.path === '/:id' && layer.route?.methods?.put)?.handle);
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  router.patch('/:id', updateFileTypeHandler);
 
   // DELETE /:id - Delete file type
   // eslint-disable-next-line @typescript-eslint/no-misused-promises

@@ -18,8 +18,6 @@ import { FileShareService } from '../services/FileShareService';
 import { FileVersionService } from '../services/FileVersionService';
 import { createLogger, LogLevel } from '@monorepo/shared';
 
-const router = Router();
-
 // Multer configuration for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -32,6 +30,8 @@ const upload = multer({
  * Initialize admin file routes
  */
 export function createAdminFileRoutes(storageService: StorageService, dbPool: import('pg').Pool): Router {
+  const router = Router();
+
   // Initialize services
   const logger = createLogger({
     level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,

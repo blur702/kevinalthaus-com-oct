@@ -30,7 +30,7 @@ import {
   Typography,
   Paper,
 } from '@mui/material';
-import { TreeView, TreeItem } from '@mui/lab';
+import { TreeView, TreeItem } from '@mui/x-tree-view';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -627,6 +627,7 @@ const MenusPage: React.FC = () => {
                             {!menu.is_active && <Chip size="small" color="warning" label="Inactive" />}
                           </Box>
                         }
+                        secondaryTypographyProps={{ component: 'div' }}
                       />
                     </ListItemButton>
                   </ListItem>
