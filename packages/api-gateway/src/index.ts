@@ -331,7 +331,7 @@ async function getOverallHealth(): Promise<HealthPayload> {
     checkServiceHealth(PYTHON_SERVICE_URL),
   ]);
 
-  const checks = {
+  const checks: Record<string, 'healthy' | 'unhealthy'> = {
     mainApp: mainAppHealthy ? 'healthy' : 'unhealthy',
     pythonService: pythonServiceHealthy ? 'healthy' : 'unhealthy',
   };
