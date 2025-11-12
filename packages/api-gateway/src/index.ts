@@ -853,6 +853,18 @@ app.use(
   })
 );
 
+// Admin Files API routes (alternative path for file management)
+app.use(
+  '/api/admin/files',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/admin/files': '/admin/files' },
+    includeForwardingHeaders: true,
+    timeout: 60000 // Longer timeout for file uploads
+  })
+);
+
 // Python service proxy (JWT required)
 app.use(
   '/api/python',
