@@ -41,7 +41,7 @@
     "@types/node": "^20.0.0",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.1",
-    "typescript": "^5.0.0"
+    "typescript": "5.0.4"
   },
   "engines": {
     "node": ">=20.0.0",

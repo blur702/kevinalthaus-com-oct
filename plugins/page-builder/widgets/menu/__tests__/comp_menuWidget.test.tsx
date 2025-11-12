@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom';
 import MenuWidget from '../component';
 import type { WidgetInstance } from '../../../src/types';
 
@@ -56,7 +57,7 @@ const mockFetch = () => {
       json: async () => mockAdminMenus,
     });
   });
-  (globalThis as typeof globalThis & { fetch: typeof mockedFetch }).fetch = mockedFetch as unknown as typeof globalThis.fetch;
+  globalThis.fetch = mockedFetch as any;
   return mockedFetch;
 };
 

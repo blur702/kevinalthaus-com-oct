@@ -182,9 +182,9 @@ export function rateLimit(options: RateLimitOptions = {}) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       res.send = function(data: any): Response {
         // Decrement counter based on response status
-        if (res.statusCode >= 400 && skipFailedRequests) {
+        if (entry && res.statusCode >= 400 && skipFailedRequests) {
           entry.count--;
-        } else if (res.statusCode < 400 && skipSuccessfulRequests) {
+        } else if (entry && res.statusCode < 400 && skipSuccessfulRequests) {
           entry.count--;
         }
         return originalSend.call(this, data);

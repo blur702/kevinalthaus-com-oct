@@ -24,7 +24,7 @@ export function validate<T>(schema: ZodSchema<T>) {
     } catch (error) {
       if (error instanceof ZodError) {
         // Format validation errors for better readability
-        const formattedErrors = error.errors.map((err) => ({
+        const formattedErrors = error.issues.map((err: any) => ({
           field: err.path.join('.'),
           message: err.message,
         }));
@@ -60,7 +60,7 @@ export const createMenuSchema = z.object({
   description: z.string().max(500, 'Description must be less than 500 characters').optional(),
   location: menuLocationSchema.optional(),
   is_active: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // UpdateMenuRequest schema
@@ -74,7 +74,7 @@ export const updateMenuSchema = z.object({
   description: z.string().max(500, 'Description must be less than 500 characters').nullable().optional(),
   location: menuLocationSchema.optional(),
   is_active: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // CreateMenuItemRequest schema
@@ -88,7 +88,7 @@ export const createMenuItemSchema = z.object({
   rel: z.string().max(255, 'Rel attribute must be less than 255 characters').nullable().optional(),
   order_index: z.number().int().min(0, 'Order index must be a non-negative integer').optional(),
   is_active: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   visibility_roles: z.array(z.string()).optional(),
 });
 
@@ -103,6 +103,6 @@ export const updateMenuItemSchema = z.object({
   rel: z.string().max(255, 'Rel attribute must be less than 255 characters').nullable().optional(),
   order_index: z.number().int().min(0, 'Order index must be a non-negative integer').optional(),
   is_active: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   visibility_roles: z.array(z.string()).optional(),
 });

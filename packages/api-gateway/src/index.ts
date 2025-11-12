@@ -670,7 +670,7 @@ const publicSettingsProxyOptions: Options = {
   proxyTimeout: 30000,
   onProxyReq: (proxyReq, req) => {
     // Set internal gateway token
-    proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN);
+    proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN!);
     // Propagate request id
     const rid = req.headers['x-request-id'];
     if (rid) {
@@ -738,7 +738,7 @@ const publicMenusProxyOptions: Options = {
   timeout: 30000,
   proxyTimeout: 30000,
   onProxyReq: (proxyReq, req) => {
-    proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN);
+    proxyReq.setHeader('X-Internal-Token', INTERNAL_GATEWAY_TOKEN!);
     const rid = req.headers['x-request-id'];
     if (rid) {
       proxyReq.setHeader('x-request-id', Array.isArray(rid) ? rid[0] : String(rid));

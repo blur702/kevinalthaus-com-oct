@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom';
 import AddressValidatorForm from '../AddressValidatorForm';
 
 const fillForm = async (user: ReturnType<typeof userEvent.setup>) => {

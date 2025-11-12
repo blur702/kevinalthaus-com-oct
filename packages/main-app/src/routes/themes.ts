@@ -24,7 +24,7 @@ const ADMIN_THEME_PATH = path.join(process.cwd(), 'public', 'admin-theme-overrid
 const FRONTEND_THEME_PATH = path.join(process.cwd(), 'public', 'frontend-theme-overrides.css');
 
 // GET /api/themes/config - Get current theme configuration
-router.get('/config', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/config', async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const result = await query(
       `SELECT config_value FROM settings WHERE config_key = 'theme_config' LIMIT 1`
@@ -79,13 +79,13 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response) => {
     });
 
     logger.info('Theme saved successfully', { userId: req.user?.id, target });
-    res.json({
+    return res.json({
       message: 'Theme saved successfully',
       cssPath: `/${target}-theme-overrides.css`
     });
   } catch (error) {
     logger.error('Error saving theme', error as Error);
-    res.status(500).json({ error: 'Failed to save theme' });
+    return res.status(500).json({ error: 'Failed to save theme' });
   }
 });
 
@@ -117,10 +117,10 @@ router.post('/reset', async (req: AuthenticatedRequest, res: Response) => {
     );
 
     logger.info('Theme reset to default', { userId: req.user?.id, target });
-    res.json({ message: 'Theme reset successfully' });
+    return res.json({ message: 'Theme reset successfully' });
   } catch (error) {
     logger.error('Error resetting theme', error as Error);
-    res.status(500).json({ error: 'Failed to reset theme' });
+    return res.status(500).json({ error: 'Failed to reset theme' });
   }
 });
 
