@@ -38,6 +38,23 @@ export default defineConfig({
     port: 3002,
     strictPort: true,
     proxy: {
+      // Admin files need special handling - strip /api prefix
+      '/api/admin/files': {
+        target: 'http://localhost:3003',
+        changeOrigin: true,
+        secure: false,
+        cookieDomainRewrite: 'localhost',
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        ws: true,
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('[Proxy Error]', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('[Proxy Request]', req.method, req.url, '-> http://localhost:3003' + req.url.replace(/^\/api/, ''));
+          });
+        },
+      },
       '/api': {
         // Point directly to Main App (bypassing gateway for reliability)
         target: 'http://localhost:3003',
