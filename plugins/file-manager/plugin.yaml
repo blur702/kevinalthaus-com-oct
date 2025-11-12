@@ -1,0 +1,150 @@
+name: file-manager
+version: 1.0.0
+displayName: File Manager
+description: Comprehensive file management with folder hierarchy, batch operations, advanced search, and access control
+author:
+  name: Kevin Althaus
+  email: contact@kevinalthaus.com
+license: MIT
+keywords:
+  - files
+  - folders
+  - storage
+  - batch
+  - permissions
+  - search
+
+capabilities:
+  - database:read
+  - database:write
+  - api:call
+
+entrypoint: dist/index.js
+
+backend:
+  routes:
+    # Folder management endpoints
+    - path: /api/file-manager/folders
+      method: GET
+      handler: listFoldersHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: List folders with hierarchy
+
+    - path: /api/file-manager/folders/:id
+      method: GET
+      handler: getFolderHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:read
+      description: Get single folder with contents
+
+    - path: /api/file-manager/folders
+      method: POST
+      handler: createFolderHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Create new folder (Editor role required)
+
+    - path: /api/file-manager/folders/:id
+      method: PUT
+      handler: updateFolderHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Update folder metadata (Editor role required)
+
+    - path: /api/file-manager/folders/:id
+      method: DELETE
+      handler: deleteFolderHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Delete folder (Admin only)
+
+    - path: /api/file-manager/folders/:id/move
+      method: POST
+      handler: moveFolderHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Move folder to new parent (Editor role required)
+
+    # File-Folder association endpoints
+    - path: /api/file-manager/files/:fileId/folder
+      method: POST
+      handler: addFileToFolderHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Add file to folder (Editor role required)
+
+    - path: /api/file-manager/files/:fileId/folder
+      method: DELETE
+      handler: removeFileFromFolderHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Remove file from folder (Editor role required)
+
+    # Batch operations endpoints
+    - path: /api/file-manager/batch/move
+      method: POST
+      handler: batchMoveHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Move multiple files/folders (Editor role required)
+
+    - path: /api/file-manager/batch/copy
+      method: POST
+      handler: batchCopyHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Copy multiple files (Editor role required)
+
+    - path: /api/file-manager/batch/tag
+      method: POST
+      handler: batchTagHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Tag multiple files (Editor role required)
+
+    - path: /api/file-manager/batch/delete
+      method: POST
+      handler: batchDeleteHandler
+      middleware:
+        - authentication
+      requiredCapabilities:
+        - database:write
+      description: Delete multiple files/folders (Admin only)
+
+database:
+  migrations:
+    - 01-create-schema.sql
+    - 02-create-folders-table.sql
+    - 03-create-file-folders-junction.sql
+    - 04-create-folder-permissions.sql
+    - 05-create-file-access-log.sql
+
+hooks:
+  install: onInstall
+  activate: onActivate
+  deactivate: onDeactivate
+  uninstall: onUninstall
+  update: onUpdate
