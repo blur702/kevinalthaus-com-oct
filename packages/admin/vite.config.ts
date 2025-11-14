@@ -27,6 +27,7 @@ export default defineConfig({
         })
       : undefined,
   ].filter(Boolean),
+  publicDir: resolve(__dirname, '../../public'),
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
