@@ -82,7 +82,7 @@ export class BulkService {
 
       this.logger.info(`Parsed ${records.length} records from JSON`);
 
-      return await this.importUsers(records as Record<string, unknown>[], actorId);
+      return await this.importUsers(records, actorId);
     } catch (error) {
       this.logger.error('Failed to import from JSON', error as Error);
       throw new Error(`JSON parsing failed: ${(error as Error).message}`);

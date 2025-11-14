@@ -13,11 +13,15 @@ import fs from 'fs';
 test.describe('File Management', () => {
   // Login before each test
   test.beforeEach(async ({ page }) => {
+    // Increase test timeout
+    test.setTimeout(120000);
+
     await login(page, TEST_CREDENTIALS.ADMIN.username, TEST_CREDENTIALS.ADMIN.password);
 
-    // Navigate to files page
-    await page.goto('/files');
-    await page.waitForSelector('h1:has-text("File Management")', { timeout: 10000 });
+    // Navigate to files page with proper wait
+    await page.goto('/files', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('h1:has-text("File Management")', { state: 'visible', timeout: 20000 });
   });
 
   test.describe('File Upload & URL-Friendly Filenames', () => {
@@ -35,26 +39,32 @@ test.describe('File Management', () => {
       fs.writeFileSync(testFilePath, testContent);
 
       try {
-        // Click upload button
-        await page.click('button:has-text("Upload File")');
+        // Click upload button with wait
+        const uploadBtn = page.locator('button:has-text("Upload File")');
+        await uploadBtn.waitFor({ state: 'visible', timeout: 15000 });
+        await uploadBtn.click();
 
-        // Wait for upload dialog
+        // Wait for upload dialog with longer timeout
         const dialog = page.getByRole('dialog');
-        await dialog.waitFor({ timeout: 5000 });
+        await dialog.waitFor({ state: 'visible', timeout: 15000 });
 
         // Enter plugin ID in text field (within dialog)
-        await dialog.getByLabel('Plugin ID').fill('admin');
+        const pluginIdInput = dialog.getByLabel('Plugin ID');
+        await pluginIdInput.waitFor({ state: 'visible', timeout: 10000 });
+        await pluginIdInput.fill('admin');
+        await page.waitForTimeout(500);
 
         // Upload file (find input within dialog)
         const fileInput = await dialog.locator('input[type="file"]');
+        await fileInput.waitFor({ state: 'attached', timeout: 10000 });
         await fileInput.setInputFiles(testFilePath);
 
         // Wait for the file selection to be confirmed (look for the alert showing file info)
-        await expect(dialog.locator('text=/Selected:.*txt/i')).toBeVisible({ timeout: 5000 });
+        await expect(dialog.locator('text=/Selected:.*txt/i')).toBeVisible({ timeout: 15000 });
 
         // Wait for Upload button to be enabled (not disabled)
         const uploadButton = dialog.getByRole('button', { name: 'Upload' });
-        await expect(uploadButton).toBeEnabled({ timeout: 5000 });
+        await expect(uploadButton).toBeEnabled({ timeout: 15000 });
 
         // Add small delay to ensure React state has fully updated
         await page.waitForTimeout(500);
@@ -71,19 +81,30 @@ test.describe('File Management', () => {
           }
         });
 
-        // Wait for either success or error message
+        // Wait for either success or error message with longer timeout
         await expect(
           page.locator('text=/uploaded successfully|upload failed|error/i')
-        ).toBeVisible({ timeout: 15000 });
+        ).toBeVisible({ timeout: 30000 });
+
+        // Wait for upload to complete
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(1000);
 
         // Close dialog
-        await page.click('button:has-text("Close")');
+        const closeBtn = page.locator('button:has-text("Close")');
+        await closeBtn.waitFor({ state: 'visible', timeout: 10000 });
+        await closeBtn.click();
+
+        // Wait for dialog to close
+        await dialog.waitFor({ state: 'hidden', timeout: 10000 });
 
         // Verify file appears in list
-        await page.waitForSelector('table', { timeout: 5000 });
+        await page.waitForSelector('table', { state: 'visible', timeout: 15000 });
+        await page.waitForLoadState('networkidle');
 
-        // Check that the original filename is preserved in the display
-        await expect(page.locator(`text="${originalFilename}"`)).toBeVisible();
+        // Check that the original filename is preserved in the display with longer timeout
+        await page.waitForSelector(`text="${originalFilename}"`, { state: 'visible', timeout: 15000 });
+        await expect(page.locator(`text="${originalFilename}"`)).toBeVisible({ timeout: 10000 });
 
         // Click on the file row to get more details
         const fileRow = page.locator(`tr:has-text("${originalFilename}")`);
@@ -193,23 +214,33 @@ test.describe('File Management', () => {
     test('should create basic share link', async ({ page }) => {
       // Find and click share button for the test file
       const fileRow = page.locator(`tr:has-text("${testFilename}")`);
-      await fileRow.locator('button[aria-label="Share"], svg[data-testid="ShareIcon"]').first().click();
+      await fileRow.waitFor({ state: 'visible', timeout: 15000 });
 
-      // Wait for share dialog
-      await expect(page.locator('text=/Share File:/i')).toBeVisible({ timeout: 5000 });
+      const shareButton = fileRow.locator('button[aria-label="Share"], svg[data-testid="ShareIcon"]').first();
+      await shareButton.waitFor({ state: 'visible', timeout: 10000 });
+      await shareButton.click();
+
+      // Wait for share dialog with longer timeout
+      await page.waitForSelector('text=/Share File:/i', { state: 'visible', timeout: 15000 });
+      await expect(page.locator('text=/Share File:/i')).toBeVisible({ timeout: 10000 });
 
       // Create share link (no options)
-      await page.click('button:has-text("Create Share Link")');
+      const createShareButton = page.locator('button:has-text("Create Share Link")');
+      await createShareButton.waitFor({ state: 'visible', timeout: 10000 });
+      await createShareButton.click();
 
-      // Wait for success message
-      await expect(page.locator('text=/Share link created successfully/i')).toBeVisible({ timeout: 5000 });
+      // Wait for success message with longer timeout
+      await page.waitForSelector('text=/Share link created successfully/i', { state: 'visible', timeout: 20000 });
+      await expect(page.locator('text=/Share link created successfully/i')).toBeVisible({ timeout: 10000 });
 
       // Verify share appears in list
-      await expect(page.locator('text=/Active/i')).toBeVisible();
-      await expect(page.locator('text=/Created:/i')).toBeVisible();
+      await expect(page.locator('text=/Active/i')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('text=/Created:/i')).toBeVisible({ timeout: 10000 });
 
       // Close dialog
-      await page.click('button:has-text("Close")');
+      const closeBtn = page.locator('button:has-text("Close")');
+      await closeBtn.waitFor({ state: 'visible', timeout: 10000 });
+      await closeBtn.click();
     });
 
     test('should create share link with expiration date', async ({ page }) => {

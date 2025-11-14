@@ -1,9 +1,10 @@
 import { Router, type Response } from 'express';
 import { authMiddleware, type AuthenticatedRequest } from '../auth';
 import { requireRole } from '../auth/rbac-middleware';
-import { Role, type CreateMenuRequest, type UpdateMenuRequest, type CreateMenuItemRequest, type UpdateMenuItemRequest } from '@monorepo/shared';
+import { Role, type CreateMenuRequest, type UpdateMenuRequest, type CreateMenuItemRequest, type UpdateMenuItemRequest, ValidationError } from '@monorepo/shared';
 import { menuService } from '../server';
 import { asyncHandler } from '../utils/asyncHandler';
+import { Sentry, isSentryEnabled } from '../instrument';
 import {
   validate,
   createMenuSchema,
@@ -13,6 +14,69 @@ import {
 } from '../middleware/zodValidation';
 
 const menusRouter = Router();
+
+// Custom error classes for proper error handling
+class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NotFoundError';
+  }
+}
+
+class UnauthorizedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+/**
+ * Handles menu-related errors and sends appropriate HTTP responses
+ * @param error - The error to handle (unknown type)
+ * @param res - Express Response object
+ */
+function handleMenuError(error: unknown, res: Response): void {
+  // Use instanceof checks for proper error classification
+  if (error instanceof ValidationError) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+
+  if (error instanceof NotFoundError) {
+    res.status(404).json({ error: error.message });
+    return;
+  }
+
+  if (error instanceof UnauthorizedError) {
+    res.status(401).json({ error: error.message });
+    return;
+  }
+
+  // Fallback to string matching for errors not using custom classes
+  const err = error instanceof Error ? error : new Error(String(error));
+  const errorMessage = err.message.toLowerCase();
+
+  if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+    res.status(404).json({ error: err.message });
+    return;
+  }
+
+  if (errorMessage.includes('unauthorized')) {
+    res.status(401).json({ error: err.message });
+    return;
+  }
+
+  if (errorMessage.includes('forbidden')) {
+    res.status(403).json({ error: err.message });
+    return;
+  }
+
+  // Unexpected errors - capture to Sentry and return 500
+  if (isSentryEnabled) {
+    Sentry.captureException(err);
+  }
+  res.status(500).json({ error: 'Internal server error' });
+}
 
 menusRouter.use(authMiddleware);
 menusRouter.use(requireRole(Role.ADMIN));
@@ -62,23 +126,7 @@ menusRouter.put(
       const menu = await menuService.updateMenu(req.params.id, data, req.user!.id);
       res.json({ menu });
     } catch (error) {
-      const err = error as Error;
-      const errorMessage = err.message.toLowerCase();
-
-      // Check for validation errors
-      if (err.name === 'ValidationError' || errorMessage.includes('invalid') || errorMessage.includes('required')) {
-        res.status(400).json({ error: err.message });
-        return;
-      }
-
-      // Check for not found errors
-      if (err.message.includes('not found') || err.message.includes('does not exist')) {
-        res.status(404).json({ error: err.message });
-        return;
-      }
-
-      // Unexpected errors
-      res.status(500).json({ error: 'Internal server error' });
+      handleMenuError(error, res);
     }
   })
 );
@@ -100,7 +148,7 @@ menusRouter.post(
       const item = await menuService.createMenuItem(req.params.id, data, req.user!.id);
       res.status(201).json({ item });
     } catch (error) {
-      res.status(400).json({ error: (error as Error).message });
+      handleMenuError(error, res);
     }
   })
 );
@@ -114,16 +162,20 @@ menusRouter.put(
       const item = await menuService.updateMenuItem(req.params.itemId, data, req.user!.id);
       res.json({ item });
     } catch (error) {
-      res.status(400).json({ error: (error as Error).message });
+      handleMenuError(error, res);
     }
   })
 );
 
 menusRouter.delete(
   '/:menuId/items/:itemId',
-  asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
-    await menuService.deleteMenuItem(_req.params.itemId);
-    res.status(204).send();
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await menuService.deleteMenuItem(req.params.itemId);
+      res.status(204).send();
+    } catch (error) {
+      handleMenuError(error, res);
+    }
   })
 );
 

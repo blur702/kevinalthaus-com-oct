@@ -5,7 +5,6 @@
  * Ensures plugin failures NEVER crash the main system.
  */
 
-import type express from 'express';
 import {
   PluginExecutor,
   pluginExecutor,
@@ -14,7 +13,7 @@ import {
   type Plugin,
 } from './PluginExecutor';
 import type { PluginLogger } from '@monorepo/shared';
-import type { IBlogService } from '@monorepo/shared';
+import type { IBlogService, IAnalyticsService } from '@monorepo/shared';
 
 interface DiscoveredPlugin {
   name: string;
@@ -51,13 +50,14 @@ class PluginManager {
     editor?: unknown;
     taxonomy?: unknown;
     email?: unknown;
+    analytics?: IAnalyticsService;
   } = {};
 
   constructor() {
     this.executor = pluginExecutor;
   }
 
-  init(_app: express.Express): void {
+  init(): void {
     console.log('[PluginManager] Initialized with error isolation enabled');
   }
 
@@ -70,6 +70,7 @@ class PluginManager {
     taxonomy?: unknown;
     email?: unknown;
     storage?: unknown;
+    analytics?: IAnalyticsService;
   }): void {
     this.services = services;
     console.log('[PluginManager] Services injected:', Object.keys(services));
@@ -117,6 +118,7 @@ class PluginManager {
         editor: this.services.editor || null,
         taxonomy: this.services.taxonomy || null,
         email: this.services.email || null,
+        analytics: this.services.analytics || null,
       },
       logger,
       config: context.config || {},
@@ -157,6 +159,7 @@ class PluginManager {
         editor: this.services.editor || null,
         taxonomy: this.services.taxonomy || null,
         email: this.services.email || null,
+        analytics: this.services.analytics || null,
       },
       logger,
       config: {},
@@ -245,4 +248,3 @@ class PluginManager {
 }
 
 export const pluginManager = new PluginManager();
-

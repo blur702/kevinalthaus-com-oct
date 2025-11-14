@@ -14,7 +14,9 @@ export default defineConfig({
     // Upload source maps to Sentry on production builds (validate required env vars)
     (() => {
       const isProd = process.env.NODE_ENV === 'production';
-      if (!isProd) return undefined;
+      if (!isProd) {
+        return undefined;
+      }
       const required = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'];
       const missing = required.filter((k) => !process.env[k]);
       if (missing.length > 0) {

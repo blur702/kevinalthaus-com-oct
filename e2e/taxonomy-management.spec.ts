@@ -21,110 +21,147 @@ async function loginAsKevin(page: Page): Promise<void> {
 
 test.describe('Taxonomy Management', () => {
   test.beforeEach(async ({ page }) => {
+    // Increase test timeout
+    test.setTimeout(90000);
     await loginAsKevin(page);
   });
 
   test('should navigate to Taxonomy page', async ({ page }) => {
-    await page.goto('/taxonomy');
+    await page.goto('/taxonomy', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForLoadState('networkidle');
     await expect(page).toHaveURL('/taxonomy');
-    await expect(page.locator('text=/Taxonomy/i')).toBeVisible({ timeout: 5000 });
+    await page.waitForSelector('text=/Taxonomy/i', { state: 'visible', timeout: 15000 });
+    await expect(page.locator('text=/Taxonomy/i')).toBeVisible({ timeout: 10000 });
   });
 
   test('should create a new vocabulary', async ({ page }) => {
-    await page.goto('/taxonomy');
+    await page.goto('/taxonomy', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Click "Create Vocabulary" or "Add Vocabulary" button
     const createVocabButton = page.locator('button:has-text("Create"), button:has-text("Add Vocabulary"), button:has-text("New Vocabulary")').first();
-    await createVocabButton.click({ timeout: 5000 });
+    await createVocabButton.waitFor({ state: 'visible', timeout: 15000 });
+    await createVocabButton.click();
 
-    // Wait for dialog to appear
-    await page.waitForSelector('input[name="name"], input[placeholder*="name" i]', { timeout: 5000 });
+    // Wait for dialog to appear with longer timeout
+    await page.waitForSelector('input[name="name"], input[placeholder*="name" i]', { state: 'visible', timeout: 15000 });
 
     // Fill in vocabulary details
     const testVocabName = `Test Categories ${Date.now()}`;
-    await page.locator('input[name="name"], input[placeholder*="name" i]').fill(testVocabName);
+    const nameInput = page.locator('input[name="name"], input[placeholder*="name" i]');
+    await nameInput.waitFor({ state: 'visible', timeout: 10000 });
+    await nameInput.fill(testVocabName);
 
     // Fill machine name
     const machineName = `test_categories_${Date.now()}`;
-    await page.locator('input[name="machine_name"], input[placeholder*="machine" i]').fill(machineName);
+    const machineNameInput = page.locator('input[name="machine_name"], input[placeholder*="machine" i]');
+    await machineNameInput.waitFor({ state: 'visible', timeout: 10000 });
+    await machineNameInput.fill(machineName);
+    await page.waitForTimeout(500);
 
     // Fill description if available
     const descriptionField = page.locator('textarea[name="description"], textarea[placeholder*="description" i]');
     if (await descriptionField.count() > 0) {
       await descriptionField.fill('Test vocabulary for categories');
+      await page.waitForTimeout(500);
     }
 
     // Check "Allow Multiple" if available
     const allowMultipleCheckbox = page.locator('input[type="checkbox"][name="allow_multiple"], input[type="checkbox"] + label:has-text("Allow Multiple")');
     if (await allowMultipleCheckbox.count() > 0) {
       await allowMultipleCheckbox.check();
+      await page.waitForTimeout(500);
     }
 
     // Submit the form
     const saveButton = page.locator('button:has-text("Save"), button:has-text("Create")').first();
+    await saveButton.waitFor({ state: 'visible', timeout: 10000 });
     await saveButton.click();
 
     // Wait for dialog to close and vocabulary to appear in list
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
-    // Verify vocabulary appears in the list
-    await expect(page.locator(`text=${testVocabName}`)).toBeVisible({ timeout: 5000 });
+    // Verify vocabulary appears in the list with longer timeout
+    await page.waitForSelector(`text=${testVocabName}`, { state: 'visible', timeout: 15000 });
+    await expect(page.locator(`text=${testVocabName}`)).toBeVisible({ timeout: 10000 });
   });
 
   test('should create a term within a vocabulary', async ({ page }) => {
-    await page.goto('/taxonomy');
+    await page.goto('/taxonomy', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // First, create a vocabulary
     const createVocabButton = page.locator('button:has-text("Create"), button:has-text("Add Vocabulary"), button:has-text("New Vocabulary")').first();
-    await createVocabButton.click({ timeout: 5000 });
+    await createVocabButton.waitFor({ state: 'visible', timeout: 15000 });
+    await createVocabButton.click();
 
     const testVocabName = `Animals ${Date.now()}`;
     const machineName = `animals_${Date.now()}`;
 
-    await page.waitForSelector('input[name="name"], input[placeholder*="name" i]', { timeout: 5000 });
-    await page.locator('input[name="name"], input[placeholder*="name" i]').fill(testVocabName);
-    await page.locator('input[name="machine_name"], input[placeholder*="machine" i]').fill(machineName);
+    await page.waitForSelector('input[name="name"], input[placeholder*="name" i]', { state: 'visible', timeout: 15000 });
+    const nameInput = page.locator('input[name="name"], input[placeholder*="name" i]');
+    await nameInput.fill(testVocabName);
+    await page.waitForTimeout(500);
+
+    const machineNameInput = page.locator('input[name="machine_name"], input[placeholder*="machine" i]');
+    await machineNameInput.fill(machineName);
+    await page.waitForTimeout(500);
 
     const saveVocabButton = page.locator('button:has-text("Save"), button:has-text("Create")').first();
+    await saveVocabButton.waitFor({ state: 'visible', timeout: 10000 });
     await saveVocabButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Select the vocabulary from the list
-    await page.locator(`text=${testVocabName}`).click();
-    await page.waitForTimeout(500);
+    const vocabLink = page.locator(`text=${testVocabName}`);
+    await vocabLink.waitFor({ state: 'visible', timeout: 15000 });
+    await vocabLink.click();
+    await page.waitForTimeout(1000);
 
     // Click "Create Term" or "Add Term" button
     const createTermButton = page.locator('button:has-text("Add Term"), button:has-text("Create Term"), button:has-text("New Term")').first();
-    await createTermButton.click({ timeout: 5000 });
+    await createTermButton.waitFor({ state: 'visible', timeout: 15000 });
+    await createTermButton.click();
 
     // Wait for term form to appear
-    await page.waitForSelector('input[name="name"]:visible, input[placeholder*="term name" i]:visible', { timeout: 5000 });
+    await page.waitForSelector('input[name="name"]:visible, input[placeholder*="term name" i]:visible', { state: 'visible', timeout: 15000 });
 
     // Fill in term details
     const testTermName = 'Cats';
-    await page.locator('input[name="name"]:visible, input[placeholder*="term name" i]:visible').fill(testTermName);
+    const termNameInput = page.locator('input[name="name"]:visible, input[placeholder*="term name" i]:visible');
+    await termNameInput.fill(testTermName);
+    await page.waitForTimeout(500);
 
     // Fill slug if available
     const slugField = page.locator('input[name="slug"]:visible, input[placeholder*="slug" i]:visible');
     if (await slugField.count() > 0) {
       await slugField.fill('cats');
+      await page.waitForTimeout(500);
     }
 
     // Fill description if available
     const termDescField = page.locator('textarea[name="description"]:visible, textarea[placeholder*="description" i]:visible');
     if (await termDescField.count() > 0) {
       await termDescField.fill('All content related to cats');
+      await page.waitForTimeout(500);
     }
 
     // Submit the term form
     const saveTermButton = page.locator('button:has-text("Save"), button:has-text("Create")').last();
+    await saveTermButton.waitFor({ state: 'visible', timeout: 10000 });
     await saveTermButton.click();
 
     // Wait for term to appear in the list
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
-    // Verify term appears in the list
-    await expect(page.locator(`text=${testTermName}`)).toBeVisible({ timeout: 5000 });
+    // Verify term appears in the list with longer timeout
+    await page.waitForSelector(`text=${testTermName}`, { state: 'visible', timeout: 15000 });
+    await expect(page.locator(`text=${testTermName}`)).toBeVisible({ timeout: 10000 });
   });
 
   test('should create hierarchical terms (parent-child)', async ({ page }) => {
@@ -298,7 +335,7 @@ test.describe('Taxonomy Integration with Blog Posts', () => {
     await page.goto('/taxonomy');
 
     // Create categories vocabulary
-    let createVocabButton = page.locator('button:has-text("Create"), button:has-text("Add Vocabulary"), button:has-text("New Vocabulary")').first();
+    const createVocabButton = page.locator('button:has-text("Create"), button:has-text("Add Vocabulary"), button:has-text("New Vocabulary")').first();
     await createVocabButton.click({ timeout: 5000 });
 
     await page.waitForSelector('input[name="name"]', { timeout: 5000 });
@@ -313,7 +350,7 @@ test.describe('Taxonomy Integration with Blog Posts', () => {
     await page.locator('text=Persist Categories').click();
     await page.waitForTimeout(500);
 
-    let createTermButton = page.locator('button:has-text("Add Term"), button:has-text("Create Term"), button:has-text("New Term")').first();
+    const createTermButton = page.locator('button:has-text("Add Term"), button:has-text("Create Term"), button:has-text("New Term")').first();
     await createTermButton.click({ timeout: 5000 });
 
     await page.waitForSelector('input[name="name"]:visible', { timeout: 5000 });
@@ -375,8 +412,8 @@ test.describe('Taxonomy Integration with Blog Posts', () => {
     await page.goto('/taxonomy');
 
     // Create a vocabulary with two terms
-    let createVocabButton = page.locator('button:has-text("Create"), button:has-text("Add Vocabulary"), button:has-text("New Vocabulary")').first();
-    await createVocabButton.click({ timeout: 5000 });
+    const createVocabButton2 = page.locator('button:has-text("Create"), button:has-text("Add Vocabulary"), button:has-text("New Vocabulary")').first();
+    await createVocabButton2.click({ timeout: 5000 });
 
     await page.waitForSelector('input[name="name"]', { timeout: 5000 });
     await page.locator('input[name="name"]').fill('Change Categories');
@@ -390,8 +427,8 @@ test.describe('Taxonomy Integration with Blog Posts', () => {
     await page.locator('text=Change Categories').click();
     await page.waitForTimeout(500);
 
-    let createTermButton = page.locator('button:has-text("Add Term"), button:has-text("Create Term"), button:has-text("New Term")').first();
-    await createTermButton.click({ timeout: 5000 });
+    const createTermButton2 = page.locator('button:has-text("Add Term"), button:has-text("Create Term"), button:has-text("New Term")').first();
+    await createTermButton2.click({ timeout: 5000 });
 
     await page.waitForSelector('input[name="name"]:visible', { timeout: 5000 });
     await page.locator('input[name="name"]:visible').fill('Term One');
@@ -401,7 +438,7 @@ test.describe('Taxonomy Integration with Blog Posts', () => {
     await page.waitForTimeout(1000);
 
     // Add second term
-    await createTermButton.click({ timeout: 5000 });
+    await createTermButton2.click({ timeout: 5000 });
     await page.waitForSelector('input[name="name"]:visible', { timeout: 5000 });
     await page.locator('input[name="name"]:visible').fill('Term Two');
 

@@ -1,9 +1,13 @@
-import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 
-export function asyncHandler(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
+/**
+ * Async handler wrapper to properly handle async route handlers
+ * Catches rejected promises and forwards them to Express error middleware
+ */
+export function asyncHandler<T = Request>(
+  fn: (req: T, res: Response, next: NextFunction) => Promise<void | Response>
 ): RequestHandler {
-  return (req: Request, res: Response, next: NextFunction) => {
-    void Promise.resolve(fn(req, res, next)).catch(next);
+  return (req, res, next) => {
+    Promise.resolve(fn(req as T, res, next)).catch(next);
   };
 }

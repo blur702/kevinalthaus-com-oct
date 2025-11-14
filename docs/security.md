@@ -15,6 +15,16 @@ The platform applies defense-in-depth across auth, CSRF, CORS, headers, and inte
 - Docker network isolation: internal services are not exposed publicly
 - **Structured logging**: All services use request IDs for tracing; errors never expose filesystem paths to clients
 - **Upload security**: Quarantine-based validation with magic-byte sniffing; all errors sanitized before client response
+- PostgreSQL TLS hardening with CA/hostname validation (`PGSSLMODE=verify-full`)
+
+## PostgreSQL TLS Requirements
+
+- Provision three files in `./secrets` before starting containers: `server.crt`, `server.key`, and `ca.crt`. The CA file must be the issuer of `server.crt`, as mounted into `main-app` at `/run/secrets/postgres_ca.crt`.
+- Run `./scripts/generate-ssl-certs.sh` for local testing; it now creates a local CA, signs `server.crt` with SAN entries for `postgres` and `localhost`, and writes `ca.crt` next to the server assets. For production, copy the CA-provided files into the same locations.
+- File permissions must allow the Docker runtime user (typically your host user ID) to read `./secrets/ca.crt` so the bind mount remains readable inside the `main-app` container. Recommended: `chmod 640 ca.crt` and `chmod 600 server.key`.
+- Verify the certificate chain prior to deployment: `openssl verify -CAfile ./secrets/ca.crt ./secrets/server.crt` should return `OK`. When using public CA chains, place the full chain (root + intermediates) in `ca.crt`.
+- Ensure the server certificate's CN or SAN entries include the hostname used by clients (`postgres` on the Docker network). Mismatched hostnames will cause `PGSSLMODE=verify-full` to abort connections during startup.
+- If replacing certificates, update both the `postgres` service mounts (`./secrets/server.crt`, `./secrets/server.key`) and the client CA mount (`./secrets/ca.crt`) so that `packages/main-app/src/db/index.ts` can read the correct trust anchor.
 
 ## Admin CSRF Requirements
 
@@ -97,4 +107,3 @@ All file uploads go through a multi-stage validation process:
 - Rotate secrets regularly and store securely
 
 See `docs/maintainers/pending-fixes.md` for open security/code-quality items.
-

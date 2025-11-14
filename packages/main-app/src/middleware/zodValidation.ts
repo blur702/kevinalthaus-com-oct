@@ -24,7 +24,7 @@ export function validate<T>(schema: ZodSchema<T>) {
     } catch (error) {
       if (error instanceof ZodError) {
         // Format validation errors for better readability
-        const formattedErrors = error.issues.map((err: any) => ({
+        const formattedErrors = error.issues.map((err) => ({
           field: err.path.join('.'),
           message: err.message,
         }));

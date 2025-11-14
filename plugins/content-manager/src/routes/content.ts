@@ -12,6 +12,7 @@ import Joi from 'joi';
 
 // Import types from shared package
 import type { PluginLogger } from '@monorepo/shared';
+import { Role } from '@monorepo/shared';
 
 export function createContentRouter(pool: Pool, logger: PluginLogger): Router {
   const router = Router();
@@ -258,7 +259,7 @@ export function createContentRouter(pool: Pool, logger: PluginLogger): Router {
 
       // Check user permission (Editor or Admin)
       const userRole = req.user?.role;
-      if (userRole !== 'admin' && userRole !== 'editor') {
+      if (userRole !== Role.ADMIN && userRole !== Role.EDITOR) {
         res.status(403).json({
           success: false,
           error: 'Editor role required to create content'
@@ -433,7 +434,7 @@ export function createContentRouter(pool: Pool, logger: PluginLogger): Router {
       const existingContent = existingResult.rows[0];
 
       // Check permissions
-      if (existingContent.status === 'published' && userRole !== 'admin') {
+      if (existingContent.status === 'published' && userRole !== Role.ADMIN) {
         res.status(403).json({
           success: false,
           error: 'Admin role required to update published content'
@@ -567,7 +568,7 @@ export function createContentRouter(pool: Pool, logger: PluginLogger): Router {
       const userId = req.user?.id;
       const userRole = req.user?.role;
 
-      if (userRole !== 'admin') {
+      if (userRole !== Role.ADMIN) {
         res.status(403).json({
           success: false,
           error: 'Admin role required to delete content'
@@ -618,7 +619,7 @@ export function createContentRouter(pool: Pool, logger: PluginLogger): Router {
       const userId = req.user?.id;
       const userRole = req.user?.role;
 
-      if (userRole !== 'admin') {
+      if (userRole !== Role.ADMIN) {
         res.status(403).json({
           success: false,
           error: 'Admin role required to publish content'
@@ -672,7 +673,7 @@ export function createContentRouter(pool: Pool, logger: PluginLogger): Router {
       const userId = req.user?.id;
       const userRole = req.user?.role;
 
-      if (userRole !== 'admin') {
+      if (userRole !== Role.ADMIN) {
         res.status(403).json({
           success: false,
           error: 'Admin role required to unpublish content'
@@ -758,7 +759,7 @@ export function createContentRouter(pool: Pool, logger: PluginLogger): Router {
       const userId = req.user?.id;
       const userRole = req.user?.role;
 
-      if (userRole !== 'admin') {
+      if (userRole !== Role.ADMIN) {
         res.status(403).json({
           success: false,
           error: 'Admin role required to restore versions'

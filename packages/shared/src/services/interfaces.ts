@@ -8,7 +8,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import type { Pool } from 'pg';
-import type Knex from 'knex';
+import type { Knex } from 'knex';
 import type { Role, Capability } from '../security/rbac';
 
 // ============================================================================
@@ -186,8 +186,7 @@ export interface IDatabaseService extends IService {
   /**
    * Get Knex query builder for schema
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getKnex(schema?: string): any;
+  getKnex(schema?: string): Knex;
 
   /**
    * Execute raw SQL query (use sparingly, prefer query builder)
@@ -197,9 +196,8 @@ export interface IDatabaseService extends IService {
   /**
    * Start a transaction
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transaction<T>(
-    callback: (trx: any) => Promise<T>,
+    callback: (trx: Knex.Transaction) => Promise<T>,
     schema?: string
   ): Promise<T>;
 
@@ -365,14 +363,21 @@ export interface ImageMetadata {
   alt?: string;
   title?: string;
   caption?: string;
+  filename?: string;
+  mimeType?: string;
+  userId?: string;
 }
 
 export interface ImageResult {
+  id?: string;
   url: string;
-  width: number;
-  height: number;
-  size: number;
-  format: string;
+  width?: number;
+  height?: number;
+  size?: number;
+  format?: string;
+  thumbnailUrl?: string;
+  alt?: string;
+  title?: string;
 }
 
 // ============================================================================
@@ -1224,6 +1229,356 @@ export interface IEmailService extends IService {
    * @returns True if configured, false otherwise
    */
   isConfigured(): boolean;
+}
+
+// ============================================================================
+// Analytics Service Interface
+// ============================================================================
+
+export type AnalyticsEventProperties = Record<string, unknown>;
+
+export interface AnalyticsSessionCreateInput {
+  user_id?: string | null;
+  anonymous_id?: string | null;
+  session_start?: Date;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  device_type?: string | null;
+  browser?: string | null;
+  browser_version?: string | null;
+  os?: string | null;
+  os_version?: string | null;
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+  referrer_source?: string | null;
+  referrer_medium?: string | null;
+  referrer_campaign?: string | null;
+  landing_page?: string | null;
+}
+
+export interface AnalyticsSessionUpdateInput {
+  session_end?: Date | null;
+  duration_seconds?: number | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  device_type?: string | null;
+  browser?: string | null;
+  browser_version?: string | null;
+  os?: string | null;
+  os_version?: string | null;
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+  referrer_source?: string | null;
+  referrer_medium?: string | null;
+  referrer_campaign?: string | null;
+  landing_page?: string | null;
+  exit_page?: string | null;
+  page_views_count?: number;
+  events_count?: number;
+  is_bounce?: boolean;
+}
+
+export interface AnalyticsSession {
+  id: string;
+  user_id?: string | null;
+  anonymous_id?: string | null;
+  session_start: Date;
+  session_end?: Date | null;
+  duration_seconds?: number | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  device_type?: string | null;
+  browser?: string | null;
+  browser_version?: string | null;
+  os?: string | null;
+  os_version?: string | null;
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+  referrer_source?: string | null;
+  referrer_medium?: string | null;
+  referrer_campaign?: string | null;
+  landing_page?: string | null;
+  exit_page?: string | null;
+  page_views_count: number;
+  events_count: number;
+  is_bounce: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface AnalyticsEventInput {
+  session_id: string;
+  user_id?: string | null;
+  event_name: string;
+  event_properties?: AnalyticsEventProperties;
+  page_url?: string | null;
+  page_path?: string | null;
+  page_title?: string | null;
+  referrer?: string | null;
+  created_at?: Date;
+}
+
+export interface AnalyticsPageViewInput extends Omit<AnalyticsEventInput, 'event_name'> {
+  ip_address?: string | null;
+  user_agent?: string | null;
+}
+
+export interface AnalyticsEventRecord {
+  id: string;
+  session_id: string;
+  user_id?: string | null;
+  event_name: string;
+  event_properties: AnalyticsEventProperties;
+  page_url?: string | null;
+  page_path?: string | null;
+  page_title?: string | null;
+  referrer?: string | null;
+  created_at: Date;
+}
+
+export interface AnalyticsEventQuery {
+  session_id?: string;
+  user_id?: string;
+  event_name?: string;
+  start_date?: Date;
+  end_date?: Date;
+  limit?: number;
+  offset?: number;
+  order?: 'asc' | 'desc';
+}
+
+export interface AnalyticsEventStreamResult {
+  events: AnalyticsEventRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface AnalyticsUserPropertyInput {
+  user_id?: string | null;
+  anonymous_id?: string | null;
+  property_key: string;
+  property_value: string;
+  property_type: 'string' | 'number' | 'boolean' | 'date';
+}
+
+export interface AnalyticsUserProperty {
+  id: string;
+  user_id?: string | null;
+  anonymous_id?: string | null;
+  property_key: string;
+  property_value: string;
+  property_type: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface AnalyticsConsentInput {
+  user_id?: string | null;
+  anonymous_id?: string | null;
+  consent_type: 'analytics' | 'marketing' | 'functional' | 'necessary';
+  consent_given: boolean;
+  consent_version: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
+}
+
+export interface AnalyticsConsent {
+  id: string;
+  user_id?: string | null;
+  anonymous_id?: string | null;
+  consent_type: string;
+  consent_given: boolean;
+  consent_version: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: Date;
+}
+
+export interface AnalyticsFunnel {
+  id: string;
+  name: string;
+  description?: string | null;
+  steps: AnalyticsEventProperties;
+  is_active: boolean;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CreateAnalyticsFunnelInput {
+  name: string;
+  description?: string | null;
+  steps: AnalyticsEventProperties;
+  created_by: string;
+  is_active?: boolean;
+}
+
+export interface UpdateAnalyticsFunnelInput {
+  name?: string;
+  description?: string | null;
+  steps?: AnalyticsEventProperties;
+  is_active?: boolean;
+}
+
+export interface AnalyticsGoal {
+  id: string;
+  name: string;
+  description?: string | null;
+  goal_type: 'event' | 'destination' | 'duration' | 'pages_per_session';
+  goal_conditions: AnalyticsEventProperties;
+  goal_value?: string | null;
+  is_active: boolean;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CreateAnalyticsGoalInput {
+  name: string;
+  description?: string | null;
+  goal_type: 'event' | 'destination' | 'duration' | 'pages_per_session';
+  goal_conditions: AnalyticsEventProperties;
+  goal_value?: string | null;
+  created_by: string;
+  is_active?: boolean;
+}
+
+export interface UpdateAnalyticsGoalInput {
+  name?: string;
+  description?: string | null;
+  goal_type?: 'event' | 'destination' | 'duration' | 'pages_per_session';
+  goal_conditions?: AnalyticsEventProperties;
+  goal_value?: string | null;
+  is_active?: boolean;
+}
+
+export interface AnalyticsSessionRecording {
+  id: string;
+  session_id: string;
+  recording_data: AnalyticsEventProperties;
+  recording_duration_ms: number;
+  recording_size_bytes: number;
+  has_errors: boolean;
+  error_count: number;
+  privacy_mode: 'strict' | 'moderate' | 'minimal';
+  created_at: Date;
+}
+
+export interface CreateAnalyticsSessionRecordingInput {
+  session_id: string;
+  recording_data: AnalyticsEventProperties;
+  recording_duration_ms: number;
+  recording_size_bytes: number;
+  has_errors?: boolean;
+  error_count?: number;
+  privacy_mode?: 'strict' | 'moderate' | 'minimal';
+}
+
+export interface AnalyticsHeatmap {
+  id: string;
+  page_path: string;
+  viewport_width: number;
+  viewport_height: number;
+  interaction_type: 'click' | 'scroll' | 'move';
+  aggregation_period: Date;
+  heatmap_data: AnalyticsEventProperties;
+  sample_size: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface UpsertAnalyticsHeatmapInput {
+  page_path: string;
+  viewport_width: number;
+  viewport_height: number;
+  interaction_type: 'click' | 'scroll' | 'move';
+  aggregation_period: Date;
+  heatmap_data: AnalyticsEventProperties;
+  sample_size: number;
+}
+
+export interface AnalyticsHeatmapQuery {
+  page_path?: string;
+  start_date?: Date;
+  end_date?: Date;
+  interaction_type?: 'click' | 'scroll' | 'move';
+  limit?: number;
+}
+
+export interface AnalyticsSessionQuery {
+  user_id?: string;
+  anonymous_id?: string;
+  start_date?: Date;
+  end_date?: Date;
+}
+
+export interface AnalyticsSessionSummary {
+  total_sessions: number;
+  active_sessions: number;
+  average_duration_seconds: number;
+  total_events: number;
+  total_page_views: number;
+}
+
+export interface AnalyticsAggregateQuery {
+  start_date?: Date;
+  end_date?: Date;
+  limit?: number;
+}
+
+export interface AnalyticsTopEvent {
+  event_name: string;
+  count: number;
+  unique_sessions: number;
+}
+
+export interface AnalyticsTopPage {
+  page_path: string;
+  views: number;
+  unique_visitors: number;
+}
+
+export interface AnalyticsTopPagesQuery extends AnalyticsAggregateQuery {}
+
+export interface AnalyticsTimelineQuery extends AnalyticsSessionQuery {
+  interval?: 'hour' | 'day' | 'week';
+}
+
+export interface AnalyticsTimeSeriesPoint {
+  period: string;
+  sessions: number;
+  events: number;
+}
+
+export interface IAnalyticsService extends IService {
+  createSession(data: AnalyticsSessionCreateInput): Promise<AnalyticsSession>;
+  updateSession(sessionId: string, updates: AnalyticsSessionUpdateInput): Promise<AnalyticsSession | null>;
+  endSession(sessionId: string, endedAt?: Date): Promise<AnalyticsSession | null>;
+  trackEvent(event: AnalyticsEventInput): Promise<AnalyticsEventRecord>;
+  recordPageView(view: AnalyticsPageViewInput): Promise<AnalyticsEventRecord>;
+  getEventStream(query: AnalyticsEventQuery): Promise<AnalyticsEventStreamResult>;
+  setUserProperty(property: AnalyticsUserPropertyInput): Promise<AnalyticsUserProperty>;
+  getUserProperties(query: { user_id?: string; anonymous_id?: string }): Promise<AnalyticsUserProperty[]>;
+  recordConsent(consent: AnalyticsConsentInput): Promise<AnalyticsConsent>;
+  getConsentHistory(query: { user_id?: string; anonymous_id?: string }): Promise<AnalyticsConsent[]>;
+  createFunnel(data: CreateAnalyticsFunnelInput): Promise<AnalyticsFunnel>;
+  updateFunnel(id: string, updates: UpdateAnalyticsFunnelInput): Promise<AnalyticsFunnel | null>;
+  listFunnels(options?: { includeInactive?: boolean }): Promise<AnalyticsFunnel[]>;
+  createGoal(data: CreateAnalyticsGoalInput): Promise<AnalyticsGoal>;
+  updateGoal(id: string, updates: UpdateAnalyticsGoalInput): Promise<AnalyticsGoal | null>;
+  listGoals(options?: { includeInactive?: boolean; goal_type?: string }): Promise<AnalyticsGoal[]>;
+  saveSessionRecording(data: CreateAnalyticsSessionRecordingInput): Promise<AnalyticsSessionRecording>;
+  getSessionRecording(sessionId: string): Promise<AnalyticsSessionRecording | null>;
+  upsertHeatmap(data: UpsertAnalyticsHeatmapInput): Promise<AnalyticsHeatmap>;
+  getHeatmaps(query: AnalyticsHeatmapQuery): Promise<AnalyticsHeatmap[]>;
+  getSessionSummary(query: AnalyticsSessionQuery): Promise<AnalyticsSessionSummary>;
+  getTopEvents(options?: AnalyticsAggregateQuery): Promise<AnalyticsTopEvent[]>;
+  getTopPages(options?: AnalyticsTopPagesQuery): Promise<AnalyticsTopPage[]>;
+  getSessionTimeline(options: AnalyticsTimelineQuery): Promise<AnalyticsTimeSeriesPoint[]>;
 }
 
 // ============================================================================

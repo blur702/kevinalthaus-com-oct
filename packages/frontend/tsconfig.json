@@ -26,5 +26,12 @@
     "src",
     "../../plugins/ssdd-validator/frontend/src"
   ],
+  "exclude": [
+    "**/__tests__",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

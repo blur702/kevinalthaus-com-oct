@@ -195,7 +195,7 @@ describe('BatchService', () => {
       expect(mockClient.release).toHaveBeenCalled();
     });
 
-    it('should rollback on transaction error', async () => {
+    it('should handle individual file errors without rolling back transaction', async () => {
       // Mock BEGIN transaction
       mockClient.query.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
 
@@ -205,17 +205,33 @@ describe('BatchService', () => {
         rowCount: 1,
       } as any);
 
-      // Mock error during file processing
+      // First file: check fails with error
       mockClient.query.mockRejectedValueOnce(new Error('Database error'));
 
-      // Mock ROLLBACK
+      // Second file: succeeds
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ id: fileIds[1] }],
+        rowCount: 1,
+      } as any);
+      mockClient.query.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
       mockClient.query.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
 
-      await expect(
-        batchService.batchMoveFiles(fileIds, targetFolderId, userId)
-      ).rejects.toThrow('Database error');
+      // Third file: succeeds
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ id: fileIds[2] }],
+        rowCount: 1,
+      } as any);
+      mockClient.query.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+      mockClient.query.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
 
-      expect(mockLogger.error).toHaveBeenCalled();
+      // Mock COMMIT
+      mockClient.query.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+
+      const result = await batchService.batchMoveFiles(fileIds, targetFolderId, userId);
+
+      expect(result.successful).toEqual([fileIds[1], fileIds[2]]);
+      expect(result.failed).toHaveLength(1);
+      expect(result.failed[0]).toEqual({ id: fileIds[0], error: 'Database error' });
       expect(mockClient.release).toHaveBeenCalled();
     });
 
@@ -261,6 +277,12 @@ describe('BatchService', () => {
         // Folder exists check
         mockClient.query.mockResolvedValueOnce({
           rows: [{ id: folderIds[i], depth: 1 }],
+          rowCount: 1,
+        } as any);
+
+        // Circular reference check (validateCircularReference)
+        mockClient.query.mockResolvedValueOnce({
+          rows: [{ is_circular: false }],
           rowCount: 1,
         } as any);
 

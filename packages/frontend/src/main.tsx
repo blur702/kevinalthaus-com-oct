@@ -7,6 +7,7 @@ import App from './App';
 import { theme } from './theme';
 import { initializeSentry, SentryErrorBoundary } from '@monorepo/shared';
 import './sentry-debug';
+import './error-boundary.css';
 
 // Initialize Sentry as early as possible
 const sentryDSN = import.meta.env.VITE_SENTRY_DSN || '';
@@ -39,19 +40,15 @@ ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <SentryErrorBoundary
       fallback={({ error, resetError }: { error: unknown; componentStack: string; eventId: string; resetError: () => void }) => (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div className="error-boundary">
           <h1>Something went wrong</h1>
           <p>We've been notified and are working on a fix.</p>
-          <details style={{ whiteSpace: 'pre-wrap', marginTop: '20px' }}>
+          <details className="error-details">
             {error instanceof Error ? error.toString() : String(error)}
           </details>
           <button
             onClick={resetError}
-            style={{
-              marginTop: '20px',
-              padding: '10px 20px',
-              cursor: 'pointer',
-            }}
+            className="error-retry-btn"
           >
             Try again
           </button>

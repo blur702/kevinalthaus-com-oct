@@ -52,6 +52,7 @@ import { requestIdMiddleware } from './middleware/requestId';
 import { BlogService } from './services/BlogService';
 import { emailService } from './services/emailService';
 import { storageService } from './server';
+import { analyticsService, initializeAnalyticsService } from './services/analyticsServiceRegistry';
 import { createAdminFileRoutes } from './routes/admin-files';
 import { createPluginFileRoutes } from './routes/plugin-files';
 import { createPublicShareRoutes } from './routes/public-shares';
@@ -366,6 +367,9 @@ app.use('/api/menus', menusRouter);
 app.use('/api/plugins', pluginsRouter);
 // Blog plugin routes
 const blogService = new BlogService(pool);
+void initializeAnalyticsService(logger).catch((error: Error) => {
+  logger.error('Analytics service initialization failed', error);
+});
 app.use('/api/blog', createBlogRouter(blogService, logger));
 
 // Page Builder plugin routes
@@ -374,7 +378,9 @@ const widgetRegistry = new WidgetRegistryService(
   logger
 );
 // Discover widgets asynchronously (non-blocking)
-void widgetRegistry.discoverWidgets();
+void widgetRegistry.discoverWidgets().catch((error: Error) => {
+  logger.error('Widget discovery failed', error);
+});
 const pageBuilderApiRouter = createPageBuilderRouter(pool, logger, widgetRegistry);
 app.use('/api/page-builder', pageBuilderApiRouter);
 
@@ -385,15 +391,75 @@ app.use('/api/plugins', createPluginFileRoutes(storageService));
 // Public file sharing routes (no authentication required)
 app.use('/share', createPublicShareRoutes(storageService, pool));
 
+// File Manager Plugin routes
+// Import and activate file-manager plugin synchronously since we need its routes
+void (async () => {
+  try {
+    const FileManagerPlugin = (await import('../../../plugins/file-manager/dist/index')).default;
+    const fileManagerPlugin = new FileManagerPlugin();
+
+    // Initialize plugin with context (providing minimal required fields)
+    // Using 'as any' type assertion since the file-manager plugin only uses db, app, and logger
+    const pluginContext = {
+      pluginId: 'file-manager',
+      manifest: {
+        name: 'file-manager',
+        version: '1.0.0',
+        displayName: 'File Manager',
+        description: 'Comprehensive file management with folder hierarchy',
+        author: 'Kevin Althaus',
+        capabilities: [],
+        entrypoint: './dist/index.js',
+      },
+      pluginPath: path.join(__dirname, '../../../plugins/file-manager'),
+      dataPath: path.join(__dirname, '../../../plugins/file-manager/data'),
+      logger: {
+        info: (msg: string) => logger.info(`[FileManagerPlugin] ${msg}`),
+        warn: (msg: string) => logger.warn(`[FileManagerPlugin] ${msg}`),
+        error: (msg: string, err?: Error) => logger.error(`[FileManagerPlugin] ${msg}`, err || new Error(msg)),
+        debug: (msg: string) => logger.debug(`[FileManagerPlugin] ${msg}`),
+      },
+      api: {
+        get: async () => ({}),
+        post: async () => ({}),
+        put: async () => ({}),
+        delete: async () => ({}),
+      },
+      storage: {
+        get: async () => null,
+        set: async () => {},
+        delete: async () => {},
+        has: async () => false,
+        keys: async () => [],
+        clear: async () => {},
+      },
+      services: {} as any,
+      db: pool,
+      app,
+    } as any;
+
+    // Install (run migrations) if needed
+    await fileManagerPlugin.onInstall(pluginContext);
+
+    // Activate (register routes)
+    await fileManagerPlugin.onActivate(pluginContext);
+
+    logger.info('File Manager Plugin initialized successfully');
+  } catch (error) {
+    logger.error('Failed to initialize File Manager Plugin', error as Error);
+  }
+})();
+
 // Inject services into plugin manager for plugin execution contexts
 pluginManager.setServices({
   blog: blogService,
   email: emailService,
   storage: storageService,
+  analytics: analyticsService,
 });
 
 // Admin UI for plugin management
-pluginManager.init(app);
+pluginManager.init();
 app.use('/admin/plugins', adminPluginsRouter);
 
 // Page Builder admin interface
@@ -426,7 +492,16 @@ app.use('*', (req, res) => {
 Sentry.setupExpressErrorHandler(app);
 
 // Global error handling middleware - must be last
-app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: Error & { status?: number; type?: string }, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  // Handle body-parser errors (malformed JSON, etc.)
+  if (err.type === 'entity.parse.failed' || err.status === 400) {
+    res.status(400).json({
+      error: 'Bad Request',
+      message: 'Invalid request body',
+    });
+    return;
+  }
+
   logger.error('Unhandled error', err, {
     stack: err.stack,
     url: req.url,

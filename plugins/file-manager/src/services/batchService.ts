@@ -311,18 +311,21 @@ export class BatchService {
 
           // Apply operation
           switch (operation) {
-            case 'add':
+            case 'add': {
               // Add new tags, avoid duplicates
               newTags = [...new Set([...currentTags, ...tags])];
               break;
-            case 'remove':
+            }
+            case 'remove': {
               // Remove specified tags
               newTags = currentTags.filter((tag: string) => !tags.includes(tag));
               break;
-            case 'replace':
+            }
+            case 'replace': {
               // Replace all tags
               newTags = tags;
               break;
+            }
           }
 
           // Update tags

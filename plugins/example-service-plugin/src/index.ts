@@ -16,7 +16,7 @@
  */
 
 import type { PluginExecutionContext } from '../../../packages/main-app/src/plugins/PluginExecutor';
-import type { IBlogService, CreateBlogPostData } from '@monorepo/shared';
+import type { IBlogService, CreateBlogPostData, IAnalyticsService } from '@monorepo/shared';
 
 /**
  * Plugin handler function
@@ -31,6 +31,7 @@ export async function handler(context: PluginExecutionContext): Promise<unknown>
 
   // Get BlogService from injected services
   const blogService = services.blog as IBlogService;
+  const analyticsService = services.analytics as IAnalyticsService | null;
 
   if (!blogService) {
     logger.error('BlogService not available');
@@ -60,34 +61,36 @@ export async function handler(context: PluginExecutionContext): Promise<unknown>
           body_html,
           status: status || 'draft',
         },
-        user.id
-      );
+    // Example 5: Emit a custom analytics event via the shared service
+    if (request?.path === '/analytics/demo' && request?.method === 'POST') {
+      if (!analyticsService) {
+        return {
+          success: false,
+          error: 'AnalyticsService not available',
+        };
+      }
 
-      logger.info(`Blog post created via plugin: ${post.id}`);
+      const session = await analyticsService.createSession({
+        user_id: user.id,
+        anonymous_id: `plugin-example-${user.id}`,
+        landing_page: '/plugins/example',
+        referrer_source: request?.query?.source as string | undefined,
+      });
+
+      await analyticsService.trackEvent({
+        session_id: session.id,
+        user_id: user.id,
+        event_name: 'example_plugin_demo_event',
+        event_properties: (request?.body as Record<string, unknown>) ?? {},
+        page_path: request?.path,
+      });
 
       return {
         success: true,
         data: {
-          postId: post.id,
-          title: post.title,
-          status: post.status,
+          message: 'Analytics event recorded via service layer',
+          sessionId: session.id,
         },
-      };
-    }
-
-    // Example 2: List user's blog posts
-    if (request?.path === '/my-posts') {
-      const posts = await blogService.listPosts({
-        authorId: user.id,
-        page: 1,
-        limit: 10,
-      });
-
-      logger.info(`Retrieved ${posts.posts.length} posts for user ${user.id}`);
-
-      return {
-        success: true,
-        data: posts,
       };
     }
 
@@ -151,6 +154,7 @@ export async function handler(context: PluginExecutionContext): Promise<unknown>
           'GET /my-posts - List your blog posts',
           'GET /post/:id - Get specific post',
           'POST /publish/:id - Publish a post',
+          'POST /analytics/demo - Record a demo analytics event',
         ],
       },
     };

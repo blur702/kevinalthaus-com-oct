@@ -59,8 +59,8 @@ export class FolderService {
       `;
 
       const params = [];
-      if (parentId) params.push(parentId);
-      if (maxDepth) params.push(maxDepth);
+      if (parentId) {params.push(parentId);}
+      if (maxDepth) {params.push(maxDepth);}
 
       const result = await client.query(query, params);
 

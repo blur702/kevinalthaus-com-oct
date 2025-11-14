@@ -12,9 +12,24 @@ export async function discoverPlugins(app: express.Express): Promise<void> {
     const pluginDirs = await fs.readdir(pluginsDir, { withFileTypes: true });
     for (const dirent of pluginDirs) {
       if (dirent.isDirectory()) {
+        // Skip disabled plugins (ending with .disabled)
+        if (dirent.name.endsWith('.disabled')) {
+          logger.debug(`Skipping disabled plugin: ${dirent.name}`);
+          continue;
+        }
+
         const pluginDir = path.join(pluginsDir, dirent.name);
         const packageJsonPath = path.join(pluginDir, 'package.json');
+
         try {
+          // Check if package.json exists
+          try {
+            await fs.access(packageJsonPath);
+          } catch {
+            logger.debug(`Skipping plugin ${dirent.name}: no package.json found`);
+            continue;
+          }
+
           const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8');
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           const packageJson = JSON.parse(packageJsonContent);

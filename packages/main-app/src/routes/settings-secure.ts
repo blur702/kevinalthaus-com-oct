@@ -135,7 +135,7 @@ async function logAudit(
   action: string,
   resourceType: string,
   resourceId?: string,
-  details?: any
+  details?: unknown
 ): Promise<void> {
   try {
     await query(

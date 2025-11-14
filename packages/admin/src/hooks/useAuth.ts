@@ -104,12 +104,21 @@ export function useAuth(): AuthContext {
       });
 
       navigate('/');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error &&
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response &&
+        typeof error.response.data === 'object' && error.response.data !== null &&
+        'message' in error.response.data &&
+        typeof error.response.data.message === 'string'
+        ? error.response.data.message
+        : 'Login failed';
+
       setAuthState({
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: error.response?.data?.message || 'Login failed',
+        error: errorMessage,
       });
       throw error;
     }

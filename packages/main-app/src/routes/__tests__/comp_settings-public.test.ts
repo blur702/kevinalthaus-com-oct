@@ -2,15 +2,16 @@ import express from 'express';
 import request from 'supertest';
 import router from '../settings-public';
 
-jest.mock('../db', () => ({
+jest.mock('../../db', () => ({
   query: jest.fn(),
 }));
 
-jest.mock('../index', () => ({
+jest.mock('../../instrument', () => ({
+  Sentry: {},
   isSentryEnabled: false,
 }));
 
-const { query } = jest.requireMock('../db');
+const { query } = jest.requireMock('../../db');
 
 const buildApp = () => {
   const app = express();
@@ -18,9 +19,23 @@ const buildApp = () => {
   return app;
 };
 
+// Mock Date.now to control cache expiration
+let mockNow = Date.now();
+const realDateNow = Date.now.bind(global.Date);
+
 describe('comp_settings-public route', () => {
+  beforeAll(() => {
+    global.Date.now = jest.fn(() => mockNow);
+  });
+
+  afterAll(() => {
+    global.Date.now = realDateNow;
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
+    // Invalidate cache by advancing time past cache expiration (60 seconds)
+    mockNow += 61000;
   });
 
   it('returns parsed public settings', async () => {

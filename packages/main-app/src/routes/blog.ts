@@ -6,8 +6,11 @@
 import { Router, Request, Response } from 'express';
 import type { PluginLogger } from '@monorepo/shared';
 import type { IBlogService } from '@monorepo/shared';
-import { getUserId } from '@monorepo/shared';
+import { getUserId, Role } from '@monorepo/shared';
 import { authMiddleware } from '../auth';
+import { Sentry, isSentryEnabled } from '../instrument';
+import { asyncHandler } from '../utils/asyncHandler';
+import { csrfProtection } from '../middleware/csrf';
 
 // Use global Request type which already includes user
 type AuthRequest = Request;
@@ -19,8 +22,7 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
   // Public routes are explicitly defined below without auth
 
   // List blog posts
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  router.get('/', async (req: Request, res: Response): Promise<void> => {
+  router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
       const page = parseInt(String(req.query.page), 10) || 1;
       const limit = parseInt(String(req.query.limit), 10) || 10;
@@ -32,13 +34,15 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       res.json(result);
     } catch (error) {
       logger.error('Error listing blog posts', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to list blog posts' });
     }
-  });
+  }));
 
   // List blog posts by specific user
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  router.get('/by-user/:userId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  router.get('/by-user/:userId', authMiddleware, asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
       const { userId } = req.params;
       const page = parseInt(String(req.query.page), 10) || 1;
@@ -50,9 +54,12 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       res.json(result);
     } catch (error) {
       logger.error('Error listing user blog posts', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to list user blog posts' });
     }
-  });
+  }));
 
   // Public endpoints
   // Get published blog posts
@@ -67,6 +74,9 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       res.json(result);
     } catch (error) {
       logger.error('Error listing public blog posts', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to list blog posts' });
     }
   });
@@ -93,13 +103,16 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       res.json(post);
     } catch (error) {
       logger.error('Error getting blog post', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to get blog post' });
     }
   });
 
   // Create blog post
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  router.post('/', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  router.post('/', authMiddleware, csrfProtection, async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId((req as AuthRequest).user);
       if (!userId) {
@@ -155,13 +168,16 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       }
     } catch (error) {
       logger.error('Error creating blog post', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to create blog post' });
     }
   });
 
   // Update blog post
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  router.put('/:id', authMiddleware, csrfProtection, async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId((req as AuthRequest).user);
       const userRole = (req as AuthRequest).user?.role;
@@ -200,7 +216,7 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       }
 
       // Verify authorization: user must be the author or an admin
-      if (existingPost.author_id !== userId && userRole !== 'admin') {
+      if (existingPost.author_id !== userId && userRole !== Role.ADMIN) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
@@ -241,13 +257,16 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       res.json(post);
     } catch (error) {
       logger.error('Error updating blog post', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to update blog post' });
     }
   });
 
   // Delete blog post (soft delete)
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  router.delete('/:id', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  router.delete('/:id', authMiddleware, csrfProtection, async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId((req as AuthRequest).user);
       const userRole = (req as AuthRequest).user?.role;
@@ -273,7 +292,7 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       }
 
       // Verify authorization: user must be the author or an admin
-      if (existingPost.author_id !== userId && userRole !== 'admin') {
+      if (existingPost.author_id !== userId && userRole !== Role.ADMIN) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
@@ -289,13 +308,16 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       res.json({ success: true });
     } catch (error) {
       logger.error('Error deleting blog post', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to delete blog post' });
     }
   });
 
   // Publish blog post
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  router.post('/:id/publish', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  router.post('/:id/publish', authMiddleware, csrfProtection, async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId((req as AuthRequest).user);
       const userRole = (req as AuthRequest).user?.role;
@@ -321,7 +343,7 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       }
 
       // Verify authorization: user must be the author, editor, or admin
-      if (existingPost.author_id !== userId && userRole !== 'admin' && userRole !== 'editor') {
+      if (existingPost.author_id !== userId && userRole !== Role.ADMIN && userRole !== Role.EDITOR) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
@@ -349,13 +371,16 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       res.json(post);
     } catch (error) {
       logger.error('Error publishing blog post', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to publish blog post' });
     }
   });
 
   // Unpublish blog post
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  router.post('/:id/unpublish', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  router.post('/:id/unpublish', authMiddleware, csrfProtection, async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId((req as AuthRequest).user);
       const userRole = (req as AuthRequest).user?.role;
@@ -381,7 +406,7 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       }
 
       // Verify authorization: user must be the author, editor, or admin
-      if (existingPost.author_id !== userId && userRole !== 'admin' && userRole !== 'editor') {
+      if (existingPost.author_id !== userId && userRole !== Role.ADMIN && userRole !== Role.EDITOR) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
       }
@@ -397,6 +422,9 @@ export function createBlogRouter(blogService: IBlogService, logger: PluginLogger
       res.json(post);
     } catch (error) {
       logger.error('Error unpublishing blog post', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({ error: 'Failed to unpublish blog post' });
     }
   });

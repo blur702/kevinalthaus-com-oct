@@ -320,34 +320,42 @@ export class EditorService implements IEditorService {
    */
   private nodeToHTML(node: EditorNode): string {
     switch (node.type) {
-      case 'paragraph':
+      case 'paragraph': {
         return `<p>${node.content ? this.nodesToHTML(node.content) : ''}</p>`;
+      }
 
       case 'heading': {
         const level = (node.attrs?.level as number) || 1;
         return `<h${level}>${node.content ? this.nodesToHTML(node.content) : ''}</h${level}>`;
       }
 
-      case 'blockquote':
+      case 'blockquote': {
         return `<blockquote>${node.content ? this.nodesToHTML(node.content) : ''}</blockquote>`;
+      }
 
-      case 'bulletList':
+      case 'bulletList': {
         return `<ul>${node.content ? this.nodesToHTML(node.content) : ''}</ul>`;
+      }
 
-      case 'orderedList':
+      case 'orderedList': {
         return `<ol>${node.content ? this.nodesToHTML(node.content) : ''}</ol>`;
+      }
 
-      case 'listItem':
+      case 'listItem': {
         return `<li>${node.content ? this.nodesToHTML(node.content) : ''}</li>`;
+      }
 
-      case 'codeBlock':
+      case 'codeBlock': {
         return `<pre><code>${node.content ? this.nodesToHTML(node.content) : ''}</code></pre>`;
+      }
 
-      case 'horizontalRule':
+      case 'horizontalRule': {
         return '<hr>';
+      }
 
-      case 'hardBreak':
+      case 'hardBreak': {
         return '<br>';
+      }
 
       case 'image': {
         const src = (node.attrs?.src as string) || '';
@@ -369,9 +377,10 @@ export class EditorService implements IEditorService {
         return html;
       }
 
-      default:
+      default: {
         console.warn(`Unknown node type: ${node.type}`);
         return '';
+      }
     }
   }
 
@@ -380,23 +389,29 @@ export class EditorService implements IEditorService {
    */
   private applyMark(text: string, mark: EditorMark): string {
     switch (mark.type) {
-      case 'bold':
+      case 'bold': {
         return `<strong>${text}</strong>`;
-      case 'italic':
+      }
+      case 'italic': {
         return `<em>${text}</em>`;
-      case 'underline':
+      }
+      case 'underline': {
         return `<u>${text}</u>`;
-      case 'strike':
+      }
+      case 'strike': {
         return `<strike>${text}</strike>`;
-      case 'code':
+      }
+      case 'code': {
         return `<code>${text}</code>`;
+      }
       case 'link': {
         const href = (mark.attrs?.href as string) || '';
         const title = mark.attrs?.title ? ` title="${this.escapeHTML(mark.attrs.title as string)}"` : '';
         return `<a href="${this.escapeHTML(href)}"${title}>${text}</a>`;
       }
-      default:
+      default: {
         return text;
+      }
     }
   }
 
@@ -438,47 +453,53 @@ export class EditorService implements IEditorService {
       const tagName = element.tagName.toLowerCase();
 
       switch (tagName) {
-        case 'p':
+        case 'p': {
           return {
             type: 'paragraph',
             content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
           };
+        }
 
         case 'h1':
         case 'h2':
         case 'h3':
         case 'h4':
         case 'h5':
-        case 'h6':
+        case 'h6': {
           return {
             type: 'heading',
             attrs: { level: parseInt(tagName[1], 10) },
             content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
           };
+        }
 
-        case 'blockquote':
+        case 'blockquote': {
           return {
             type: 'blockquote',
             content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
           };
+        }
 
-        case 'ul':
+        case 'ul': {
           return {
             type: 'bulletList',
             content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
           };
+        }
 
-        case 'ol':
+        case 'ol': {
           return {
             type: 'orderedList',
             content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
           };
+        }
 
-        case 'li':
+        case 'li': {
           return {
             type: 'listItem',
             content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
           };
+        }
 
         case 'pre': {
           const code = element.querySelector('code');
@@ -490,17 +511,19 @@ export class EditorService implements IEditorService {
           };
         }
 
-        case 'hr':
+        case 'hr': {
           return {
             type: 'horizontalRule',
           };
+        }
 
-        case 'br':
+        case 'br': {
           return {
             type: 'hardBreak',
           };
+        }
 
-        case 'img':
+        case 'img': {
           return {
             type: 'image',
             attrs: {
@@ -509,6 +532,7 @@ export class EditorService implements IEditorService {
               title: element.getAttribute('title') || undefined,
             },
           };
+        }
 
         // Inline formatting - convert to marks
         case 'strong':
@@ -523,12 +547,13 @@ export class EditorService implements IEditorService {
           return this.wrapNodesWithMark(childNodes, tagName, element);
         }
 
-        default:
+        default: {
           // Unsupported tag - extract children
           return {
             type: 'paragraph',
             content: this.domNodesToEditorNodes(Array.from(element.childNodes)),
           };
+        }
       }
     }
 
@@ -547,27 +572,34 @@ export class EditorService implements IEditorService {
 
     switch (tagName) {
       case 'strong':
-      case 'b':
+      case 'b': {
         markType = 'bold';
         break;
+      }
       case 'em':
-      case 'i':
+      case 'i': {
         markType = 'italic';
         break;
-      case 'u':
+      }
+      case 'u': {
         markType = 'underline';
         break;
-      case 'strike':
+      }
+      case 'strike': {
         markType = 'strike';
         break;
-      case 'code':
+      }
+      case 'code': {
         markType = 'code';
         break;
-      case 'a':
+      }
+      case 'a': {
         markType = 'link';
         break;
-      default:
+      }
+      default: {
         return null;
+      }
     }
 
     const mark: EditorMark = {
@@ -711,30 +743,37 @@ export class EditorService implements IEditorService {
    */
   private nodeToPlainText(node: EditorNode): string {
     switch (node.type) {
-      case 'text':
+      case 'text': {
         return node.text || '';
+      }
 
       case 'paragraph':
       case 'heading':
       case 'blockquote':
-      case 'listItem':
+      case 'listItem': {
         return (node.content ? this.nodesToPlainText(node.content) : '') + '\n';
+      }
 
       case 'bulletList':
-      case 'orderedList':
+      case 'orderedList': {
         return (node.content ? this.nodesToPlainText(node.content) : '') + '\n';
+      }
 
-      case 'codeBlock':
+      case 'codeBlock': {
         return (node.content ? this.nodesToPlainText(node.content) : '') + '\n\n';
+      }
 
-      case 'hardBreak':
+      case 'hardBreak': {
         return '\n';
+      }
 
-      case 'horizontalRule':
+      case 'horizontalRule': {
         return '\n---\n';
+      }
 
-      default:
+      default: {
         return node.content ? this.nodesToPlainText(node.content) : '';
+      }
     }
   }
 

@@ -4,20 +4,126 @@ import { createLogger } from '@monorepo/shared';
 import { Role } from '@monorepo/shared';
 import { AuthenticatedRequest, authMiddleware } from '../auth';
 import { requireRole } from '../auth/rbac-middleware';
+// Analytics service import for future use
+// import { analyticsService } from '../services/analyticsServiceRegistry';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 const logger = createLogger();
+
+type DashboardRange = {
+  label: string;
+  value: string;
+  startDate: Date;
+  endDate: Date;
+  interval: 'hour' | 'day' | 'week';
+};
+
+function resolveRange(rangeParam?: string): DashboardRange {
+  const now = new Date();
+  const normalized = typeof rangeParam === 'string' ? rangeParam.toLowerCase() : '7d';
+
+  switch (normalized) {
+    case '24h': {
+      const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      return {
+        label: 'Last 24 hours',
+        value: '24h',
+        startDate,
+        endDate: now,
+        interval: 'hour',
+      };
+    }
+    case '30d': {
+      const startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return {
+        label: 'Last 30 days',
+        value: '30d',
+        startDate,
+        endDate: now,
+        interval: 'day',
+      };
+    }
+    default: {
+      const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return {
+        label: 'Last 7 days',
+        value: '7d',
+        startDate,
+        endDate: now,
+        interval: 'day',
+      };
+    }
+  }
+}
 
 // Apply authentication and admin role requirement to all routes
 router.use(authMiddleware);
 router.use(requireRole(Role.ADMIN));
 
+router.get('/dashboard/overview', asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const range = resolveRange(typeof req.query.range === 'string' ? req.query.range : undefined);
+
+  try {
+    // Analytics feature is currently disabled - return empty but correctly-shaped payload
+    // When re-enabling, implement the following service calls:
+    // const [summary, topEvents, topPages, goals, funnels, eventStream, timeline] = await Promise.all([
+    //   analyticsService.getSessionSummary({ start_date: range.startDate, end_date: range.endDate }),
+    //   analyticsService.getTopEvents({ start_date: range.startDate, end_date: range.endDate, limit: 10 }),
+    //   analyticsService.getTopPages({ start_date: range.startDate, end_date: range.endDate, limit: 10 }),
+    //   analyticsService.listGoals({ includeInactive: false }),
+    //   analyticsService.listFunnels({ includeInactive: false }),
+    //   analyticsService.getEventStream({ start_date: range.startDate, end_date: range.endDate, limit: 20 }),
+    //   analyticsService.getSessionTimeline({ start_date: range.startDate, end_date: range.endDate, interval: range.interval }),
+    // ]);
+
+    // Return empty but valid response structure
+    const summary = {
+      total_sessions: 0,
+      active_sessions: 0,
+      average_duration_seconds: 0,
+      total_events: 0,
+      total_page_views: 0
+    };
+    const topEvents: unknown[] = [];
+    const topPages: unknown[] = [];
+    const goals: unknown[] = [];
+    const funnels: unknown[] = [];
+    const eventStream: unknown[] = [];
+    const timeline: unknown[] = [];
+
+    res.status(200).json({
+      success: true,
+      range: {
+        ...range,
+        startDate: range.startDate.toISOString(),
+        endDate: range.endDate.toISOString(),
+      },
+      data: {
+        summary,
+        topEvents,
+        topPages,
+        activeGoals: goals.slice(0, 5),
+        activeFunnels: funnels.slice(0, 5),
+        recentEvents: eventStream,
+        timeline,
+      },
+    });
+  } catch (error) {
+    logger.error('Failed to fetch analytics dashboard', error as Error);
+    res.status(500).json({
+      success: false,
+      error: 'internal_error',
+      message: 'Failed to retrieve analytics data',
+    });
+  }
+}));
+
 /**
  * GET /api/analytics/page-views
  * Query page views with filtering, pagination, and aggregation
  */
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
-router.get('/page-views', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/page-views', asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     // Parse query parameters
     const startDate = req.query.startDate ? String(req.query.startDate) : null;
@@ -173,14 +279,13 @@ router.get('/page-views', async (req: AuthenticatedRequest, res: Response): Prom
       error: 'Failed to retrieve page views',
     });
   }
-});
+}));
 
 /**
  * GET /api/analytics/page-views/stats
  * Get summary statistics for page views
  */
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
-router.get('/page-views/stats', async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/page-views/stats', asyncHandler(async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     // Execute multiple queries for statistics
     const [totalViews, uniqueVisitors, viewsToday, viewsThisWeek, viewsThisMonth, topPages] = await Promise.all([
@@ -235,14 +340,13 @@ router.get('/page-views/stats', async (_req: AuthenticatedRequest, res: Response
       error: 'Failed to retrieve statistics',
     });
   }
-});
+}));
 
 /**
  * GET /api/analytics/page-views/top-pages
  * Get top pages by view count with date filtering
  */
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
-router.get('/page-views/top-pages', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/page-views/top-pages', asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     // Parse query parameters
     const limitParam = req.query.limit ? Number(req.query.limit) : 10;
@@ -310,6 +414,6 @@ router.get('/page-views/top-pages', async (req: AuthenticatedRequest, res: Respo
       error: 'Failed to retrieve top pages',
     });
   }
-});
+}));
 
 export { router as analyticsRouter };

@@ -16,6 +16,11 @@
     "resolveJsonModule": true,
     "types": ["node", "@playwright/test"]
   },
-  "include": ["playwright.config.ts", "e2e/**/*.ts"],
+  "include": [
+    "playwright.config.ts",
+    "playwright.page-builder.config.ts",
+    "playwright.sentry.config.ts",
+    "e2e/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }

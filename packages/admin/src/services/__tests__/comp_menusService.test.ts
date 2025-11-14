@@ -53,14 +53,14 @@ describe('comp_menusService', () => {
 
     expect(mockedApi.post).toHaveBeenCalledWith(
       '/menus/menu%2Fone/items',
-      expect.objectContaining({ title: 'Child' })
+      expect.objectContaining({ label: 'Child' })
     );
     expect(created).toEqual({ item: { id: 'child' } });
 
     await updateMenuItem('menu/one', 'node/id', { label: 'Updated' });
     expect(mockedApi.put).toHaveBeenCalledWith(
       '/menus/menu%2Fone/items/node%2Fid',
-      expect.objectContaining({ title: 'Updated' })
+      expect.objectContaining({ label: 'Updated' })
     );
 
     await deleteMenuItem('menu/one', 'node/id');

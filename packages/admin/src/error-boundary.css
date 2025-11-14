@@ -1,0 +1,14 @@
+/* Global error boundary styles for consistent UI */
+.error-boundary {
+  padding: 20px;
+  text-align: center;
+}
+.error-details {
+  white-space: pre-wrap;
+  margin-top: 20px;
+}
+.error-retry-btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  cursor: pointer;
+}

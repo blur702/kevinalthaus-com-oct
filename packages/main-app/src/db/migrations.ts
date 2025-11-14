@@ -424,6 +424,9 @@ export async function runMigrations(): Promise<void> {
       `);
     });
 
+    // Migration 20: Create files tables (from SQL file) - must run before file_shares
+    await runSQLFileMigration('20-create-files-tables', '20-create-files-tables.sql');
+
     await runMigration('16-create-file-shares-table', async (client: PoolClient) => {
       await client.query(`
         CREATE TABLE IF NOT EXISTS file_shares (
@@ -560,6 +563,12 @@ export async function runMigrations(): Promise<void> {
 
     // Migration 23: Menus tables (from SQL file)
     await runSQLFileMigration('23-menus', '14-menus.sql');
+
+    // Migration 24: Comprehensive analytics tables (from SQL file)
+    await runSQLFileMigration('24-analytics-tables', '24-analytics-tables.sql');
+
+    // Migration 25: Blog plugin tables (includes content-manager and blog schemas)
+    await runSQLFileMigration('25-blog-plugin-tables', '25-blog-plugin-tables.sql');
 
     // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');

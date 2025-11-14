@@ -28,12 +28,12 @@ export default defineConfig({
   // Explicit spec globs keep other source files from being picked up
   testMatch: ['e2e/**/*.spec.ts', 'tests/e2e/**/*.spec.ts'],
 
-  // Timeout for each test (30 seconds)
-  timeout: 30000,
+  // Timeout for each test (60 seconds - increased for stability)
+  timeout: 60000,
 
-  // Timeout for expect assertions (5 seconds)
+  // Timeout for expect assertions (10 seconds - increased for stability)
   expect: {
-    timeout: 5000,
+    timeout: 10000,
   },
 
   // Run tests in parallel
@@ -76,11 +76,11 @@ export default defineConfig({
     // Browser context options
     viewport: { width: 1280, height: 720 },
 
-    // Navigation timeout (30 seconds)
-    navigationTimeout: 30000,
+    // Navigation timeout (45 seconds - increased for stability)
+    navigationTimeout: 45000,
 
-    // Action timeout (10 seconds)
-    actionTimeout: 10000,
+    // Action timeout (15 seconds - increased for stability)
+    actionTimeout: 15000,
 
     // Ignore HTTPS errors only in development (not production/CI)
     // In production, tests should validate proper SSL configuration

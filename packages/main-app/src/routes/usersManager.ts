@@ -4,6 +4,8 @@ import { hashPassword, validateEmail, createLogger, LogLevel } from '@monorepo/s
 import { Role } from '@monorepo/shared';
 import { AuthenticatedRequest, authMiddleware } from '../auth';
 import { requireRole } from '../auth/rbac-middleware';
+import { Sentry, isSentryEnabled } from '../instrument';
+import { csrfProtection, attachCSRFToken } from '../middleware/csrf';
 
 const logger = createLogger({
   level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
@@ -32,6 +34,20 @@ function isValidUUID(uuid: string): boolean {
 // All routes require authentication and admin role
 router.use(authMiddleware);
 router.use(requireRole(Role.ADMIN));
+router.use(attachCSRFToken); // Attach CSRF token to responses
+
+// Validate UUID format for :id parameter across all routes
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+router.param('id', (_req, res, next, id) => {
+  if (!isValidUUID(id)) {
+    res.status(400).json({
+      error: 'Bad Request',
+      message: 'Invalid user ID format'
+    });
+    return;
+  }
+  next();
+});
 
 // GET /api/users-manager - List users with pagination, filtering, sorting
 router.get(
@@ -151,6 +167,9 @@ router.get(
       });
     } catch (error) {
       logger.error('List users error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to fetch users',
@@ -166,15 +185,6 @@ router.get(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-
-      // Validate UUID format
-      if (!isValidUUID(id)) {
-        res.status(400).json({
-          error: 'Bad Request',
-          message: 'Invalid user ID format',
-        });
-        return;
-      }
 
       const result = await query<{
         id: string;
@@ -213,6 +223,9 @@ router.get(
       });
     } catch (error) {
       logger.error('Get user error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to fetch user',
@@ -224,6 +237,7 @@ router.get(
 // POST /api/users-manager - Create new user
 router.post(
   '/',
+  csrfProtection,
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -324,6 +338,9 @@ router.post(
         return;
       }
       logger.error('Create user error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to create user',
@@ -335,19 +352,11 @@ router.post(
 // PATCH /api/users-manager/:id - Update user
 router.patch(
   '/:id',
+  csrfProtection,
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-
-      // Validate UUID format
-      if (!isValidUUID(id)) {
-        res.status(400).json({
-          error: 'Bad Request',
-          message: 'Invalid user ID format',
-        });
-        return;
-      }
 
       const body = req.body as { email?: unknown; username?: unknown; password?: unknown; role?: unknown; active?: unknown };
       const email = body.email;
@@ -492,6 +501,9 @@ router.patch(
         return;
       }
       logger.error('Update user error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to update user',
@@ -503,19 +515,11 @@ router.patch(
 // DELETE /api/users-manager/:id - Delete user
 router.delete(
   '/:id',
+  csrfProtection,
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-
-      // Validate UUID format
-      if (!isValidUUID(id)) {
-        res.status(400).json({
-          error: 'Bad Request',
-          message: 'Invalid user ID format',
-        });
-        return;
-      }
 
       const actorId = req.user?.userId;
 
@@ -569,6 +573,9 @@ router.delete(
       res.json({ message: 'User deleted successfully' });
     } catch (error) {
       logger.error('Delete user error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to delete user',
@@ -629,6 +636,9 @@ router.get(
       res.json({ activities });
     } catch (error) {
       logger.error('Get user activity error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to fetch user activity',
@@ -677,6 +687,9 @@ router.get(
       res.json({ customFields: result.rows[0].custom_fields || {} });
     } catch (error) {
       logger.error('Get custom fields error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to fetch custom fields',
@@ -688,10 +701,12 @@ router.get(
 // PATCH /api/users-manager/:id/custom-fields - Update custom fields
 router.patch(
   '/:id/custom-fields',
+  csrfProtection,
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+
       const body = req.body as { customFields?: unknown };
       const customFields = body.customFields;
 
@@ -738,6 +753,9 @@ router.patch(
       res.json({ customFields: result.rows[0].custom_fields });
     } catch (error) {
       logger.error('Update custom fields error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to update custom fields',
@@ -749,6 +767,7 @@ router.patch(
 // POST /api/users-manager/bulk/import - Bulk import users
 router.post(
   '/bulk/import',
+  csrfProtection,
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -866,6 +885,9 @@ router.post(
       res.json(results);
     } catch (error) {
       logger.error('Bulk import error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to import users',
@@ -877,6 +899,7 @@ router.post(
 // POST /api/users-manager/bulk/export - Bulk export users
 router.post(
   '/bulk/export',
+  csrfProtection,
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -959,6 +982,9 @@ router.post(
       });
     } catch (error) {
       logger.error('Bulk export error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to export users',
@@ -970,6 +996,7 @@ router.post(
 // POST /api/users-manager/bulk/delete - Bulk delete users
 router.post(
   '/bulk/delete',
+  csrfProtection,
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -1023,6 +1050,9 @@ router.post(
       res.json({ deleted: result.rowCount || 0 });
     } catch (error) {
       logger.error('Bulk delete error', error as Error);
+      if (isSentryEnabled) {
+        Sentry.captureException(error as Error);
+      }
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to delete users',

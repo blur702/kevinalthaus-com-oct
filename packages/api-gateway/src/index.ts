@@ -368,10 +368,14 @@ async function getReadiness(): Promise<ReadyPayload> {
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 app.get('/health', async (_req, res): Promise<void> => {
   const payload = await getOverallHealth();
+  // Health checks should not be cached
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.status(payload.status === 'healthy' ? 200 : 503).json(payload);
 });
 
 app.get('/health/live', (_req, res) => {
+  // Liveness checks should not be cached
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.json({ status: 'alive' });
 });
 
@@ -379,6 +383,8 @@ app.get('/health/live', (_req, res) => {
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 app.get('/health/ready', async (_req, res) => {
   const payload = await getReadiness();
+  // Readiness checks should not be cached
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.status(payload.status === 'ready' ? 200 : 503).json(payload);
 });
 

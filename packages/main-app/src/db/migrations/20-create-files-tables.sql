@@ -137,9 +137,10 @@ BEGIN
 
   -- If still no user found, create a system user with fixed UUID
   IF admin_id IS NULL THEN
-    INSERT INTO users (id, email, password_hash, role, created_at)
+    INSERT INTO users (id, username, email, password_hash, role, created_at)
     VALUES (
       system_user_uuid,
+      'system',
       'system@localhost',
       '$2b$12$PLACEHOLDER_HASH_SYSTEM_USER_LOCKED',
       'admin',
@@ -222,3 +223,25 @@ COMMENT ON COLUMN public.files.deleted_at IS 'Soft delete timestamp. NULL = acti
 COMMENT ON TABLE public.allowed_file_types IS 'Allowlist of permitted file types with configurable size limits';
 COMMENT ON COLUMN public.allowed_file_types.max_file_size IS 'Maximum file size in bytes. NULL = no limit (use global default)';
 COMMENT ON COLUMN public.allowed_file_types.category IS 'Broad file category for UI grouping and filtering';
+
+-- =============================================================================
+-- Trigger: Auto-update updated_at timestamp
+-- =============================================================================
+
+-- Create trigger function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_allowed_file_types_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach trigger to allowed_file_types table
+CREATE TRIGGER trigger_update_allowed_file_types_updated_at
+  BEFORE UPDATE ON public.allowed_file_types
+  FOR EACH ROW
+  EXECUTE FUNCTION update_allowed_file_types_updated_at();
+
+COMMENT ON FUNCTION update_allowed_file_types_updated_at() IS 'Automatically updates updated_at timestamp on row modification';
+COMMENT ON TRIGGER trigger_update_allowed_file_types_updated_at ON public.allowed_file_types IS 'Automatically updates updated_at column when a row is modified';

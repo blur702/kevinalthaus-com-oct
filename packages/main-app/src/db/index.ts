@@ -44,14 +44,24 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
   const sslMode = process.env.PGSSLMODE || 'prefer';
 
   switch (sslMode) {
-    case 'disable':
+    case 'disable': {
       return false;
+    }
     case 'prefer':
-      // Try SSL but fall back to non-SSL if it fails
+    case 'require': {
+      // NOTE: 'prefer' mode is currently treated as 'require' (no fallback to non-SSL)
+      // PostgreSQL's documented 'prefer' behavior attempts SSL first and falls back to non-SSL
+      // on handshake failure or if server doesn't support SSL. This implementation does not
+      // implement the fallback logic and treats 'prefer' as 'require' for simplicity.
+      // Both require SSL but don't verify the certificate
+      if (sslMode === 'prefer') {
+        console.warn(
+          '[DB] PGSSLMODE=prefer is currently treated as "require" (SSL required, no fallback to non-SSL). ' +
+          'If SSL connection fails, the connection will not fall back to unencrypted mode.'
+        );
+      }
       return { rejectUnauthorized: false };
-    case 'require':
-      // Require SSL but don't verify the certificate
-      return { rejectUnauthorized: false };
+    }
     case 'verify-ca':
     case 'verify-full': {
       // Require SSL and verify the certificate
@@ -95,11 +105,12 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
         );
       }
     }
-    default:
+    default: {
       throw new Error(
         `Invalid PGSSLMODE '${sslMode}'. ` +
         'Valid values: disable, prefer, require, verify-ca, verify-full'
       );
+    }
   }
 }
 

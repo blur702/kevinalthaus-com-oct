@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { query, transaction } from '../db';
-import { hashPassword, validateEmail, createLogger, LogLevel } from '@monorepo/shared';
+import { hashPassword, validateEmail, validateUUID, createLogger, LogLevel } from '@monorepo/shared';
 import { Role, Capability } from '@monorepo/shared';
 import { AuthenticatedRequest, authMiddleware } from '../auth';
 import { requireRole, requireCapability } from '../auth/rbac-middleware';
@@ -143,6 +143,15 @@ router.get(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
+
+      // Validate ID parameter
+      if (!id || !validateUUID(id)) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Invalid user ID format',
+        });
+        return;
+      }
 
       const result = await query<{
         id: string;
@@ -287,6 +296,15 @@ router.patch(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { email, username, role, is_active } = req.body;
 
+      // Validate ID parameter
+      if (!id || !validateUUID(id)) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Invalid user ID format',
+        });
+        return;
+      }
+
       const updates: string[] = [];
       const params: unknown[] = [];
       let paramCount = 0;
@@ -418,6 +436,15 @@ router.delete(
       const actorId = req.user?.userId;
       const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
       const userAgent = req.get('User-Agent') || 'unknown';
+
+      // Validate ID parameter
+      if (!id || !validateUUID(id)) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Invalid user ID format',
+        });
+        return;
+      }
 
       // Prevent self-deletion
       if (actorId === id) {

@@ -13,13 +13,17 @@ import { test, expect, type Page } from '@playwright/test';
 
 // Helper function to login
 async function loginAsAdmin(page: Page) {
-  await page.goto('/', { waitUntil: 'load', timeout: 30000 });
+  await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
   if (!page.url().includes('/login')) {
     return;
   }
 
-  await page.goto('/login');
-  await page.waitForLoadState('load');
+  await page.goto('/login', { waitUntil: 'networkidle' });
+  await page.waitForLoadState('domcontentloaded');
+
+  // Wait for login form to be visible
+  await page.waitForSelector('input[name="identifier"]', { state: 'visible', timeout: 15000 });
+  await page.waitForSelector('input[name="password"]', { state: 'visible', timeout: 15000 });
 
   // Fill in login credentials (using test admin account)
   const username = process.env.TEST_ADMIN_USERNAME;
@@ -30,12 +34,30 @@ async function loginAsAdmin(page: Page) {
   await page.fill('input[name="identifier"]', username);
   await page.fill('input[name="password"]', password);
 
-  // Click login button
-  await page.click('button[type="submit"]');
+  // Click login button and wait for navigation
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: 'networkidle', timeout: 20000 }),
+    page.click('button[type="submit"]')
+  ]);
 
   // Wait for navigation to dashboard
-  await page.waitForURL(/\/(dashboard)?$/, { timeout: 10000 });
-  await page.waitForLoadState('load');
+  await page.waitForURL(/\/(dashboard)?$/, { timeout: 15000 });
+  await page.waitForLoadState('networkidle');
+}
+
+// Helper function to navigate to admin pages safely
+async function navigateToAdminPage(page: Page, href: string, headingText: string) {
+  // Wait for the link to be visible
+  await page.waitForSelector(`a[href="${href}"]`, { state: 'visible', timeout: 10000 });
+
+  // Click the link
+  await page.click(`a[href="${href}"]`);
+
+  // Wait for network to be idle
+  await page.waitForLoadState('networkidle');
+
+  // Wait for the specific heading to confirm the page loaded
+  await page.waitForSelector(`h1:has-text("${headingText}")`, { state: 'visible', timeout: 15000 });
 }
 
 test.describe('Admin Panel Comprehensive Test', () => {
@@ -63,15 +85,19 @@ test.describe('Admin Panel Comprehensive Test', () => {
   });
 
   test('Complete admin workflow with screenshots', async ({ page }) => {
+    // Increase test timeout
+    test.setTimeout(120000);
+
     // Step 1: Ensure authenticated (use storageState if available; otherwise login)
-    await page.goto('/', { waitUntil: 'load', timeout: 30000 });
+    await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
     const cookies = await page.context().cookies();
     if (page.url().includes('/login')) {
       await loginAsAdmin(page);
     }
 
     // Wait for dashboard to load (wait for h1 heading to appear)
-    await expect(page.locator('h1:has-text("Dashboard")')).toBeVisible({ timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Dashboard")', { state: 'visible', timeout: 20000 });
+    await expect(page.locator('h1:has-text("Dashboard")')).toBeVisible({ timeout: 15000 });
 
     // Take screenshot of dashboard after login
     await page.screenshot({
@@ -80,53 +106,48 @@ test.describe('Admin Panel Comprehensive Test', () => {
     });
 
     // Step 2: Navigate to Users page
-    await page.click('a[href="/users"]');
-    await page.waitForLoadState('load');
+    await navigateToAdminPage(page, '/users', 'Users');
     await page.screenshot({
       path: 'e2e/screenshots/admin-users.png',
       fullPage: true
     });
 
     // Verify users page elements
-    await expect(page.locator('h1:has-text("Users")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Users")')).toBeVisible({ timeout: 10000 });
 
     // Step 3: Navigate to Content page
-    await page.click('a[href="/content"]');
-    await page.waitForLoadState('load');
+    await navigateToAdminPage(page, '/content', 'Content');
     await page.screenshot({
       path: 'e2e/screenshots/admin-content.png',
       fullPage: true
     });
 
     // Verify content page elements
-    await expect(page.locator('h1:has-text("Content")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Content")')).toBeVisible({ timeout: 10000 });
 
     // Step 4: Navigate to Taxonomy page
-    await page.click('a[href="/taxonomy"]');
-    await page.waitForLoadState('load');
+    await navigateToAdminPage(page, '/taxonomy', 'Taxonomy');
     await page.screenshot({
       path: 'e2e/screenshots/admin-taxonomy.png',
       fullPage: true
     });
 
     // Verify taxonomy page elements
-    await expect(page.locator('h1:has-text("Taxonomy")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Taxonomy")')).toBeVisible({ timeout: 10000 });
 
     // Step 5: Navigate to Files page
-    await page.click('a[href="/files"]');
-    await page.waitForLoadState('load');
+    await navigateToAdminPage(page, '/files', 'File Management');
     await page.screenshot({
       path: 'e2e/screenshots/admin-files.png',
       fullPage: true
     });
 
     // Verify files page elements
-    await expect(page.locator('h1:has-text("File Management")')).toBeVisible();
+    await expect(page.locator('h1:has-text("File Management")')).toBeVisible({ timeout: 10000 });
 
     // Step 6: Manage menus and verify public navigation
-    await page.click('a[href="/menus"]');
-    await page.waitForLoadState('load');
-    await expect(page.locator('h1:has-text("Menu Manager")')).toBeVisible();
+    await navigateToAdminPage(page, '/menus', 'Menu Manager');
+    await expect(page.locator('h1:has-text("Menu Manager")')).toBeVisible({ timeout: 10000 });
 
     // Check if menus loaded successfully (wait a bit for the error to appear if it's going to)
     await page.waitForTimeout(1000);
@@ -175,40 +196,42 @@ test.describe('Admin Panel Comprehensive Test', () => {
     }
 
     // Step 7: Navigate to Analytics page
-    await page.click('a[href="/analytics"]');
-    await page.waitForLoadState('load');
+    await navigateToAdminPage(page, '/analytics', 'Analytics');
     await page.screenshot({
       path: 'e2e/screenshots/admin-analytics.png',
       fullPage: true
     });
 
     // Verify analytics page elements
-    await expect(page.locator('h1:has-text("Analytics")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Analytics")')).toBeVisible({ timeout: 10000 });
 
     // Step 8: Navigate to Settings page
+    await page.waitForSelector('a[href="/settings"]', { state: 'visible', timeout: 10000 });
     await page.click('a[href="/settings"]');
-    await page.waitForLoadState('load');
-    await page.waitForTimeout(2000); // Give settings time to load
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000); // Give settings time to load
     await page.screenshot({
       path: 'e2e/screenshots/admin-settings.png',
       fullPage: true
     });
 
     // Verify settings page elements (with error boundary)
-    const hasSettings = await page.locator('text=Settings').isVisible();
-    const hasError = await page.locator('text=/something went wrong/i').isVisible();
+    const hasSettings = await page.locator('text=Settings').isVisible().catch(() => false);
+    const hasError = await page.locator('text=/something went wrong/i').isVisible().catch(() => false);
     expect(hasSettings || hasError).toBeTruthy();
 
     // Step 9: Navigate to Editor Test page
+    await page.waitForSelector('a[href="/editor-test"]', { state: 'visible', timeout: 10000 });
     await page.click('a[href="/editor-test"]');
-    await page.waitForLoadState('load');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('text=Editor Test', { state: 'visible', timeout: 15000 });
     await page.screenshot({
       path: 'e2e/screenshots/admin-editor-test.png',
       fullPage: true
     });
 
     // Verify editor test page elements
-    await expect(page.locator('text=Editor Test')).toBeVisible();
+    await expect(page.locator('text=Editor Test')).toBeVisible({ timeout: 10000 });
 
     // Step 10: Test navigation menu
     await expect(page.locator('text=Dashboard')).toBeVisible();

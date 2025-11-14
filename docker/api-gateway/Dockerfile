@@ -18,8 +18,8 @@ RUN npm ci && npm cache clean --force
 COPY packages/shared ./packages/shared
 COPY packages/api-gateway ./packages/api-gateway
 
-# Build packages
-RUN npm run build
+# Build packages (only what api-gateway needs)
+RUN npx lerna run build --scope=@monorepo/shared --scope=@monorepo/api-gateway --include-dependencies
 
 # Production stage
 FROM node:22-alpine
@@ -50,8 +50,7 @@ COPY --from=builder /app/packages/api-gateway/package.json ./packages/api-gatewa
 # Install only production dependencies (this will create proper symlinks to packages/shared)
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Set ownership and switch to non-root user
-RUN chown -R appuser:appuser /app
+# Switch to non-root user for security (avoid running as root)
 USER appuser
 
 # Expose port

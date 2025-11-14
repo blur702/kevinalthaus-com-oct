@@ -152,7 +152,7 @@ const CategoryDialog: React.FC<CategoryDialogProps> = ({
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {return;}
 
     setLoading(true);
     setErrors({});

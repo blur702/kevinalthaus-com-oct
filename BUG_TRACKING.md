@@ -20,8 +20,12 @@
 - **Location**: Environment configuration
 - **Issue**: JWT_SECRET is only 28 characters long
 - **Requirement**: Minimum 32 characters for security
-- **Status**: IDENTIFIED
-- **Fix Required**: Generate new JWT secret with `openssl rand -base64 64`
+- **Status**: FIXED
+- **Fix Applied**: Added minimum 32-character validation in `packages/main-app/src/auth/index.ts`
+  - Production enforcement: Application fails to start with secrets < 32 characters
+  - Development behavior: Warning logged but allows shorter secrets for local testing
+  - Documentation updated in `.env.example` with prominent security warnings
+- **Generation Command**: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` or `openssl rand -hex 32`
 
 ---
 
@@ -191,26 +195,20 @@ During testing, observed actual user activity in server logs:
 - **Status**: NEEDS INVESTIGATION
 - **Priority**: MEDIUM
 
-### 3. 🐛 Missing UUID Validation in User Manager API
+### 3. 🐛 UUID Validation in User Manager Sub-Resource Endpoints
 - **Severity**: MEDIUM - Poor Error Handling
 - **Location**: packages/main-app/src/routes/usersManager.ts
-- **Affected Endpoints**:
-  - GET `/api/users-manager/:id` (line 154-205)
-  - PATCH `/api/users-manager/:id` (line 318-474)
-  - DELETE `/api/users-manager/:id` (line 476+)
-- **Issue**: No UUID format validation before database queries
+- **Issue**: Missing UUID format validation in sub-resource endpoints
 - **Impact**: Returns generic 500 error instead of 400 Bad Request for invalid UUIDs
 - **Database Error**: `invalid input syntax for type uuid: "undefined"`, `invalid input syntax for type uuid: "some-id"`
-- **Status**: IDENTIFIED
-- **Priority**: MEDIUM
-- **Fix Required**: Add UUID validation middleware or validate format before queries
-- **Recommended Fix**:
-  ```typescript
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(id)) {
-    return res.status(400).json({ error: 'Bad Request', message: 'Invalid user ID format' });
-  }
-  ```
+- **Status**: FIXED
+- **Note**: Main endpoints (GET/PATCH/DELETE `/:id`) already had validation implemented
+- **Fixed Endpoints**:
+  - GET `/api/users-manager/:id/activity` - Now validates UUID before querying audit logs
+  - GET `/api/users-manager/:id/custom-fields` - Now validates UUID before querying custom fields
+  - PATCH `/api/users-manager/:id/custom-fields` - Now validates UUID before updating custom fields
+- **Fix Applied**: Added `isValidUUID()` validation to all three sub-resource endpoints
+- **Verification**: All user manager endpoints now return 400 Bad Request for invalid UUID format instead of 500 Internal Server Error
 
 ### 4. 🐛 JSON Parsing Error Handling
 - **Severity**: LOW - Client Error

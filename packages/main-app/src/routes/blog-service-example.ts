@@ -55,20 +55,20 @@ export class BlogRouteHandler {
     this.router.put(
       '/:id',
       this.authService.middleware(),  // Auth check
-      this.updatePost.bind(this)
+      (req, res) => void this.updatePost(req, res)
     );
 
     this.router.delete(
       '/:id',
       this.authService.middleware(),  // Auth check
-      this.deletePost.bind(this)
+      (req, res) => void this.deletePost(req, res)
     );
 
     // Admin-only routes
     this.router.post(
       '/:id/publish',
       this.authService.requireRole(Role.ADMIN),  // Role check in 1 line!
-      this.publishPost.bind(this)
+      (req, res) => void this.publishPost(req, res)
     );
   }
 

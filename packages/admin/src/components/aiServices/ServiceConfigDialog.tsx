@@ -134,7 +134,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
 
-    if (!validateForm() || !service) return;
+    if (!validateForm() || !service) {return;}
 
     setLoading(true);
     setErrors({});
@@ -168,7 +168,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     }
   };
 
-  if (!service) return null;
+  if (!service) {return null;}
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>

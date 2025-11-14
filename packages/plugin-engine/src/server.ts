@@ -7,8 +7,27 @@ import { Pool } from 'pg';
 
 import { createLogger, LogLevel, Role, PORTS, ensurePortAvailable } from '@monorepo/shared';
 
+// Plugin context interface
+interface PluginContext {
+  app: express.Application;
+  db: Pool;
+  logger: {
+    info: (message: string, ...args: unknown[]) => void;
+    warn: (message: string, ...args: unknown[]) => void;
+    error: (message: string, error?: Error, ...args: unknown[]) => void;
+    debug: (message: string, ...args: unknown[]) => void;
+  };
+  services: {
+    blog: null;
+    editor: null;
+    taxonomy: null;
+    email: null;
+  };
+  config: Record<string, unknown>;
+}
+
 // Dynamic SSDD Validator plugin loader
-let SSDDValidatorPlugin: any;
+let SSDDValidatorPlugin: { new(): { onActivate(context: PluginContext): Promise<void> } };
 (function resolvePlugin() {
   try {
     const explicitPath = process.env.PLUGIN_SSDD_PATH;
@@ -163,7 +182,7 @@ app.use((req, _res, next) => {
       id: userId,
       ...(roleValue ? { role: roleValue } : {}),
       email: userEmail,
-    } as express.Request['user'];
+    } as any;
   }
   next();
 });
@@ -181,14 +200,14 @@ async function loadPlugins(): Promise<void> {
     console.log('[plugin-engine] Loading SSDD Validator plugin...');
 
     const plugin = new SSDDValidatorPlugin();
-    const context = {
+    const context: PluginContext = {
       app,
       db: pool,
       logger: {
-        info: (message: string, ...args: unknown[]) => logger.info(message, ...args as Array<Record<string, unknown>>),
-        warn: (message: string, ...args: unknown[]) => logger.warn(message, ...args as Array<Record<string, unknown>>),
-        error: (message: string, error?: Error, ...args: unknown[]) => logger.error(message, error, ...args as Array<Record<string, unknown>>),
-        debug: (message: string, ...args: unknown[]) => logger.debug(message, ...args as Array<Record<string, unknown>>),
+        info: (message: string, ...args: unknown[]) => logger.info(message, ...args),
+        warn: (message: string, ...args: unknown[]) => logger.warn(message, ...args),
+        error: (message: string, error?: Error, ...args: unknown[]) => logger.error(message, error, ...args),
+        debug: (message: string, ...args: unknown[]) => logger.debug(message, ...args),
       },
       services: {
         blog: null,
@@ -217,8 +236,7 @@ app.all('/plugins/*', (req, res) => {
     message: 'Plugin Engine stub',
     method: req.method,
     path: req.path,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    body: req.body,
+    body: req.body as unknown,
   });
 });
 

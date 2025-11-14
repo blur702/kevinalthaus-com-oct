@@ -32,6 +32,8 @@ coverage/
 test-results/
 playwright-report/
 e2e/.auth/
+test-output*.txt
+test-results*.txt
 
 # Logs
 logs/
@@ -50,6 +52,8 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+*.pid
+/*_test.txt
 
 # Build artifacts
 *.tgz
@@ -107,9 +111,15 @@ secrets/
 .env.local
 
 # Lint output files
-lint-output.txt
-lint-final.txt
-cookies.txt
+lint-*.txt
+lint-*.json
+eslint-*.json
+*-eslint*.json
+test-monitoring-*.txt
+test-results-*.json
+test-progress-*.log
+coderabbit-*.log
+coderabbit-*.txt
 NUL
 
 # Playwright

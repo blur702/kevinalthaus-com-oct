@@ -12,3 +12,4 @@ export * from './HttpService';
 export * from './StorageService';
 export * from './TaxonomyService';
 export * from './MenuService';
+export * from './AnalyticsService';

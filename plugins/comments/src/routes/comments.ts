@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import type { PluginLogger } from '@monorepo/shared';
+import { Role } from '@monorepo/shared';
 import { CommentService } from '../services/CommentService';
 
 export function createCommentsRouter(pool: Pool, logger: PluginLogger): Router {
@@ -170,7 +171,7 @@ export function createCommentsRouter(pool: Pool, logger: PluginLogger): Router {
       }
 
       // Only the comment owner or admin can update
-      if (existingComment.user_id !== userId && userRole !== 'admin') {
+      if (existingComment.user_id !== userId && userRole !== Role.ADMIN) {
         res.status(403).json({
           success: false,
           error: 'Permission denied'
@@ -203,7 +204,7 @@ export function createCommentsRouter(pool: Pool, logger: PluginLogger): Router {
         updateData.content = content.trim();
       }
 
-      if (status !== undefined && userRole === 'admin') {
+      if (status !== undefined && userRole === Role.ADMIN) {
         if (!['approved', 'pending', 'spam', 'deleted'].includes(status)) {
           res.status(400).json({
             success: false,

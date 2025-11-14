@@ -9,6 +9,7 @@ import {
   getRefreshTokenExpiration
 } from '../utils/jwt';
 import { authenticateToken } from '../middleware/auth';
+import { captureException } from '@monorepo/shared';
 
 export function createAuthRouter(pool: Pool): Router {
   const router = Router();
@@ -66,6 +67,7 @@ export function createAuthRouter(pool: Pool): Router {
         userId: user.id
       });
     } catch (error) {
+      captureException(error as Error);
       res.status(500).json({
         error: 'Failed to register user',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -133,6 +135,7 @@ export function createAuthRouter(pool: Pool): Router {
         }
       });
     } catch (error) {
+      captureException(error as Error);
       res.status(500).json({
         error: 'Failed to login',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -201,6 +204,7 @@ export function createAuthRouter(pool: Pool): Router {
 
       res.json({ accessToken });
     } catch (error) {
+      captureException(error as Error);
       res.status(500).json({
         error: 'Failed to refresh token',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -229,6 +233,7 @@ export function createAuthRouter(pool: Pool): Router {
 
       res.json({ message: 'Logged out successfully' });
     } catch (error) {
+      captureException(error as Error);
       res.status(500).json({
         error: 'Failed to logout',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -263,6 +268,7 @@ export function createAuthRouter(pool: Pool): Router {
         created_at: user.created_at
       });
     } catch (error) {
+      captureException(error as Error);
       res.status(500).json({
         error: 'Failed to get user information',
         details: error instanceof Error ? error.message : 'Unknown error'

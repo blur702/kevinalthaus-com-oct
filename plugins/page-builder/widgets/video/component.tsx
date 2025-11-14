@@ -53,7 +53,7 @@ export default function VideoWidget({ widget, editMode, onChange }: VideoWidgetP
     ];
     for (const pattern of patterns) {
       const match = url.match(pattern);
-      if (match) return match[1];
+      if (match) {return match[1];}
     }
     return null;
   };

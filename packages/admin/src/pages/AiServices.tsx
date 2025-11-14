@@ -192,7 +192,7 @@ const AiServices: React.FC = () => {
   };
 
   const handleDeleteCategory = async (): Promise<void> => {
-    if (!deleteCategoryId) return;
+    if (!deleteCategoryId) {return;}
 
     try {
       await deleteCategory(deleteCategoryId);
@@ -221,9 +221,9 @@ const AiServices: React.FC = () => {
         limit: promptsRowsPerPage,
       };
 
-      if (searchQuery) params.search = searchQuery;
-      if (categoryFilter !== 'all') params.category_id = categoryFilter;
-      if (favoriteFilter !== 'all') params.is_favorite = favoriteFilter;
+      if (searchQuery) {params.search = searchQuery;}
+      if (categoryFilter !== 'all') {params.category_id = categoryFilter;}
+      if (favoriteFilter !== 'all') {params.is_favorite = favoriteFilter;}
 
       const data = await listPrompts(params);
       setPrompts(data.prompts);
@@ -279,7 +279,7 @@ const AiServices: React.FC = () => {
   };
 
   const handleDeletePrompt = async (): Promise<void> => {
-    if (!deletePromptId) return;
+    if (!deletePromptId) {return;}
 
     try {
       await deletePrompt(deletePromptId);

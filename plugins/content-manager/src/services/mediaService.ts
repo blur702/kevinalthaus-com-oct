@@ -7,7 +7,7 @@ import { Pool } from 'pg';
 import { promises as fs } from 'fs';
 import path from 'path';
 import sharp from 'sharp';
-import { fromFile } from 'file-type';
+import fileType from 'file-type';
 import mimeTypes from 'mime-types';
 import type { PluginLogger } from '@monorepo/shared';
 
@@ -79,7 +79,7 @@ export class MediaService {
       }
 
       // Detect actual MIME type using magic bytes
-      const fileTypeResult = await fromFile(file.path);
+      const fileTypeResult = await fileType.fromFile(file.path);
       const detectedMimeType = fileTypeResult?.mime || file.mimetype;
       const detectedExtension = fileTypeResult?.ext || path.extname(file.originalname).slice(1);
 

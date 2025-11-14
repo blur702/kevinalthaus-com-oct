@@ -98,7 +98,7 @@ test('Deep dive: MUI TextField structure', async ({ page }) => {
       const styles = window.getComputedStyle(el);
       return {
         tagName: el.tagName,
-        name: (el as any).name,
+        name: el.getAttribute('name'),
         className: el.className,
         opacity: styles.opacity,
         display: styles.display,

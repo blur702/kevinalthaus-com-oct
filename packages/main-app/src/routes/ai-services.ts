@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, RequestHandler, NextFunction } from 'express';
 import { query } from '../db';
 import { AuthenticatedRequest, authMiddleware } from '../auth';
 import { requireRole } from '../auth/rbac-middleware';
@@ -12,6 +12,8 @@ const logger = createLogger({
   service: 'ai-services',
   level: LogLevel.INFO,
 });
+
+import { asyncHandler } from '../utils/asyncHandler';
 
 function toError(err: unknown): Error {
   return err instanceof Error ? err : new Error(String(err));
@@ -206,7 +208,7 @@ async function hasCircularReference(categoryId: string, newParentId: string): Pr
  * GET /api/ai/services
  * Get all AI service configurations
  */
-router.get('/services', async (_req: AuthenticatedRequest, res: Response) => {
+router.get('/services', asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const serviceResult = await query<AIServiceConfig>(
       `SELECT id, service_name, api_key_vault_path, enabled, settings,
@@ -232,13 +234,13 @@ router.get('/services', async (_req: AuthenticatedRequest, res: Response) => {
     logger.error('Failed to fetch AI services', toError(error));
     return res.status(500).json({ error: 'Failed to fetch AI services' });
   }
-});
+}));
 
 /**
  * GET /api/ai/services/:serviceName
  * Get specific AI service configuration
  */
-router.get('/services/:serviceName', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/services/:serviceName', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { serviceName } = req.params;
 
@@ -274,7 +276,7 @@ router.get('/services/:serviceName', async (req: AuthenticatedRequest, res: Resp
     logger.error('Failed to fetch AI service', toError(error), { serviceName: req.params.serviceName });
     return res.status(500).json({ error: 'Failed to fetch AI service' });
   }
-});
+}));
 
 /**
  * PUT /api/ai/services/:serviceName
@@ -283,8 +285,8 @@ router.get('/services/:serviceName', async (req: AuthenticatedRequest, res: Resp
 router.put(
   '/services/:serviceName',
   csrfProtection,
-  aiServicesRateLimit,
-  async (req: AuthenticatedRequest, res: Response) => {
+  aiServicesRateLimit as RequestHandler,
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { serviceName } = req.params;
       const { api_key, enabled, settings } = req.body as UpdateServiceRequest;
@@ -364,7 +366,7 @@ router.put(
       logger.error('Failed to update AI service', toError(error), { serviceName: req.params.serviceName });
       return res.status(500).json({ error: 'Failed to update AI service configuration' });
     }
-  }
+  })
 );
 
 /**
@@ -374,8 +376,8 @@ router.put(
 router.post(
   '/services/:serviceName/test',
   csrfProtection,
-  aiServicesRateLimit,
-  async (req: AuthenticatedRequest, res: Response) => {
+  aiServicesRateLimit as RequestHandler,
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { serviceName } = req.params;
       const userId = req.user!.id;
@@ -423,7 +425,7 @@ router.post(
       logger.error('Failed to test AI service', toError(error), { serviceName: req.params.serviceName });
       return res.status(500).json({ error: 'Failed to test AI service connection' });
     }
-  }
+  })
 );
 
 // ============================================================================
@@ -434,7 +436,7 @@ router.post(
  * GET /api/ai/prompts/categories
  * Get all categories with hierarchy
  */
-router.get('/prompts/categories', async (_req: AuthenticatedRequest, res: Response) => {
+router.get('/prompts/categories', asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const categoriesResult = await query<AIPromptCategory>(
       `SELECT id, name, description, parent_id, sort_order,
@@ -449,7 +451,7 @@ router.get('/prompts/categories', async (_req: AuthenticatedRequest, res: Respon
     logger.error('Failed to fetch prompt categories', toError(error));
     return res.status(500).json({ error: 'Failed to fetch prompt categories' });
   }
-});
+}));
 
 /**
  * POST /api/ai/prompts/categories
@@ -458,8 +460,8 @@ router.get('/prompts/categories', async (_req: AuthenticatedRequest, res: Respon
 router.post(
   '/prompts/categories',
   csrfProtection,
-  aiPromptsRateLimit,
-  async (req: AuthenticatedRequest, res: Response) => {
+  aiPromptsRateLimit as RequestHandler,
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     let sanitizedName = '';
     let sanitizedDescription: string | null = null;
     try {
@@ -520,7 +522,7 @@ router.post(
       return res.status(500).json({ error: 'Failed to create prompt category' });
     }
   }
-);
+));
 
 /**
  * PUT /api/ai/prompts/categories/:id
@@ -529,8 +531,8 @@ router.post(
 router.put(
   '/prompts/categories/:id',
   csrfProtection,
-  aiPromptsRateLimit,
-  async (req: AuthenticatedRequest, res: Response) => {
+  aiPromptsRateLimit as RequestHandler,
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { name, description, parent_id, sort_order } = req.body;
@@ -608,7 +610,7 @@ router.put(
       return res.status(500).json({ error: 'Failed to update prompt category' });
     }
   }
-);
+));
 
 /**
  * DELETE /api/ai/prompts/categories/:id
@@ -617,8 +619,8 @@ router.put(
 router.delete(
   '/prompts/categories/:id',
   csrfProtection,
-  aiPromptsRateLimit,
-  async (req: AuthenticatedRequest, res: Response) => {
+  aiPromptsRateLimit as RequestHandler,
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const userId = req.user!.id;
@@ -653,7 +655,7 @@ router.delete(
       return res.status(500).json({ error: 'Failed to delete prompt category' });
     }
   }
-);
+));
 
 // ============================================================================
 // Prompt Library Routes
@@ -663,7 +665,7 @@ router.delete(
  * GET /api/ai/prompts
  * Get prompts with pagination and filtering
  */
-router.get('/prompts', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/prompts', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
@@ -722,13 +724,13 @@ router.get('/prompts', async (req: AuthenticatedRequest, res: Response) => {
     logger.error('Failed to fetch prompts', toError(error));
     return res.status(500).json({ error: 'Failed to fetch prompts' });
   }
-});
+}));
 
 /**
  * GET /api/ai/prompts/:id
  * Get specific prompt
  */
-router.get('/prompts/:id', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/prompts/:id', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -751,7 +753,7 @@ router.get('/prompts/:id', async (req: AuthenticatedRequest, res: Response) => {
     logger.error('Failed to fetch prompt', toError(error), { promptId: req.params.id });
     return res.status(500).json({ error: 'Failed to fetch prompt' });
   }
-});
+}));
 
 /**
  * POST /api/ai/prompts
@@ -760,8 +762,8 @@ router.get('/prompts/:id', async (req: AuthenticatedRequest, res: Response) => {
 router.post(
   '/prompts',
   csrfProtection,
-  aiPromptsRateLimit,
-  async (req: AuthenticatedRequest, res: Response) => {
+  aiPromptsRateLimit as RequestHandler,
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { title, content, category_id, variables, metadata, is_favorite } = req.body as CreatePromptRequest;
       const userId = req.user!.id;
@@ -818,7 +820,7 @@ router.post(
       return res.status(500).json({ error: 'Failed to create prompt' });
     }
   }
-);
+));
 
 /**
  * PUT /api/ai/prompts/:id
@@ -827,8 +829,8 @@ router.post(
 router.put(
   '/prompts/:id',
   csrfProtection,
-  aiPromptsRateLimit,
-  async (req: AuthenticatedRequest, res: Response) => {
+  aiPromptsRateLimit as RequestHandler,
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { title, content, category_id, variables, metadata, is_favorite } = req.body as UpdatePromptRequest;
@@ -927,7 +929,7 @@ router.put(
       return res.status(500).json({ error: 'Failed to update prompt' });
     }
   }
-);
+));
 
 /**
  * DELETE /api/ai/prompts/:id
@@ -936,8 +938,8 @@ router.put(
 router.delete(
   '/prompts/:id',
   csrfProtection,
-  aiPromptsRateLimit,
-  async (req: AuthenticatedRequest, res: Response) => {
+  aiPromptsRateLimit as RequestHandler,
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const userId = req.user!.id;
@@ -960,6 +962,6 @@ router.delete(
       return res.status(500).json({ error: 'Failed to delete prompt' });
     }
   }
-);
+));
 
 export default router;

@@ -83,9 +83,9 @@ class Repository<T extends Record<string, unknown>> implements IRepository<T> {
   }
 
   async count(filters?: Partial<T>): Promise<number> {
-    const query = this.knexInstance<T>(this.tableName);
+    let query = this.knexInstance<T>(this.tableName);
     if (filters) {
-      query.where(filters);
+      query = query.where(filters);
     }
     const result = await query.count<{ count: string }>('* as count').first();
     return result ? parseInt(result.count, 10) : 0;

@@ -10,6 +10,9 @@ import { settingsCacheService, type PasswordPolicy } from '../services/settingsC
 
 const router = Router();
 
+// Environment check constant
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 /**
  * Validates password strength based on system settings
  * Falls back to secure defaults if settings are unavailable
@@ -77,6 +80,23 @@ if (!JWT_SECRET) {
     );
   }
 }
+
+// Validate JWT_SECRET minimum length for security
+if (JWT_SECRET.length < 32) {
+  if (IS_PRODUCTION) {
+    throw new Error(
+      'JWT_SECRET must be at least 32 characters in production. Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  } else {
+    console.warn('');
+    console.warn('⚠️  WARNING: JWT_SECRET is shorter than 32 characters');
+    console.warn('   Short secrets are vulnerable to brute force attacks');
+    console.warn('   Generate a secure secret with:');
+    console.warn('   node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    console.warn('');
+  }
+}
+
 // Short-lived access token (default 15 minutes) to reduce risk window
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 const REFRESH_TOKEN_EXPIRES_DAYS = 30;
@@ -166,17 +186,22 @@ function parseDurationToMs(input: string, fallbackMs: number): number {
   }
   const unit = match[2].toLowerCase();
   switch (unit) {
-    case 's':
+    case 's': {
       return value * 1000;
-    case 'm':
+    }
+    case 'm': {
       return value * 60 * 1000;
-    case 'h':
+    }
+    case 'h': {
       return value * 60 * 60 * 1000;
-    case 'd':
+    }
+    case 'd': {
       return value * 24 * 60 * 60 * 1000;
-    default:
+    }
+    default: {
       // No unit provided, assume seconds
       return value * 1000;
+    }
   }
 }
 
@@ -1165,9 +1190,18 @@ router.get('/me', authMiddleware, (req: AuthenticatedRequest, res: Response) => 
 
 // GET /api/auth/csrf-token - Get CSRF token for authenticated users
 router.get('/csrf-token', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
-  void (async () => {
-    const { getCSRFToken } = await import('../middleware/csrf');
-    getCSRFToken(req, res);
+  void (async (): Promise<void> => {
+    try {
+      const { getCSRFToken } = await import('../middleware/csrf');
+      getCSRFToken(req, res);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      defaultLogger.error('Failed to get CSRF token', err);
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'Failed to get CSRF token',
+      });
+    }
   })();
 });
 

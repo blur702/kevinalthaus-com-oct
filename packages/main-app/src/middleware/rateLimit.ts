@@ -179,8 +179,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
     // Track response status for conditional counting
     if (skipFailedRequests || skipSuccessfulRequests) {
       const originalSend = res.send;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      res.send = function(data: any): Response {
+      res.send = function(data: unknown): Response {
         // Decrement counter based on response status
         if (entry && res.statusCode >= 400 && skipFailedRequests) {
           entry.count--;
@@ -270,10 +269,9 @@ export const passwordResetRateLimit = rateLimit({
   enableBruteForceProtection: true,
   keyGenerator: (req: Request) => {
     // Use email or IP for password reset
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const email = req.body?.email;
-    if (email) {
-      return `reset:${String(email)}`;
+    const email = req.body?.email as unknown;
+    if (typeof email === 'string' && email) {
+      return `reset:${email}`;
     }
     return defaultKeyGenerator(req);
   }

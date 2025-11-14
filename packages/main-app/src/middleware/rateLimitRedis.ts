@@ -424,8 +424,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
       // Track response status for conditional counting
       if (skipFailedRequests || skipSuccessfulRequests) {
         const originalSend = res.send;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        res.send = function(data: any): Response {
+        res.send = function(data: unknown): Response {
           // Decrement logic for both Redis and memory fallback
           if (isRedisAvailable()) {
             // Redis decrement logic
@@ -433,9 +432,9 @@ export function rateLimit(options: RateLimitOptions = {}) {
               (res.statusCode >= 400 && skipFailedRequests) ||
               (res.statusCode < 400 && skipSuccessfulRequests);
 
-            if (shouldDecrement) {
+            if (shouldDecrement && redisClient) {
               // Use DECR to atomically decrement the counter
-              redisClient.decr(key).catch((err) => {
+              void redisClient.decr(key).catch((err: Error) => {
                 logger.warn(`Failed to decrement rate limit for key: ${key}`, { error: err.message });
               });
             }
@@ -482,7 +481,7 @@ export const authRateLimit = rateLimit({
   skipSuccessfulRequests: true,
   enableBruteForceProtection: false, // Disable for E2E testing
   blockDuration: 30 * 60 * 1000,
-  skip: (_req: Request | AuthenticatedRequest) => {
+  skip: () => {
     // Bypass rate limiting for E2E tests
     return isAuthRateLimitDisabled();
   },
@@ -492,7 +491,7 @@ export const apiRateLimit = rateLimit({
   windowMs: 60 * 1000,
   max: process.env.E2E_TESTING === 'true' || process.env.NODE_ENV === 'test' ? 100000 : 100,
   message: 'API rate limit exceeded',
-  skip: (_req: Request | AuthenticatedRequest) => {
+  skip: () => {
     // Bypass rate limiting for E2E tests
     return process.env.E2E_TESTING === 'true' ||
            process.env.RATE_LIMIT_BYPASS_E2E === 'true' ||
@@ -532,10 +531,9 @@ export const passwordResetRateLimit = rateLimit({
   message: 'Too many password reset requests, please try again later',
   enableBruteForceProtection: true,
   keyGenerator: (req: Request) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const email = req.body?.email;
-    if (email) {
-      return `reset:${String(email)}`;
+    const email = req.body?.email as unknown;
+    if (typeof email === 'string' && email) {
+      return `reset:${email}`;
     }
     return defaultKeyGenerator(req);
   },

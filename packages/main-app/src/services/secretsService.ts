@@ -182,7 +182,7 @@ class SecretsService {
         }
         break;
 
-      case 'approle':
+      case 'approle': {
         // AppRole authentication
         if (!this.config.roleId || !this.config.secretId) {
           throw new Error('VAULT_ROLE_ID and VAULT_SECRET_ID required for AppRole authentication');
@@ -202,8 +202,9 @@ class SecretsService {
           throw new Error('AppRole authentication failed: no token received');
         }
         break;
+      }
 
-      case 'kubernetes':
+      case 'kubernetes': {
         // Kubernetes authentication
         const jwtToken = await this._readKubernetesServiceAccountToken();
         const k8sClient = this.client as vault.client;
@@ -219,9 +220,10 @@ class SecretsService {
           throw new Error('Kubernetes authentication failed: no token received');
         }
         break;
+      }
 
       default:
-        throw new Error(`Unsupported authentication method: ${this.config.authMethod}`);
+        throw new Error(`Unsupported authentication method: ${String(this.config.authMethod)}`);
     }
   }
 

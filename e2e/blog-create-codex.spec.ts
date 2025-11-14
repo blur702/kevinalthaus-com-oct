@@ -11,7 +11,9 @@ test('Create blog post via WYSIWYG: Here, there, and Codex', async ({ page }) =>
   for (let i = 0; i < 40; i++) {
     try {
       const res = await page.request.get('http://localhost:3001/health');
-      if (res.ok()) {break;}
+      if (res.ok()) {
+        break;
+      }
     } catch (error) {
       // Intentionally silent - health check retries expected during backend startup
     }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import {
   Box,
   Typography,
@@ -19,6 +20,7 @@ import {
   Paper,
   Slider,
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import {
   ExpandMore as ExpandMoreIcon,
   Palette as PaletteIcon,
@@ -30,6 +32,12 @@ import {
 } from '@mui/icons-material';
 import { ChromePicker, ColorResult } from 'react-color';
 import { getThemeConfig, saveTheme, resetTheme } from '../services/themeService';
+import type {
+  PaletteModeOption,
+  ThemeConfig,
+  TypographyScale,
+  TypographyVariant,
+} from '../services/themeService';
 
 interface ThemeEditorProps {
   target: 'admin' | 'frontend';
@@ -40,7 +48,52 @@ interface ColorPickerProps {
   value: string;
   onChange: (color: string) => void;
 }
+// Define types for easier access to nested theme properties. 
+type ThemePalette = NonNullable<ThemeConfig['palette']>;
+type PaletteSectionKey = Exclude<keyof ThemePalette, 'mode'>;
+type PaletteShade = 'main' | 'light' | 'dark' | 'default' | 'paper' | 'primary' | 'secondary' | 'disabled';
+type PalettePath = 'mode' | `${PaletteSectionKey}.${PaletteShade}`;
+type TypographyProperty = keyof TypographyScale;
 
+const typographyElements: TypographyVariant[] = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'body1', 'body2'];
+
+const defaultThemeConfig: ThemeConfig = {
+  palette: {
+    mode: 'light',
+    primary: { main: '#2563eb', light: '#60a5fa', dark: '#1d4ed8' },
+    secondary: { main: '#7c3aed', light: '#a78bfa', dark: '#5b21b6' },
+    error: { main: '#dc2626' },
+    warning: { main: '#d97706' },
+    info: { main: '#0284c7' },
+    success: { main: '#059669' },
+    background: { default: '#f8fafc', paper: '#ffffff' },
+    text: { primary: '#0f172a', secondary: '#475569', disabled: '#94a3b8' },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h1: { fontSize: '2.25rem', fontWeight: 700, lineHeight: 1.2 },
+    h2: { fontSize: '1.875rem', fontWeight: 600, lineHeight: 1.3 },
+    h3: { fontSize: '1.5rem', fontWeight: 600, lineHeight: 1.3 },
+    h4: { fontSize: '1.25rem', fontWeight: 500, lineHeight: 1.4 },
+    h5: { fontSize: '1.125rem', fontWeight: 500, lineHeight: 1.4 },
+    h6: { fontSize: '1rem', fontWeight: 500, lineHeight: 1.5 },
+    body1: { fontSize: '0.875rem', lineHeight: 1.5 },
+    body2: { fontSize: '0.75rem', lineHeight: 1.4 },
+  },
+  spacing: 4,
+  shape: { borderRadius: 6 },
+  customCSS: '',
+};
+
+const ensureSectionRecord = (
+  section: ThemePalette[PaletteSectionKey] | undefined,
+): Record<string, string | undefined> =>
+  section && typeof section === 'object' ? { ...section } : {};
+
+/**
+ * Renders a labeled color picker control for a single theme token.
+ * Returns a controlled React element that emits the selected color value.
+ */
 const ColorPicker: React.FC<ColorPickerProps> = ({ label, value, onChange }) => {
   const [showPicker, setShowPicker] = useState(false);
 
@@ -85,49 +138,31 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ label, value, onChange }) => 
   );
 };
 
+/**
+ * Provides the full theme editing experience for the requested target surface.
+ * Returns the interactive editor UI so administrators can view and adjust tokens.
+ */
 export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [config, setConfig] = useState<any>({
-    palette: {
-      mode: 'light',
-      primary: { main: '#2563eb', light: '#60a5fa', dark: '#1d4ed8' },
-      secondary: { main: '#7c3aed', light: '#a78bfa', dark: '#5b21b6' },
-      error: { main: '#dc2626' },
-      warning: { main: '#d97706' },
-      info: { main: '#0284c7' },
-      success: { main: '#059669' },
-      background: { default: '#f8fafc', paper: '#ffffff' },
-      text: { primary: '#0f172a', secondary: '#475569', disabled: '#94a3b8' },
-    },
-    typography: {
-      fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-      h1: { fontSize: '2.25rem', fontWeight: 700, lineHeight: 1.2 },
-      h2: { fontSize: '1.875rem', fontWeight: 600, lineHeight: 1.3 },
-      h3: { fontSize: '1.5rem', fontWeight: 600, lineHeight: 1.3 },
-      h4: { fontSize: '1.25rem', fontWeight: 500, lineHeight: 1.4 },
-      h5: { fontSize: '1.125rem', fontWeight: 500, lineHeight: 1.4 },
-      h6: { fontSize: '1rem', fontWeight: 500, lineHeight: 1.5 },
-      body1: { fontSize: '0.875rem', lineHeight: 1.5 },
-      body2: { fontSize: '0.75rem', lineHeight: 1.4 },
-    },
-    spacing: 4,
-    shape: { borderRadius: 6 },
-    customCSS: '',
-  });
+  const [config, setConfig] = useState<ThemeConfig>(defaultThemeConfig);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
 
   useEffect(() => {
-    loadTheme();
+    void loadTheme();
   }, []);
 
-  const loadTheme = async () => {
+  /**
+   * Loads the saved theme configuration from the API into local state.
+   * Returns a Promise that resolves after state has been updated.
+   */
+  const loadTheme = async (): Promise<void> => {
     setLoading(true);
     try {
       const data = await getThemeConfig();
       if (Object.keys(data).length > 0) {
-        setConfig({ ...config, ...data });
+        setConfig((prev) => ({ ...prev, ...data }));
       }
     } catch (error) {
       setMessageType('error');
@@ -137,42 +172,52 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
     }
   };
 
-  const generateCSS = (cfg: any): string => {
+  /**
+   * Converts a theme configuration object into distributable CSS overrides.
+   * Returns a string containing the CSS bundle for the current target.
+   */
+  const generateCSS = (cfg: ThemeConfig): string => {
+    const palette = cfg.palette ?? {};
+    const typography = cfg.typography ?? {};
     let css = `/* ${target === 'admin' ? 'Admin Panel' : 'Frontend'} Theme Overrides - Auto-generated */\n\n`;
 
-    // CSS Variables
+    // Define CSS variable overrides
     css += ':root {\n';
-    if (cfg.palette?.primary?.main) css += `  --primary-color: ${cfg.palette.primary.main};\n`;
-    if (cfg.palette?.secondary?.main) css += `  --secondary-color: ${cfg.palette.secondary.main};\n`;
-    if (cfg.palette?.background?.default) css += `  --background-default: ${cfg.palette.background.default};\n`;
-    if (cfg.palette?.background?.paper) css += `  --background-paper: ${cfg.palette.background.paper};\n`;
-    if (cfg.palette?.text?.primary) css += `  --text-primary: ${cfg.palette.text.primary};\n`;
-    if (cfg.palette?.text?.secondary) css += `  --text-secondary: ${cfg.palette.text.secondary};\n`;
-    if (cfg.typography?.fontFamily) css += `  --font-family: ${cfg.typography.fontFamily};\n`;
+    if (palette.primary?.main) {css += `  --primary-color: ${palette.primary.main};\n`;}
+    if (palette.secondary?.main) {css += `  --secondary-color: ${palette.secondary.main};\n`;}
+    if (palette.background?.default) {css += `  --background-default: ${palette.background.default};\n`;}
+    if (palette.background?.paper) {css += `  --background-paper: ${palette.background.paper};\n`;}
+    if (palette.text?.primary) {css += `  --text-primary: ${palette.text.primary};\n`;}
+    if (palette.text?.secondary) {css += `  --text-secondary: ${palette.text.secondary};\n`;}
+    if (typography.fontFamily) {css += `  --font-family: ${typography.fontFamily};\n`;}
     css += '}\n\n';
 
-    // MUI Component Overrides
-    if (cfg.palette?.primary?.main) {
-      css += `.MuiButton-containedPrimary {\n  background-color: ${cfg.palette.primary.main} !important;\n}\n\n`;
+    // Apply key MUI component overrides
+    if (palette.primary?.main) {
+      css += `.MuiButton-containedPrimary {\n  background-color: ${palette.primary.main} !important;\n}\n\n`;
     }
 
-    if (cfg.palette?.background?.paper) {
-      css += `.MuiPaper-root {\n  background-color: ${cfg.palette.background.paper} !important;\n}\n\n`;
+    if (palette.background?.paper) {
+      css += `.MuiPaper-root {\n  background-color: ${palette.background.paper} !important;\n}\n\n`;
     }
 
-    if (cfg.palette?.background?.default) {
-      css += `body {\n  background-color: ${cfg.palette.background.default} !important;\n}\n\n`;
+    if (palette.background?.default) {
+      css += `body {\n  background-color: ${palette.background.default} !important;\n}\n\n`;
     }
 
-    // Custom CSS
+    // Append any custom CSS provided by the user
     if (cfg.customCSS) {
-      css += `/* Custom CSS */\n${cfg.customCSS}\n`;
+      css += `/* Custom CSS overrides */\n${cfg.customCSS}\n`;
     }
 
     return css;
   };
 
-  const handleSave = async () => {
+  /**
+   * Persists the current theme to the backend and publishes the generated CSS.
+   * Returns a Promise that resolves when the save request completes.
+   */
+  const handleSave = async (): Promise<void> => {
     setSaving(true);
     try {
       const css = generateCSS(config);
@@ -193,8 +238,12 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
     }
   };
 
-  const handleReset = async () => {
-    if (!window.confirm('Reset theme to defaults? This cannot be undone.')) return;
+  /**
+   * Restores the default theme configuration for the active target.
+   * Returns a Promise that resolves after the reset API call finishes.
+   */
+  const handleReset = async (): Promise<void> => {
+    if (!window.confirm('Reset theme to defaults? This cannot be undone.')) {return;}
 
     try {
       await resetTheme({ target });
@@ -207,31 +256,138 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
     }
   };
 
-  const updatePalette = (path: string, value: string) => {
-    const keys = path.split('.');
-    const newConfig = { ...config };
-    let current: any = newConfig.palette;
-
-    for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) current[keys[i]] = {};
-      current = current[keys[i]];
+  /**
+   * Updates a nested palette path with a new color token.
+   * Returns void after updating local state immutably.
+   */
+  const updatePalette = (path: PalettePath, value: string): void => {
+    if (path === 'mode') {
+      const nextMode: PaletteModeOption = value === 'dark' ? 'dark' : 'light';
+      setConfig((prev) => ({
+        ...prev,
+        palette: {
+          ...(prev.palette ?? {}),
+          mode: nextMode,
+        },
+      }));
+      return;
     }
-    current[keys[keys.length - 1]] = value;
 
-    setConfig(newConfig);
+    // Validate path format
+    if (!path || typeof path !== 'string') {
+      console.error('Invalid path: must be a non-empty string', path);
+      return;
+    }
+
+    const parts = path.split('.');
+    if (parts.length !== 2) {
+      console.error('Invalid path format: expected exactly one dot', path);
+      return;
+    }
+
+    const [section, shade] = parts;
+    if (!section || !shade) {
+      console.error('Invalid path: section and shade must be non-empty', path);
+      return;
+    }
+
+    // Type assertion after validation
+    const validSection = section as PaletteSectionKey;
+    const validShade = shade as PaletteShade;
+
+    setConfig((prev) => {
+      const palette: ThemePalette = prev.palette ?? {};
+      const normalizedSection = ensureSectionRecord(palette[validSection]);
+      const nextSection = {
+        ...normalizedSection,
+        [validShade]: value,
+      } as ThemePalette[PaletteSectionKey];
+
+      return {
+        ...prev,
+        palette: {
+          ...palette,
+          [validSection]: nextSection,
+        },
+      };
+    });
   };
 
-  const updateTypography = (element: string, property: string, value: any) => {
-    setConfig({
-      ...config,
-      typography: {
-        ...config.typography,
-        [element]: {
-          ...config.typography[element],
-          [property]: value,
+  /**
+   * Updates a single typography property (e.g., fontSize) for the given element.
+   * Returns void after merging the change into the current config state.
+   */
+  const updateTypography = (
+    element: TypographyVariant,
+    property: TypographyProperty,
+    value: TypographyScale[TypographyProperty],
+  ): void => {
+    setConfig((prev) => {
+      const prevTypography = prev.typography ?? {};
+      const elementSettings: TypographyScale = prevTypography[element] ?? {};
+      const nextElementSettings: TypographyScale = {
+        ...elementSettings,
+        [property]: value,
+      };
+
+      return {
+        ...prev,
+        typography: {
+          ...prevTypography,
+          [element]: nextElementSettings,
         },
-      },
+      };
     });
+  };
+
+  const handleSpacingChange = (_: Event, value: number | number[]): void => {
+    setConfig((prev) => ({
+      ...prev,
+      spacing: typeof value === 'number' ? value : prev.spacing ?? 4,
+    }));
+  };
+
+  const handleBorderRadiusChange = (_: Event, value: number | number[]): void => {
+    setConfig((prev) => ({
+      ...prev,
+      shape: {
+        ...(prev.shape ?? {}),
+        borderRadius: typeof value === 'number' ? value : prev.shape?.borderRadius ?? 6,
+      },
+    }));
+  };
+
+  const handleFontFamilyChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    const { value } = event.target;
+    setConfig((prev) => ({
+      ...prev,
+      typography: {
+        ...(prev.typography ?? {}),
+        fontFamily: value,
+      },
+    }));
+  };
+
+  const handleCustomCssChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ): void => {
+    const { value } = event.target;
+    setConfig((prev) => ({
+      ...prev,
+      customCSS: value,
+    }));
+  };
+
+  const handleModeChange = (event: SelectChangeEvent<PaletteModeOption>): void => {
+    updatePalette('mode', event.target.value);
+  };
+
+  const handleSaveClick = (): void => {
+    void handleSave();
+  };
+
+  const handleResetClick = (): void => {
+    void handleReset();
   };
 
   if (loading) {
@@ -257,7 +413,7 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
           <Box>
             <Button
               startIcon={<RefreshIcon />}
-              onClick={handleReset}
+              onClick={handleResetClick}
               sx={{ mr: 1 }}
             >
               Reset
@@ -265,7 +421,7 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
             <Button
               variant="contained"
               startIcon={<SaveIcon />}
-              onClick={handleSave}
+              onClick={handleSaveClick}
               disabled={saving}
             >
               {saving ? 'Saving...' : 'Save Changes'}
@@ -274,7 +430,7 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
         </Box>
       </Paper>
 
-      {/* Colors Section */}
+      {/* Colors section */}
       <Accordion defaultExpanded>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <PaletteIcon sx={{ mr: 1 }} />
@@ -289,9 +445,9 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
               <FormControl size="small" sx={{ minWidth: 200 }}>
                 <InputLabel>Mode</InputLabel>
                 <Select
-                  value={config.palette?.mode || 'light'}
+                  value={config.palette?.mode ?? 'light'}
                   label="Mode"
-                  onChange={(e) => updatePalette('mode', e.target.value)}
+                  onChange={handleModeChange}
                 >
                   <MenuItem value="light">Light</MenuItem>
                   <MenuItem value="dark">Dark</MenuItem>
@@ -435,7 +591,7 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
         </AccordionDetails>
       </Accordion>
 
-      {/* Typography Section */}
+      {/* Typography section */}
       <Accordion>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <TextFieldsIcon sx={{ mr: 1 }} />
@@ -447,15 +603,13 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
               <TextField
                 fullWidth
                 label="Font Family"
-                value={config.typography?.fontFamily || ''}
-                onChange={(e) =>
-                  setConfig({ ...config, typography: { ...config.typography, fontFamily: e.target.value } })
-                }
+                value={config.typography?.fontFamily ?? ''}
+                onChange={handleFontFamilyChange}
                 helperText='e.g., "Inter", "Roboto", "Helvetica", sans-serif'
               />
             </Grid>
 
-            {['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'body1', 'body2'].map((element) => (
+            {typographyElements.map((element) => (
               <Grid item xs={12} key={element}>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="subtitle1" gutterBottom fontWeight={600} textTransform="uppercase">
@@ -467,7 +621,7 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
                       fullWidth
                       size="small"
                       label="Font Size"
-                      value={config.typography?.[element]?.fontSize || ''}
+                      value={config.typography?.[element]?.fontSize ?? ''}
                       onChange={(e) => updateTypography(element, 'fontSize', e.target.value)}
                       helperText="e.g., 1.5rem, 24px"
                     />
@@ -478,8 +632,20 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
                       size="small"
                       type="number"
                       label="Font Weight"
-                      value={config.typography?.[element]?.fontWeight || ''}
-                      onChange={(e) => updateTypography(element, 'fontWeight', parseInt(e.target.value))}
+                      value={config.typography?.[element]?.fontWeight ?? ''}
+                      onChange={(e) => {
+                        const trimmed = e.target.value.trim();
+                        if (!trimmed) {
+                          updateTypography(element, 'fontWeight', undefined);
+                          return;
+                        }
+                        const parsed = parseInt(trimmed, 10);
+                        updateTypography(
+                          element,
+                          'fontWeight',
+                          Number.isFinite(parsed) && !Number.isNaN(parsed) ? parsed : undefined
+                        );
+                      }}
                       helperText="100-900"
                     />
                   </Grid>
@@ -489,8 +655,14 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
                       size="small"
                       type="number"
                       label="Line Height"
-                      value={config.typography?.[element]?.lineHeight || ''}
-                      onChange={(e) => updateTypography(element, 'lineHeight', parseFloat(e.target.value))}
+                      value={config.typography?.[element]?.lineHeight ?? ''}
+                      onChange={(e) =>
+                        updateTypography(
+                          element,
+                          'lineHeight',
+                          e.target.value ? parseFloat(e.target.value) : undefined,
+                        )
+                      }
                       helperText="e.g., 1.5"
                       inputProps={{ step: 0.1 }}
                     />
@@ -502,7 +674,7 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
         </AccordionDetails>
       </Accordion>
 
-      {/* Spacing & Shape Section */}
+      {/* Spacing & shape section */}
       <Accordion>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <CategoryIcon sx={{ mr: 1 }} />
@@ -511,10 +683,10 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
         <AccordionDetails>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
-              <Typography gutterBottom>Spacing Unit: {config.spacing || 4}px</Typography>
+              <Typography gutterBottom>Spacing Unit: {config.spacing ?? 4}px</Typography>
               <Slider
-                value={config.spacing || 4}
-                onChange={(e, value) => setConfig({ ...config, spacing: value })}
+                value={config.spacing ?? 4}
+                onChange={handleSpacingChange}
                 min={2}
                 max={12}
                 step={1}
@@ -526,12 +698,10 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Typography gutterBottom>Border Radius: {config.shape?.borderRadius || 6}px</Typography>
+              <Typography gutterBottom>Border Radius: {config.shape?.borderRadius ?? 6}px</Typography>
               <Slider
-                value={config.shape?.borderRadius || 6}
-                onChange={(e, value) =>
-                  setConfig({ ...config, shape: { ...config.shape, borderRadius: value } })
-                }
+                value={config.shape?.borderRadius ?? 6}
+                onChange={handleBorderRadiusChange}
                 min={0}
                 max={24}
                 step={1}
@@ -546,7 +716,7 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
         </AccordionDetails>
       </Accordion>
 
-      {/* Custom CSS Section */}
+      {/* Custom CSS section */}
       <Accordion>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <CodeIcon sx={{ mr: 1 }} />
@@ -558,10 +728,10 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({ target }) => {
             multiline
             rows={12}
             label="Custom CSS"
-            value={config.customCSS || ''}
-            onChange={(e) => setConfig({ ...config, customCSS: e.target.value })}
+            value={config.customCSS ?? ''}
+            onChange={handleCustomCssChange}
             helperText="Add custom CSS to override any styles. This CSS will be loaded last."
-            placeholder="/* Your custom CSS here */&#10;.my-custom-class {&#10;  color: #ff0000;&#10;}"
+            placeholder="/* Add custom CSS overrides here */&#10;.my-custom-class {&#10;  color: #ff0000;&#10;}"
             sx={{
               '& textarea': {
                 fontFamily: 'monospace',

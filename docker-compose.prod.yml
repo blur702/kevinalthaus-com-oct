@@ -54,7 +54,7 @@ services:
       context: .
       dockerfile: docker/api-gateway/Dockerfile
     ports:
-      - '4000:4000'
+      - '4000:3000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,7 +66,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for api-gateway}
       INTERNAL_GATEWAY_TOKEN: ${INTERNAL_GATEWAY_TOKEN:?INTERNAL_GATEWAY_TOKEN is required for api-gateway}
     healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:4000/health || exit 1']
+      test: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -102,10 +102,22 @@ services:
       NODE_ENV: production
       MAIN_APP_PORT: 3001
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for main-app}
+      FINGERPRINT_SECRET: ${FINGERPRINT_SECRET:?FINGERPRINT_SECRET is required for main-app}
+      CSRF_SECRET: ${CSRF_SECRET:?CSRF_SECRET is required for main-app}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required for main-app}
+      PLUGIN_SIGNATURE_SECRET: ${PLUGIN_SIGNATURE_SECRET:?PLUGIN_SIGNATURE_SECRET is required for main-app}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required for main-app}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
+      # TLS/SSL Configuration: verify-full enforces encryption, validates the certificate chain, and checks hostnames
+      # CA certificate must exist at ./secrets/ca.crt on the host and is mounted to /run/secrets/postgres_ca.crt
+      # For self-signed setups, copy ./secrets/server.crt to ./secrets/ca.crt so the client can trust the server cert
+      PGSSLMODE: verify-full
       # DATABASE_URL uses POSTGRES_PASSWORD_FILE secret - application must read /run/secrets/postgres_password and construct the connection string
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      PGSSLROOTCERT: /run/secrets/postgres_ca.crt
       INTERNAL_GATEWAY_TOKEN: ${INTERNAL_GATEWAY_TOKEN:?INTERNAL_GATEWAY_TOKEN is required for main-app}
     secrets:
       - postgres_password
@@ -116,10 +128,11 @@ services:
       retries: 6
       start_period: 40s
     volumes:
-      - /app/node_modules
-      # Use bind mount for uploads to avoid data loss on existing deployments
-      # Named volumes would be future enhancement requiring migration guide
+      # Use bind mounts for file storage to persist data
       - ./uploads:/app/uploads
+      - ./uploads_quarantine:/app/packages/main-app/uploads_quarantine
+      - ./storage:/app/storage
+      - ./secrets/ca.crt:/run/secrets/postgres_ca.crt:ro
     logging:
       driver: 'json-file'
       options:

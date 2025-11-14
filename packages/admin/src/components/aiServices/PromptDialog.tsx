@@ -148,7 +148,7 @@ const PromptDialog: React.FC<PromptDialogProps> = ({
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {return;}
 
     setLoading(true);
     setErrors({});

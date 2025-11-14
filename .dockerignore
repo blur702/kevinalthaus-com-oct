@@ -76,9 +76,8 @@ Dockerfile*
 # Deployment scripts (not needed in container)
 scripts/
 
-# Uploads and plugins (will be mounted as volumes)
+# Uploads (will be mounted as volumes)
 uploads/
-plugins/
 
 # Python
 __pycache__/

@@ -25,7 +25,7 @@ interface PublicMenuResponse {
 const PUBLIC_MENU_BASE = '/api/public-menus';
 
 function isNavigationMenu(value: unknown): value is NavigationMenu {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== 'object' || value === null) {return false;}
   const menu = value as Record<string, unknown>;
   return (
     typeof menu.id === 'string' &&
@@ -37,7 +37,7 @@ function isNavigationMenu(value: unknown): value is NavigationMenu {
 }
 
 function isPublicMenuResponse(value: unknown): value is PublicMenuResponse {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== 'object' || value === null) {return false;}
   const response = value as Record<string, unknown>;
   return 'menu' in response && isNavigationMenu(response.menu);
 }

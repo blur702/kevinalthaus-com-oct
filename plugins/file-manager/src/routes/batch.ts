@@ -61,7 +61,7 @@ export function createBatchRouter(pool: Pool, logger: PluginLogger, storageServi
         return;
       }
 
-      let result: { successful: string[]; failed: Array<{ id: string; error: string }>; total: number } = { successful: [], failed: [], total: 0 };
+      const result: { successful: string[]; failed: Array<{ id: string; error: string }>; total: number } = { successful: [], failed: [], total: 0 };
 
       // Move files
       if (value.file_ids && value.file_ids.length > 0) {
@@ -259,7 +259,7 @@ export function createBatchRouter(pool: Pool, logger: PluginLogger, storageServi
         return;
       }
 
-      let result: { successful: string[]; failed: Array<{ id: string; error: string }>; total: number } = { successful: [], failed: [], total: 0 };
+      const result: { successful: string[]; failed: Array<{ id: string; error: string }>; total: number } = { successful: [], failed: [], total: 0 };
 
       // Delete files
       if (value.file_ids && value.file_ids.length > 0) {

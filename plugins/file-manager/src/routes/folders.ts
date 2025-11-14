@@ -132,9 +132,9 @@ export function createFoldersRouter(pool: Pool, logger: PluginLogger): Router {
       }
 
       // Sanitize string inputs to prevent XSS
-      if (value.name) value.name = sanitizeString(value.name);
-      if (value.slug) value.slug = sanitizeString(value.slug);
-      if (value.description) value.description = sanitizeString(value.description);
+      if (value.name) {value.name = sanitizeString(value.name);}
+      if (value.slug) {value.slug = sanitizeString(value.slug);}
+      if (value.description) {value.description = sanitizeString(value.description);}
 
       const folder = await folderService.createFolder(value, userId);
 
@@ -204,9 +204,9 @@ export function createFoldersRouter(pool: Pool, logger: PluginLogger): Router {
       }
 
       // Sanitize string inputs to prevent XSS
-      if (value.name) value.name = sanitizeString(value.name);
-      if (value.slug) value.slug = sanitizeString(value.slug);
-      if (value.description) value.description = sanitizeString(value.description);
+      if (value.name) {value.name = sanitizeString(value.name);}
+      if (value.slug) {value.slug = sanitizeString(value.slug);}
+      if (value.description) {value.description = sanitizeString(value.description);}
 
       const folder = await folderService.updateFolder(id, value, userId);
 

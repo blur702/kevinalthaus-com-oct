@@ -31,6 +31,7 @@ export interface PluginExecutionContext {
     editor: unknown; // IEditorService
     taxonomy: unknown; // ITaxonomyService
     email: unknown; // IEmailService
+    analytics: unknown; // IAnalyticsService
   };
 
   // Plugin-specific logger

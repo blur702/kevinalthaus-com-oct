@@ -247,12 +247,14 @@ const Settings: React.FC = () => {
         setLoadingSite(false);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSnackbar]);
 
+  // Ref to track loading state for loadSecuritySettings to avoid circular dependency
+  const loadingSecurityRef = useRef(false);
+
   const loadSecuritySettings = useCallback(async () => {
-    // Prevent concurrent loads
-    if (loadingSecurity) {
+    // Prevent concurrent loads using ref
+    if (loadingSecurityRef.current) {
       return;
     }
 
@@ -262,6 +264,7 @@ const Settings: React.FC = () => {
     // Create new AbortController
     securitySettingsAbortController.current = new AbortController();
 
+    loadingSecurityRef.current = true;
     setLoadingSecurity(true);
 
     try {
@@ -283,25 +286,24 @@ const Settings: React.FC = () => {
       }
     } finally {
       if (isMountedRef.current) {
+        loadingSecurityRef.current = false;
         setLoadingSecurity(false);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSnackbar]);
 
   const loadEmailSettings = useCallback(async () => {
-    // Prevent concurrent loads
-    if (loadingEmail) {
-      return;
-    }
+    // Prevent concurrent loads using functional state update
+    setLoadingEmail(prev => {
+      if (prev) return prev; // Already loading, exit
+      return true;
+    });
 
     // Cancel previous request if still running
     emailSettingsAbortController.current?.abort();
 
     // Create new AbortController
     emailSettingsAbortController.current = new AbortController();
-
-    setLoadingEmail(true);
 
     try {
       const data = await getEmailSettings(emailSettingsAbortController.current.signal);
@@ -325,22 +327,20 @@ const Settings: React.FC = () => {
         setLoadingEmail(false);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSnackbar]);
 
   const loadExternalApiSettings = useCallback(async () => {
-    // Prevent concurrent loads
-    if (loadingExternalApis) {
-      return;
-    }
+    // Prevent concurrent loads using functional state update
+    setLoadingExternalApis(prev => {
+      if (prev) return prev; // Already loading, exit
+      return true;
+    });
 
     // Cancel previous request if still running
     externalApisAbortController.current?.abort();
 
     // Create new AbortController
     externalApisAbortController.current = new AbortController();
-
-    setLoadingExternalApis(true);
 
     try {
       const data = await getExternalApiSettings(externalApisAbortController.current.signal);
@@ -364,22 +364,20 @@ const Settings: React.FC = () => {
         setLoadingExternalApis(false);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSnackbar]);
 
   const loadApiKeys = useCallback(async () => {
-    // Prevent concurrent loads
-    if (loadingApiKeys) {
-      return;
-    }
+    // Prevent concurrent loads using functional state update
+    setLoadingApiKeys(prev => {
+      if (prev) return prev; // Already loading, exit
+      return true;
+    });
 
     // Cancel previous request if still running
     apiKeysAbortController.current?.abort();
 
     // Create new AbortController
     apiKeysAbortController.current = new AbortController();
-
-    setLoadingApiKeys(true);
 
     try {
       const data = await getApiKeys(apiKeysAbortController.current.signal);
@@ -403,7 +401,6 @@ const Settings: React.FC = () => {
         setLoadingApiKeys(false);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSnackbar]);
 
   // Load settings on mount and tab change
@@ -430,8 +427,7 @@ const Settings: React.FC = () => {
     return () => {
       // No cleanup needed - let requests complete naturally
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, loadSiteSettings, loadSecuritySettings, loadEmailSettings, loadExternalApiSettings, loadApiKeys]);
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });

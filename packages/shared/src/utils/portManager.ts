@@ -129,9 +129,19 @@ export async function killProcessOnPort(port: number): Promise<boolean> {
 
 /**
  * Ensure a port is available, optionally killing existing processes
+ * Skips port checking in Docker/containerized environments where PID 1 cannot be killed
  */
 export async function ensurePortAvailable(options: PortManagerOptions): Promise<void> {
   const { port, serviceName, killExisting = true } = options;
+
+  // Skip port management in containerized environments only
+  // In Docker, the process IS pid 1 and checking/killing it would fail
+  const isDocker = process.pid === 1;
+
+  if (isDocker) {
+    console.log(`[${serviceName}] Running in containerized environment, skipping port check`);
+    return;
+  }
 
   console.log(`[${serviceName}] Checking port ${port}...`);
 

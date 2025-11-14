@@ -244,7 +244,7 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({ open, menu, item, onClo
   }, []);
 
   const parentOptions = useMemo(() => {
-    if (!menu) return [];
+    if (!menu) {return [];}
     return flattenItems(menu.items);
   }, [menu, flattenItems]);
 
@@ -278,7 +278,7 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({ open, menu, item, onClo
   };
 
   const handleSubmit = async (): Promise<void> => {
-    if (!menu) return;
+    if (!menu) {return;}
     await onSubmit(menu.id, form, item?.id);
     onClose();
   };
@@ -451,7 +451,7 @@ const MenusPage: React.FC = () => {
   };
 
   const handleEditMenu = () => {
-    if (!selectedMenu) return;
+    if (!selectedMenu) {return;}
     setEditingMenu(selectedMenu);
     setMenuDialogOpen(true);
   };
@@ -476,7 +476,7 @@ const MenusPage: React.FC = () => {
   };
 
   const handleDeleteMenu = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget) {return;}
     try {
       await deleteMenu(deleteTarget.menuId);
       showSnackbar('Menu deleted');
@@ -518,7 +518,7 @@ const MenusPage: React.FC = () => {
   };
 
   const handleDeleteItem = async () => {
-    if (!deleteItemTarget) return;
+    if (!deleteItemTarget) {return;}
     try {
       await deleteMenuItem(deleteItemTarget.menuId, deleteItemTarget.itemId);
       showSnackbar('Menu item deleted');
