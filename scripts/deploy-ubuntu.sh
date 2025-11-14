@@ -59,15 +59,29 @@ fi
 
 # Check disk space (minimum 20GB) in the filesystem containing APP_DIR
 # Use df on APP_DIR to check the correct mount point, not just /
-AVAILABLE_SPACE=$(df --output=avail "$APP_DIR" 2>/dev/null | awk 'NR==2 {print $1}')
-if [ -z "$AVAILABLE_SPACE" ]; then
-    # Fallback: if APP_DIR doesn't exist yet, check its parent
-    AVAILABLE_SPACE=$(df --output=avail "$(dirname "$APP_DIR")" 2>/dev/null | awk 'NR==2 {print $1}')
+if [ -d "$APP_DIR" ]; then
+    AVAILABLE_SPACE=$(df --output=avail "$APP_DIR" 2>/dev/null | awk 'NR==2 {print $1}')
+else
+    # If APP_DIR doesn't exist yet, check its parent directory
+    PARENT_DIR=$(dirname "$APP_DIR")
+    if [ ! -d "$PARENT_DIR" ]; then
+        # If parent doesn't exist, check root
+        AVAILABLE_SPACE=$(df --output=avail / 2>/dev/null | awk 'NR==2 {print $1}')
+    else
+        AVAILABLE_SPACE=$(df --output=avail "$PARENT_DIR" 2>/dev/null | awk 'NR==2 {print $1}')
+    fi
 fi
+
+# Ensure AVAILABLE_SPACE is not empty and is numeric
+if [ -z "$AVAILABLE_SPACE" ] || ! [[ "$AVAILABLE_SPACE" =~ ^[0-9]+$ ]]; then
+    warn "Could not determine available disk space, assuming sufficient space"
+    AVAILABLE_SPACE=21000000  # Assume 20GB+ for continuation
+fi
+
 if [ "$AVAILABLE_SPACE" -lt 20971520 ]; then
     # Convert KB to GB for error message (1024*1024 = 1048576)
     AVAILABLE_GB=$(awk "BEGIN {printf \"%.1f\", $AVAILABLE_SPACE / 1048576}")
-    error "Insufficient disk space in $APP_DIR filesystem. At least 20GB required, but only ${AVAILABLE_GB}GB available."
+    error "Insufficient disk space. At least 20GB required, but only ${AVAILABLE_GB}GB available."
 fi
 
 # Install Docker
@@ -132,7 +146,7 @@ fi
 
 # Install required packages
 log "Installing required packages..."
-apt-get install -y curl git openssl ufw
+apt-get install -y curl git openssl ufw fail2ban
 
 # Setup application directory
 log "Setting up application directory..."
@@ -147,6 +161,25 @@ ufw --force enable || error "Failed to enable firewall"
 ufw allow 80/tcp || error "Failed to allow HTTP in firewall"    # HTTP
 ufw allow 443/tcp || error "Failed to allow HTTPS in firewall"   # HTTPS
 ufw status
+
+# Configure fail2ban
+log "Configuring fail2ban for SSH protection..."
+mkdir -p /etc/fail2ban
+cat > /etc/fail2ban/jail.local <<EOF
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 5
+findtime = 10m
+bantime = 10m
+EOF
+
+# Start and enable fail2ban
+systemctl enable fail2ban
+systemctl start fail2ban
+log "✓ fail2ban configured and started"
 
 # Setup environment
 log "Setting up environment configuration..."
@@ -341,6 +374,58 @@ $APP_DIR/logs/*.log {
     sharedscripts
 }
 EOF
+
+# Verify system setup and log versions
+log "Verifying system setup and component versions..."
+VERSION_LOG="/tmp/system-versions-$(date +%Y%m%d-%H%M%S).log"
+
+{
+    echo "========================================="
+    echo "System Component Versions"
+    echo "Deployment Date: $(date)"
+    echo "========================================="
+    echo ""
+
+    # Ubuntu version
+    echo "Operating System:"
+    echo "  Ubuntu Version: $(lsb_release -d | cut -f2)"
+    echo "  Codename: $(lsb_release -c | cut -f2)"
+    echo ""
+
+    # Docker versions
+    echo "Docker:"
+    echo "  Docker Engine: $(docker --version | cut -d' ' -f3 | tr -d ',')"
+    echo "  Docker Compose: $(docker compose version | cut -d' ' -f4)"
+    echo ""
+
+    # Utilities
+    echo "Utilities:"
+    echo "  curl: $(curl --version | head -1 | cut -d' ' -f2)"
+    echo "  git: $(git --version | cut -d' ' -f3)"
+    echo "  openssl: $(openssl version | cut -d' ' -f2)"
+    echo ""
+
+    # Security
+    echo "Security:"
+    echo "  UFW Status: $(ufw status | head -1)"
+    if systemctl is-active --quiet fail2ban; then
+        echo "  fail2ban: $(fail2ban-client version) (active)"
+    else
+        echo "  fail2ban: $(fail2ban-client version) (inactive)"
+    fi
+    echo ""
+
+    # Disk usage
+    echo "Disk Usage:"
+    echo "  Available in $APP_DIR: $(df -h "$APP_DIR" | awk 'NR==2 {print $4}')"
+    echo ""
+
+    echo "========================================="
+    echo "Verification Complete"
+    echo "========================================="
+} | tee "$VERSION_LOG"
+
+log "✓ System verification complete - logged to: $VERSION_LOG"
 
 log "========================================="
 log "Deployment completed successfully!"

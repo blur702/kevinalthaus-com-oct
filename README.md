@@ -20,6 +20,7 @@ Full docs are now consolidated under `/docs`:
 - Plugin Development: `docs/plugins.md`
 - API Reference: `docs/api.md`
 - Deployment: `docs/deployment.md`
+- Server Infrastructure: `docs/server-infrastructure.md`
 - Security: `docs/security.md`
 - Implementation Status: `docs/status.md`
 - Scripts: `docs/scripts.md`
@@ -107,6 +108,34 @@ docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" kevinalthaus-postgres bash -lc "p
 ```
 
 For more details and a staged upgrade path, see `docs/deployment.md`.
+
+## Production Deployment
+
+Production deployments follow a phased approach for reliability and security:
+
+**Phase 1: Server Infrastructure Setup**
+```bash
+# Setup SSH keys (one-time)
+./scripts/setup-ssh-keys.sh
+
+# Deploy infrastructure (Docker, firewall, fail2ban)
+./scripts/setup-server-infrastructure.sh
+```
+
+**Phase 2: Application Deployment**
+```bash
+# Deploy application code and containers
+./scripts/deploy-to-prod.sh
+```
+
+**Phase 3: Production Hardening**
+```bash
+# Setup SSL, backups, and monitoring
+# See docs/deployment.md for details
+```
+
+For detailed infrastructure documentation, see `docs/server-infrastructure.md`.
+For complete deployment procedures, see `docs/deployment.md`.
 
 **Important for Production:**
 - SSL certificates required in `./secrets/`: `server.crt` and `server.key`

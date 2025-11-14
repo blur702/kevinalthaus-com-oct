@@ -109,6 +109,17 @@ secrets/
 *.secret
 .csrf-secret
 .env.local
+CREDENTIALS.md
+
+# SSH Keys (deployment)
+.ssh/id_kevin_prod
+.ssh/id_kevin_prod.pub
+id_kevin_prod
+id_kevin_prod.pub
+
+# Deployment logs
+/tmp/deploy-*.log
+deploy-*.log
 
 # Lint output files
 lint-*.txt
