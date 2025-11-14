@@ -7,13 +7,43 @@ import type {
   MenuListResponse,
   MenuResponse,
   MenuItem,
+  Menu,
 } from '../types/menu';
+import { asArray } from '../lib/dataNormalization';
+
+/**
+ * Recursively normalizes menu items to ensure children arrays are always valid arrays.
+ * This prevents runtime errors when traversing the menu tree.
+ */
+function normalizeMenuItems(items: unknown): MenuItem[] {
+  const normalizedItems = asArray<MenuItem>(items, { feature: 'MenusService', field: 'items' });
+
+  return normalizedItems.map(item => ({
+    ...item,
+    children: normalizeMenuItems(item.children || []),
+  }));
+}
+
+/**
+ * Normalizes a complete menu structure, ensuring items and nested children are always arrays.
+ */
+function normalizeMenu(menu: Menu & { items?: unknown }): Menu & { items: MenuItem[] } {
+  return {
+    ...menu,
+    items: normalizeMenuItems(menu.items || []),
+  };
+}
 
 export async function listMenus(includeItems = true): Promise<MenuListResponse> {
   const response = await api.get<MenuListResponse>('/menus', {
     params: { includeItems },
   });
-  return response.data;
+
+  const menus = asArray<Menu & { items?: unknown }>(response.data.menus, { feature: 'MenusService', field: 'menus' });
+
+  return {
+    menus: menus.map(normalizeMenu),
+  };
 }
 
 export async function getMenu(id: string, includeItems = true): Promise<MenuResponse> {

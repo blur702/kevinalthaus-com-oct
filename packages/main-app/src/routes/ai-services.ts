@@ -1,4 +1,4 @@
-import { Router, Response, RequestHandler, NextFunction } from 'express';
+import { Router, Response, RequestHandler } from 'express';
 import { query } from '../db';
 import { AuthenticatedRequest, authMiddleware } from '../auth';
 import { requireRole } from '../auth/rbac-middleware';

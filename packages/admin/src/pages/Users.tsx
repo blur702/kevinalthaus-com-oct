@@ -131,6 +131,7 @@ const Users: React.FC = () => {
       }
 
       const response = await listUsers(params);
+      // Service guarantees response.users is an array and response.total is a number
       setUsers(response.users);
       setTotal(response.total);
     } catch (err) {

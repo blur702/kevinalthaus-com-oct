@@ -10,7 +10,9 @@ import {
   Alert,
 } from '@mui/material';
 import { TrendingUp, People, Article, Visibility, Extension } from '@mui/icons-material';
+import axios from 'axios';
 import api, { fetchPlugins } from '../lib/api';
+import { logNormalizationWarning } from '../lib/dataNormalization';
 
 interface StatCardProps {
   title: string;
@@ -147,10 +149,20 @@ const Dashboard: React.FC = () => {
         let pluginCount: number;
         try {
           const plugins = await fetchPlugins(controller.signal);
-          pluginCount = plugins.plugins.length;
+
+          // Validate that plugins.plugins is an array before accessing .length
+          if (plugins && Array.isArray(plugins.plugins)) {
+            pluginCount = plugins.plugins.length;
+          } else {
+            logNormalizationWarning('Dashboard', 'plugins.plugins', plugins, 'array');
+            pluginCount = DEFAULT_MOCK_PLUGIN_COUNT;
+          }
         } catch (error) {
-          // Check if request was aborted
-          if (error instanceof Error && error.name === 'AbortError') {
+          // Check if request was aborted (native AbortError or axios cancellation)
+          if (
+            (error instanceof Error && error.name === 'AbortError') ||
+            axios.isCancel(error)
+          ) {
             // Request was cancelled, rethrow to handle in outer catch
             throw error;
           }
@@ -208,7 +220,11 @@ const Dashboard: React.FC = () => {
 
         setStats(fetchedStats);
       } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') {
+        // Check if request was cancelled (native AbortError or axios cancellation)
+        if (
+          (err instanceof Error && err.name === 'AbortError') ||
+          axios.isCancel(err)
+        ) {
           // Request was cancelled, don't update state
           return;
         }

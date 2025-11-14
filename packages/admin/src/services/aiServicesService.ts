@@ -10,6 +10,7 @@ import type {
   CreateCategoryRequest,
   UpdateCategoryRequest,
 } from '../types/aiService';
+import { asArray, asNumber } from '../lib/dataNormalization';
 
 // ============================================================================
 // AI Service Configuration APIs
@@ -17,7 +18,7 @@ import type {
 
 export async function listAIServices(signal?: AbortSignal): Promise<AIServiceConfig[]> {
   const response = await api.get<AIServiceConfig[]>('/ai/services', { signal });
-  return response.data;
+  return asArray<AIServiceConfig>(response.data, { feature: 'AIServicesService', field: 'services' });
 }
 
 export async function getAIService(
@@ -58,7 +59,7 @@ export async function testAIService(
 
 export async function listCategories(signal?: AbortSignal): Promise<AIPromptCategory[]> {
   const response = await api.get<AIPromptCategory[]>('/ai/prompts/categories', { signal });
-  return response.data;
+  return asArray<AIPromptCategory>(response.data, { feature: 'AIServicesService', field: 'categories' });
 }
 
 export async function createCategory(data: CreateCategoryRequest): Promise<AIPromptCategory> {
@@ -104,7 +105,15 @@ export async function listPrompts(
     params,
     signal,
   });
-  return response.data;
+  return {
+    prompts: asArray<AIPrompt>(response.data.prompts, { feature: 'AIServicesService', field: 'prompts' }).map(prompt => ({
+      ...prompt,
+      variables: asArray<string>(prompt.variables, { feature: 'AIServicesService', field: 'prompt.variables' }),
+    })),
+    total: asNumber(response.data.total, 0, { feature: 'AIServicesService', field: 'total' }),
+    page: asNumber(response.data.page, 1, { feature: 'AIServicesService', field: 'page' }),
+    limit: asNumber(response.data.limit, 10, { feature: 'AIServicesService', field: 'limit' }),
+  };
 }
 
 export async function getPrompt(id: string, signal?: AbortSignal): Promise<AIPrompt> {

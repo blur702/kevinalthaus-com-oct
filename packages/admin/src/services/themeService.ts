@@ -1,6 +1,6 @@
-import axios from 'axios';
+import api from '../lib/api';
 
-const API_BASE_URL = '/api/themes';
+const API_BASE_URL = '/themes';
 
 export type PaletteModeOption = 'light' | 'dark';
 
@@ -69,7 +69,7 @@ export interface ResetThemeRequest {
  * Returns the serialized theme object from the backend.
  */
 export const getThemeConfig = async (): Promise<ThemeConfig> => {
-  const response = await axios.get<ThemeConfig>(`${API_BASE_URL}/config`);
+  const response = await api.get<ThemeConfig>(`${API_BASE_URL}/config`);
   return response.data;
 };
 
@@ -78,7 +78,7 @@ export const getThemeConfig = async (): Promise<ThemeConfig> => {
  * Returns the API acknowledgement along with the published CSS path.
  */
 export const saveTheme = async (request: SaveThemeRequest): Promise<{ message: string; cssPath: string }> => {
-  const response = await axios.post(`${API_BASE_URL}/save`, request);
+  const response = await api.post(`${API_BASE_URL}/save`, request);
   return response.data;
 };
 
@@ -87,6 +87,6 @@ export const saveTheme = async (request: SaveThemeRequest): Promise<{ message: s
  * Returns the API acknowledgement message after the reset completes.
  */
 export const resetTheme = async (request: ResetThemeRequest): Promise<{ message: string }> => {
-  const response = await axios.post(`${API_BASE_URL}/reset`, request);
+  const response = await api.post(`${API_BASE_URL}/reset`, request);
   return response.data;
 };

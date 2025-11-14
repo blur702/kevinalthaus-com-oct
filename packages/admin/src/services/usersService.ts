@@ -11,6 +11,7 @@ import type {
   BulkImportRequest,
   BulkImportResponse,
 } from '../types/user';
+import { asArray, asNumber } from '../lib/dataNormalization';
 
 const BASE_URL = '/users-manager';
 
@@ -19,7 +20,10 @@ const BASE_URL = '/users-manager';
  */
 export async function listUsers(params?: UserListParams): Promise<UserListResponse> {
   const response = await api.get<UserListResponse>(BASE_URL, { params });
-  return response.data;
+  return {
+    users: asArray<User>(response.data.users, { feature: 'UsersService', field: 'users' }),
+    total: asNumber(response.data.total, 0, { feature: 'UsersService', field: 'total' }),
+  };
 }
 
 /**
@@ -66,7 +70,9 @@ export async function getUserActivity(
       params: { limit },
     }
   );
-  return response.data;
+  return {
+    activities: asArray<UserActivity>(response.data.activities, { feature: 'UsersService', field: 'activities' }),
+  };
 }
 
 /**

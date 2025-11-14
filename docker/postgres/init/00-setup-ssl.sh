@@ -43,6 +43,16 @@ if [ "$enable_ssl" = true ]; then
   chown postgres:postgres "$KEY_DIR"
   chmod 700 "$KEY_DIR"
 
+  # Fix permissions on existing mounted certificate files
+  if [ -f "$CRT_PATH" ]; then
+    chown postgres:postgres "$CRT_PATH"
+    chmod 644 "$CRT_PATH"
+  fi
+  if [ -f "$KEY_PATH" ]; then
+    chown postgres:postgres "$KEY_PATH"
+    chmod 600 "$KEY_PATH"
+  fi
+
   if [ ! -f "$CRT_PATH" ] || [ ! -f "$KEY_PATH" ]; then
     # In production, require CA-signed certificates
     if [ "$NODE_ENV" = "production" ]; then

@@ -1258,6 +1258,7 @@ export interface AnalyticsSessionCreateInput {
 }
 
 export interface AnalyticsSessionUpdateInput {
+  last_activity?: Date | null;
   session_end?: Date | null;
   duration_seconds?: number | null;
   ip_address?: string | null;

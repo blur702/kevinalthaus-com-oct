@@ -39,6 +39,17 @@ export default defineConfig({
     port: 3002,
     strictPort: true,
     proxy: {
+      // Proxy theme override CSS files to main app
+      '/admin-theme-overrides.css': {
+        target: 'http://localhost:3003',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/frontend-theme-overrides.css': {
+        target: 'http://localhost:3003',
+        changeOrigin: true,
+        secure: false,
+      },
       // Admin files need special handling - strip /api prefix
       '/api/admin/files': {
         target: 'http://localhost:3003',

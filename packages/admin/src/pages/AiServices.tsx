@@ -497,6 +497,7 @@ const AiServices: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
+                          {/* Service guarantees prompt.variables is an array */}
                           {prompt.variables.length > 0 ? (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                               {prompt.variables.slice(0, 3).map((v) => (

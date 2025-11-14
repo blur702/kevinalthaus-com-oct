@@ -59,12 +59,16 @@ COPY --from=builder /app/packages/main-app/package.json ./packages/main-app/
 # Copy entire migrations directory to allow empty directory (avoids wildcard match failure)
 COPY --from=builder /app/packages/main-app/src/db/migrations ./packages/main-app/dist/db/migrations
 
-# Create all required directories and set ownership
+# Create all required directories with proper ownership from the start
 RUN mkdir -p /app/uploads \
              /app/packages/main-app/uploads \
              /app/packages/main-app/uploads_quarantine \
              /app/storage && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app/uploads \
+                              /app/packages/main-app/uploads \
+                              /app/packages/main-app/uploads_quarantine \
+                              /app/storage \
+                              /app/packages/main-app/dist
 
 # Switch to non-root user
 USER appuser

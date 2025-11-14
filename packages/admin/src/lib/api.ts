@@ -1,6 +1,7 @@
 // Centralized axios API client configured for cookie-based auth
 
 import axios from 'axios';
+import { asArray } from './dataNormalization';
 
 // Base URL configuration - use environment variable or default to /api
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -116,7 +117,9 @@ export interface PluginListResponse {
 
 export async function fetchPlugins(signal?: AbortSignal): Promise<PluginListResponse> {
   const { data } = await api.get<PluginListResponse>('/plugins', { signal });
-  return data;
+  return {
+    plugins: asArray(data.plugins, { feature: 'PluginsAPI', field: 'plugins' }),
+  };
 }
 
 export async function installPlugin(id: string): Promise<void> {

@@ -227,7 +227,9 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({ open, menu, item, onClo
         is_active: item.is_active,
       });
     } else {
-      const max = menu?.items.reduce((max, current) => Math.max(max, current.order_index), -1) ?? -1;
+      // Service guarantees menu.items is always an array
+      const items = menu?.items || [];
+      const max = items.reduce((max, current) => Math.max(max, current.order_index), -1);
       setForm({
         ...defaultItemForm,
         order_index: max + 1,
@@ -238,13 +240,15 @@ const MenuItemDialog: React.FC<MenuItemDialogProps> = ({ open, menu, item, onClo
   const flattenItems = useCallback((nodes: MenuItemType[], depth = 0): Array<{ id: string; label: string }> => {
     return nodes.flatMap((node) => {
       const formattedLabel = `${'— '.repeat(depth)}${node.label}`;
-      const children = node.children ? flattenItems(node.children, depth + 1) : [];
-      return [{ id: node.id, label: formattedLabel }, ...children];
+      // Service guarantees node.children is always an array
+      const childResults = node.children.length > 0 ? flattenItems(node.children, depth + 1) : [];
+      return [{ id: node.id, label: formattedLabel }, ...childResults];
     });
   }, []);
 
   const parentOptions = useMemo(() => {
     if (!menu) {return [];}
+    // Service guarantees menu.items is always an array
     return flattenItems(menu.items);
   }, [menu, flattenItems]);
 
@@ -429,6 +433,7 @@ const MenusPage: React.FC = () => {
     setError(null);
     try {
       const data = await listMenus(true);
+      // Service guarantees data.menus is an array
       setMenus(data.menus);
       if (forceSelect && !selectedMenuId && data.menus.length > 0) {
         setSelectedMenuId(data.menus[0].id);
@@ -564,7 +569,8 @@ const MenusPage: React.FC = () => {
           </Box>
         }
       >
-        {item.children && item.children.length > 0 && renderMenuTree(item.children)}
+        {/* Service guarantees item.children is always an array */}
+        {item.children.length > 0 && renderMenuTree(item.children)}
       </TreeItem>
     ));
   };
@@ -689,6 +695,7 @@ const MenusPage: React.FC = () => {
                     Add Item
                   </Button>
                 </Box>
+                {/* Service guarantees selectedMenu.items is always an array */}
                 {selectedMenu.items.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
                     This menu does not contain any items yet.
