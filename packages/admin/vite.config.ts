@@ -9,6 +9,8 @@ const __dirname = dirname(__filename);
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Set base path for production deployment under /admin route
+  base: process.env.NODE_ENV === 'production' ? '/admin/' : '/',
   plugins: [
     react(),
     // Upload source maps to Sentry on production builds
