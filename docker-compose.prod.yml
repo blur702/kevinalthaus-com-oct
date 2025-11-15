@@ -66,6 +66,7 @@ services:
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for api-gateway}
       INTERNAL_GATEWAY_TOKEN: ${INTERNAL_GATEWAY_TOKEN:?INTERNAL_GATEWAY_TOKEN is required for api-gateway}
+      MAIN_APP_URL: http://main-app:3001
     healthcheck:
       test: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1']
       interval: 30s
