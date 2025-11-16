@@ -5,8 +5,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Build outputs (exclude package dist but keep plugin dist)
-packages/*/dist/
+# Build outputs
+# NOTE: We need to include dist folders for builds to work
+# Docker will rebuild these anyway
 build/
 *.tsbuildinfo
 .turbo/
