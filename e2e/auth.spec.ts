@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/console-monitor-fixture';
 import { login, logout, clearAuth, hasAuthCookies, TEST_CREDENTIALS } from './utils/auth';
 import { selectors } from './utils/selectors';
 
@@ -463,6 +463,34 @@ test.describe('Authentication', () => {
       // Credentials should only be in the login request body, not in URL or other places
       // This is a basic check - more detailed security testing would be needed
       expect(requestBodies.length).toBeGreaterThan(0);
+    });
+  });
+
+  test.describe('Console Monitoring', () => {
+    test('should capture browser console errors (verification test)', async ({ page, consoleMonitor }) => {
+      // This test verifies that the ConsoleMonitor is working
+      // It intentionally triggers a browser console error and checks if it was captured
+
+      await page.goto('/login');
+
+      // Trigger a console error in the browser
+      await page.evaluate(() => {
+        console.error('TEST ERROR: This is an intentional error for console monitoring verification');
+      });
+
+      // Wait a moment for the monitor to capture the error
+      await page.waitForTimeout(100);
+
+      // Verify the monitor captured the error
+      const errors = consoleMonitor.getErrorsByLevel('ERROR');
+      const testError = errors.find(e => e.message.includes('TEST ERROR'));
+
+      expect(testError).toBeDefined();
+      expect(testError?.message).toContain('intentional error for console monitoring');
+
+      // Also verify we can get a summary
+      const summary = consoleMonitor.getSummary();
+      expect(summary.errors).toBeGreaterThan(0);
     });
   });
 });

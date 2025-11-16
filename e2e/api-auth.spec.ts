@@ -4,7 +4,7 @@
  * password reset, password change, token refresh, and token validation
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/console-monitor-fixture';
 
 const API_URL = process.env.API_URL || 'http://localhost:3000';
 
