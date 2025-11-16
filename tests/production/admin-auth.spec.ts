@@ -26,7 +26,7 @@ const test = base.extend<{ consoleMonitor: ConsoleMonitor }>({
     logStream.write(`\n${'='.repeat(80)}\n`);
     logStream.write(`Production Admin Authentication Test\n`);
     logStream.write(`Started: ${new Date().toISOString()}\n`);
-    logStream.write(`Target: http://kevinalthaus.com/admin\n`);
+    logStream.write(`Target: http://kevinalthaus.com/login\n`);
     logStream.write(`${'='.repeat(80)}\n\n`);
 
     // Create and attach monitor
@@ -61,7 +61,7 @@ test.describe('Production Admin Authentication', () => {
   test('should load admin login page without console errors', async ({ page, consoleMonitor }) => {
     console.log('🧪 Testing admin login page load...');
 
-    const response = await page.goto('http://kevinalthaus.com/admin');
+    const response = await page.goto('http://kevinalthaus.com/login');
 
     // Should return 200
     expect(response?.status()).toBe(200);
@@ -91,7 +91,7 @@ test.describe('Production Admin Authentication', () => {
   test('should login successfully with valid admin credentials', async ({ page, consoleMonitor }) => {
     console.log('🧪 Testing admin login authentication...');
 
-    await page.goto('http://kevinalthaus.com/admin');
+    await page.goto('http://kevinalthaus.com/login');
     await page.waitForLoadState('networkidle');
 
     // Look for login form elements
@@ -161,7 +161,7 @@ test.describe('Production Admin Authentication', () => {
     console.log('🧪 Testing admin session persistence...');
 
     // Login first
-    await page.goto('http://kevinalthaus.com/admin');
+    await page.goto('http://kevinalthaus.com/login');
     await page.waitForLoadState('networkidle');
 
     const usernameInput = page.locator('input[name="username"], input[type="text"]').first();
@@ -214,7 +214,7 @@ test.describe('Production Admin Authentication', () => {
     console.log('🧪 Testing admin dashboard content...');
 
     // Login
-    await page.goto('http://kevinalthaus.com/admin');
+    await page.goto('http://kevinalthaus.com/login');
     await page.waitForLoadState('networkidle');
 
     const usernameInput = page.locator('input[name="username"], input[type="text"]').first();

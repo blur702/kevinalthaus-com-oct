@@ -5,8 +5,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Build outputs
-dist/
+# Build outputs (exclude package dist but keep plugin dist)
+packages/*/dist/
 build/
 *.tsbuildinfo
 .turbo/
@@ -76,8 +76,9 @@ Dockerfile*
 # Deployment scripts (not needed in container)
 scripts/
 
-# Uploads (will be mounted as volumes)
-uploads/
+# Uploads directory at root (will be mounted as volumes)
+# But keep source code uploads modules in packages
+/uploads/
 
 # Python
 __pycache__/
