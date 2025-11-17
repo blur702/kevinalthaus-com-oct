@@ -6,9 +6,20 @@
  * Secrets (passwords, API keys, tokens) must stay in .env files and are accessed
  * through the getSecret helper so that they are never written to source control.
  */
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = exports.getSecret = void 0;
-const REQUIRED_KEYS = [
+var REQUIRED_KEYS = [
     'API_GATEWAY_PORT',
     'API_GATEWAY_URL',
     'MAIN_APP_PORT',
@@ -36,49 +47,73 @@ const REQUIRED_KEYS = [
     'LOG_FORMAT',
     'VITE_PROXY_SECURE'
 ];
+var REQUIRED_SECRETS = [
+    'JWT_SECRET',
+    'SESSION_SECRET',
+    'CSRF_SECRET',
+    // POSTGRES_PASSWORD removed - validated in db/index.ts which supports POSTGRES_PASSWORD_FILE
+    'ENCRYPTION_KEY',
+    'PLUGIN_SIGNATURE_SECRET',
+    'INTERNAL_GATEWAY_TOKEN',
+    'FINGERPRINT_SECRET',
+];
 function resolveEnvironment() {
     if (process.env.NODE_ENV === 'production') {
         return 'production';
     }
     return 'development';
 }
+function parseBooleanEnv(value, defaultValue) {
+    if (value === undefined) {
+        return defaultValue;
+    }
+    var normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) {
+        return true;
+    }
+    if (['false', '0', 'no', 'off'].includes(normalized)) {
+        return false;
+    }
+    return defaultValue;
+}
 function loadConfig() {
-    const env = resolveEnvironment();
-    let envConfig;
+    var _a;
+    var env = resolveEnvironment();
+    var envConfig;
     try {
         // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
-        envConfig = require(`./config.${env}.js`);
-    } catch (error) {
-        if (error.code === 'MODULE_NOT_FOUND') {
-            const expectedPath = `config/config.${env}.js`;
-            throw new Error(
-                `Configuration file not found: ${expectedPath}\n` +
-                `Environment resolved as: "${env}" (from NODE_ENV="${process.env.NODE_ENV || 'undefined'}")\n` +
-                `Expected file: ${expectedPath}\n` +
-                `Available environments: development, production\n` +
-                `Suggestion: Set NODE_ENV to a valid environment or create the missing config file.`
-            );
-        }
-        // Re-throw other errors (syntax errors, etc.)
-        throw error;
+        envConfig = require("./config.".concat(env, ".js"));
     }
-    const merged = {
-        ...envConfig,
-        NODE_ENV: process.env.NODE_ENV || envConfig.NODE_ENV || env,
-        VERSION: process.env.VERSION || envConfig.VERSION || '1.0.0',
-        DEPLOY_ENV: process.env.DEPLOY_ENV || envConfig.DEPLOY_ENV || env,
-        SENTRY_RELEASE: process.env.SENTRY_RELEASE ||
+    catch (error) {
+        var expectedPath = "./config.".concat(env, ".js");
+        var e = error;
+        // Check if this is specifically a missing config file (not a syntax/runtime error)
+        var isMissingModule = e && 'code' in e && e.code === 'MODULE_NOT_FOUND' &&
+            e.message && e.message.includes(expectedPath);
+        if (isMissingModule) {
+            // Missing config file - provide helpful guidance
+            throw new Error("Configuration file not found: ".concat(expectedPath, "\n") +
+                "Environment: ".concat(env, " (from NODE_ENV=").concat(process.env.NODE_ENV || 'undefined', ")\n") +
+                "Please ensure the file exists or set NODE_ENV to 'development' or 'production'.");
+        }
+        // Syntax error, runtime error, or other failure in the config file
+        throw new Error("Failed to load environment configuration file: ".concat(expectedPath, "\n") +
+            "Environment: ".concat(env, " (from NODE_ENV=").concat(process.env.NODE_ENV || 'undefined', ")\n") +
+            "This may be due to a syntax error or runtime error in the config file.\n" +
+            "Original error: ".concat(e.message || String(error), "\n") +
+            (e.stack ? "Stack: ".concat(e.stack) : ''));
+    }
+    var merged = __assign(__assign({}, envConfig), { NODE_ENV: process.env.NODE_ENV || envConfig.NODE_ENV || env, VERSION: process.env.VERSION || envConfig.VERSION || '1.0.0', DEPLOY_ENV: process.env.DEPLOY_ENV || envConfig.DEPLOY_ENV || env, SENTRY_DSN: process.env.SENTRY_DSN || envConfig.SENTRY_DSN || '', SENTRY_RELEASE: process.env.SENTRY_RELEASE ||
             envConfig.SENTRY_RELEASE ||
             process.env.VERSION ||
             envConfig.VERSION ||
-            '1.0.0',
-    };
+            '1.0.0', E2E_TESTING: parseBooleanEnv(process.env.E2E_TESTING, (_a = envConfig.E2E_TESTING) !== null && _a !== void 0 ? _a : false) });
     validateConfig(merged);
     return Object.freeze(merged);
 }
 function validateConfig(config) {
-    const missing = REQUIRED_KEYS.filter((key) => {
-        const value = config[key];
+    var missing = REQUIRED_KEYS.filter(function (key) {
+        var value = config[key];
         // Treat undefined, null as missing
         if (value === undefined || value === null) {
             return true;
@@ -90,86 +125,41 @@ function validateConfig(config) {
         return false;
     });
     if (missing.length > 0) {
-        throw new Error(`Missing required configuration values: ${missing.join(', ')}`);
+        throw new Error("Missing required configuration values: ".concat(missing.join(', ')));
     }
 }
-const REQUIRED_SECRETS = [
-    'JWT_SECRET',
-    'SESSION_SECRET',
-    'CSRF_SECRET',
-    'POSTGRES_PASSWORD',
-    'ENCRYPTION_KEY',
-    'PLUGIN_SIGNATURE_SECRET',
-    'INTERNAL_GATEWAY_TOKEN',
-    'FINGERPRINT_SECRET',
-];
-
-const CRITICAL_SECRETS = ['JWT_SECRET', 'SESSION_SECRET', 'CSRF_SECRET'];
-
-let secretsValidated = false;
-
+var secretsValidated = false;
 function validateSecrets() {
-    // Return early if already validated or in test environment
     if (secretsValidated || process.env.NODE_ENV === 'test') {
         return;
     }
-
-    // Check existence directly on process.env without calling getSecret
-    const missing = REQUIRED_SECRETS.filter((secretKey) => !process.env[secretKey]);
-
+    var missing = REQUIRED_SECRETS.filter(function (secretKey) { return !process.env[secretKey]; });
     if (missing.length > 0) {
-        throw new Error(`Missing required secrets: ${missing.join(', ')}`);
+        throw new Error("Missing required secrets: ".concat(missing.join(', ')));
     }
-
     secretsValidated = true;
 }
-
-function validateCriticalSecrets() {
-    // Skip validation in test environment
-    if (process.env.NODE_ENV === 'test') {
-        return;
-    }
-
-    const missingCritical = CRITICAL_SECRETS.filter((secretKey) => !process.env[secretKey]);
-
-    if (missingCritical.length > 0) {
-        throw new Error(
-            `Application startup failed: Missing critical secrets: ${missingCritical.join(', ')}\n` +
-            `These secrets must be set in your .env file before the application can start.\n` +
-            `See .env.example for guidance on generating secure values.`
-        );
-    }
-}
-
-function getSecret(key, required = true) {
-    // Validate all secrets on first use
+function getSecret(key, required) {
+    if (required === void 0) { required = true; }
+    // Validate all required secrets on first call to getSecret
     validateSecrets();
-
-    const value = process.env[key];
-    if (!value && required) {
-        // Fail fast regardless of NODE_ENV when required is true
-        throw new Error(`Missing required secret: ${key}`);
+    var value = process.env[key];
+    if (!value && required && process.env.NODE_ENV !== 'test') {
+        throw new Error("Missing required secret: ".concat(key));
     }
-
-    // Optionally emit warning when required is false and value is missing
-    if (!value && !required && process.env.NODE_ENV === 'test') {
-        if (typeof console !== 'undefined' && console.warn) {
-            console.warn(`[CONFIG WARNING] Optional secret not set: ${key}`);
-        }
-    }
-
     return value;
 }
 exports.getSecret = getSecret;
-
-const loadedConfig = loadConfig();
-
+var loadedConfig = loadConfig();
 // Eager validation of critical secrets at startup (except in test environment)
-validateCriticalSecrets();
-
-exports.config = Object.freeze({
-    ...loadedConfig,
-    getSecret,
-});
+if (process.env.NODE_ENV !== 'test') {
+    var CRITICAL_SECRETS = ['JWT_SECRET', 'SESSION_SECRET', 'CSRF_SECRET'];
+    var missingCritical = CRITICAL_SECRETS.filter(function (secretKey) { return !process.env[secretKey]; });
+    if (missingCritical.length > 0) {
+        throw new Error("Application startup failed: Missing critical secrets: ".concat(missingCritical.join(', '), "\n") +
+            "These secrets must be set in your .env file before the application can start.\n" +
+            "See .env.example for guidance on generating secure values.");
+    }
+}
+exports.config = Object.freeze(__assign(__assign({}, loadedConfig), { getSecret: getSecret }));
 exports.default = exports.config;
-//# sourceMappingURL=index.js.map
