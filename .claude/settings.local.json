@@ -20,7 +20,7 @@
       "Bash(timeout /t 15 /nobreak)",
       "Bash(nul)",
       "Bash(docker info:*)",
-      "Bash(docker compose:*)"
+      "Bash(npm run build:*)"
     ],
     "deny": [
       "Bash(powershell.exe:*)",

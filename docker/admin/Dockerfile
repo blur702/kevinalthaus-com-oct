@@ -18,6 +18,7 @@ RUN npm ci && npm cache clean --force
 COPY packages/shared ./packages/shared
 COPY packages/admin ./packages/admin
 COPY plugins ./plugins
+COPY config ./config
 
 # Build packages (test files are excluded via tsconfig.json exclude rules)
 RUN npx lerna run build --scope=@monorepo/shared --scope=@monorepo/admin --include-dependencies
