@@ -135,7 +135,7 @@ def parse_polygon(placemark: Element) -> Optional[GeometryCoordinates]:
     return None
 
 
-def extract_properties(placemark: ET.Element) -> Dict[str, Any]:
+def extract_properties(placemark: Element) -> Dict[str, Any]:
     """
     Extract properties from KML placemark
 
