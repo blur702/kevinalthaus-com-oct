@@ -63,12 +63,12 @@ function deploy() {
     // Check status
     console.log('[DEPLOY] Checking container status...');
     const status = execSync(
-      'docker compose -f docker-compose.prod.yml ps --format json',
+      'docker compose -f docker-compose.prod.yml ps',
       { cwd: '/opt/kevinalthaus', encoding: 'utf8' }
     );
 
     console.log('[DEPLOY] Deployment completed successfully!');
-    return { success: true, status: JSON.parse(status) };
+    return { success: true, status: status.trim() };
   } catch (error) {
     console.error('[DEPLOY] Deployment failed:', error.message);
     return { success: false, error: error.message };
