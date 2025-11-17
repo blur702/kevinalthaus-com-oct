@@ -13,7 +13,7 @@ SSH into the production server and start all services using the production compo
 ```bash
 # 1. Connect to server
 ssh kevin@65.181.112.77
-# Password: (130Bpm)
+# Use SSH key authentication (no password needed)
 
 # 2. Navigate to application directory
 cd /opt/kevinalthaus

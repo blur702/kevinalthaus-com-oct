@@ -33,7 +33,7 @@
 
 ### 3. Login Form Functionality
 - ✅ Username filled successfully: `kevin`
-- ✅ Password filled successfully: `(130Bpm)`
+- ✅ Password filled successfully: `[redacted]`
 - ✅ Submit button clickable and enabled
 - ❌ **Login fails with 502 Bad Gateway error**
 

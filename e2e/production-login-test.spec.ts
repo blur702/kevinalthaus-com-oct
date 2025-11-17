@@ -6,13 +6,40 @@ import { test, expect } from '@playwright/test';
  *
  * Server: 65.181.112.77 (kevinalthaus.com)
  * Username: kevin
- * Password: (130Bpm)
+ * Password: REQUIRED via PROD_ADMIN_PASSWORD environment variable
+ *
+ * To allow local development testing with a fallback:
+ * Set ALLOW_LOCAL_FALLBACK=true environment variable
  */
 
 test.describe('Production Login Test', () => {
   const PROD_URL = 'http://65.181.112.77';
   const USERNAME = 'kevin';
-  const PASSWORD = '(130Bpm)!Secure2024';
+
+  // Strict credential check - no silent fallbacks
+  const PASSWORD = (() => {
+    if (process.env.PROD_ADMIN_PASSWORD) {
+      return process.env.PROD_ADMIN_PASSWORD;
+    }
+
+    // Only allow fallback if explicitly enabled for local dev
+    if (process.env.ALLOW_LOCAL_FALLBACK === 'true') {
+      console.warn('⚠️  WARNING: Using fallback password for local development');
+      console.warn('⚠️  This should NEVER happen in CI/production');
+      return 'local-dev-fallback';
+    }
+
+    // Fail fast with clear error message
+    throw new Error(
+      '❌ PROD_ADMIN_PASSWORD environment variable is required!\n' +
+      '   Set it before running production tests:\n' +
+      '   export PROD_ADMIN_PASSWORD="<your-password>"\n' +
+      '   \n' +
+      '   For local development testing only, you can set:\n' +
+      '   export ALLOW_LOCAL_FALLBACK=true\n' +
+      '   (This flag must NEVER be used in CI/production)'
+    );
+  })();
 
   test.beforeEach(async ({ page }) => {
     // Set a longer timeout for production server

@@ -12,7 +12,7 @@
 1. **PostgreSQL** - Fixed permissions, SSL configuration
 2. **Main-App** - Fixed database SSL mode
 3. **API Gateway** - Now accepting requests on port 4000
-4. **Created admin user:** kevin / (130Bpm)!Secure2024
+4. **Created admin user:** kevin / [password stored securely]
 
 ### ✅ All Services Running
 ```
