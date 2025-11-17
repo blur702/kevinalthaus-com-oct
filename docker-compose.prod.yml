@@ -134,6 +134,7 @@ services:
     restart: always
     environment:
       NODE_ENV: production
+      API_GATEWAY_PORT: 3000
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for api-gateway}
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required for api-gateway}
       CSRF_SECRET: ${CSRF_SECRET:?CSRF_SECRET is required for api-gateway}
