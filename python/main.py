@@ -7,7 +7,7 @@ from typing import Dict, Any
 import logging
 
 # Import route routers
-from routes import usps_router, geocode_router, kml_parser_router, house_api_router
+from python.routes import usps_router, geocode_router, kml_parser_router, house_api_router
 
 # Configure logging
 logging.basicConfig(
