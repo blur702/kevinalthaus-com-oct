@@ -25,7 +25,7 @@ import {
 import { pageViewTrackingMiddleware } from './middleware/pageViewTracking';
 import { authRouter } from './auth';
 import { usersRouter } from './users';
-import { uploadsRouter } from './uploads';
+// import { uploadsRouter } from './uploads'; // TODO: File does not exist, likely refactored into admin-files/plugin-files
 import { healthCheck } from './db';
 import { discoverPlugins } from './plugins';
 import { pluginManager } from './plugins/manager';
@@ -45,8 +45,9 @@ import { taxonomyRouter } from './routes/taxonomy';
 import { createLogger, LogLevel } from '@monorepo/shared';
 import { createBlogRouter } from './routes/blog';
 import path from 'path';
-import { createPageBuilderRouter } from '../../../plugins/page-builder/dist/routes/index';
-import { WidgetRegistryService } from '../../../plugins/page-builder/dist/services/widget-registry.service';
+// TODO: Plugin routes should be registered via plugin activation system, not manual imports
+// import { createPageBuilderRouter } from '../../../plugins/page-builder/dist/routes/index';
+// import { WidgetRegistryService } from '../../../plugins/page-builder/dist/services/widget-registry.service';
 import { pool } from './db';
 import { asyncHandler } from './utils/asyncHandler';
 import { requestIdMiddleware } from './middleware/requestId';
@@ -424,7 +425,7 @@ app.use('/api/themes', themesRouter);
 app.use('/api/ai', aiServicesRouter);
 app.use('/api/editor', editorRouter);
 app.use('/api/taxonomy', taxonomyRouter);
-app.use('/api/uploads', uploadsRouter);
+// app.use('/api/uploads', uploadsRouter); // TODO: uploadsRouter doesn't exist, functionality moved to admin-files/plugin-files
 app.use('/api/menus', menusRouter);
 // pluginsRouter already has authMiddleware and requireRole(Role.ADMIN) applied at line 37 of routes/plugins.ts
 app.use('/api/plugins', pluginsRouter);
@@ -435,17 +436,17 @@ void initializeAnalyticsService(logger).catch((error: Error) => {
 });
 app.use('/api/blog', createBlogRouter(blogService, logger));
 
-// Page Builder plugin routes
-const widgetRegistry = new WidgetRegistryService(
-  path.resolve(__dirname, '../../../plugins/page-builder'),
-  logger
-);
-// Discover widgets asynchronously (non-blocking)
-void widgetRegistry.discoverWidgets().catch((error: Error) => {
-  logger.error('Widget discovery failed', error);
-});
-const pageBuilderApiRouter = createPageBuilderRouter(pool, logger, widgetRegistry);
-app.use('/api/page-builder', pageBuilderApiRouter);
+// TODO: Page Builder plugin routes should be registered via plugin activation system
+// Page Builder plugin should activate itself and register routes automatically
+// const widgetRegistry = new WidgetRegistryService(
+//   path.resolve(__dirname, '../../../plugins/page-builder'),
+//   logger
+// );
+// void widgetRegistry.discoverWidgets().catch((error: Error) => {
+//   logger.error('Widget discovery failed', error);
+// });
+// const pageBuilderApiRouter = createPageBuilderRouter(pool, logger, widgetRegistry);
+// app.use('/api/page-builder', pageBuilderApiRouter);
 
 // File management routes (storageService imported from server.ts)
 app.use('/admin/files', createAdminFileRoutes(storageService, pool));
