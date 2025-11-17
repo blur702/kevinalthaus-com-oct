@@ -21,15 +21,21 @@ RUN npm ci && npm cache clean --force
 COPY packages/shared ./packages/shared
 COPY packages/main-app ./packages/main-app
 
-# Build plugins first (required by main-app)
+# Copy config directory (required by runtime configuration)
+COPY config ./config
+
+# Build @monorepo/shared first (required by plugins)
+RUN npx lerna run build --scope=@monorepo/shared
+
+# Build plugins (now that shared is available)
 RUN cd plugins/page-builder && npm run build && cd ../..
 RUN cd plugins/file-manager && npm run build && cd ../..
 RUN cd plugins/content-manager && npm run build && cd ../..
 RUN cd plugins/taxonomy && npm run build && cd ../..
 RUN cd plugins/user-manager && npm run build && cd ../..
 
-# Build packages (only what main-app needs)
-RUN npx lerna run build --scope=@monorepo/shared --scope=@monorepo/main-app --include-dependencies
+# Build main-app (now that plugins are available)
+RUN npx lerna run build --scope=@monorepo/main-app --include-dependencies
 
 # Production stage
 FROM node:22-alpine
@@ -61,6 +67,9 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/packages/main-app/dist ./packages/main-app/dist
 COPY --from=builder /app/packages/main-app/package.json ./packages/main-app/
+
+# Copy config directory (required by runtime configuration)
+COPY --from=builder /app/config ./config
 
 # Copy SQL migration files (needed at runtime)
 # Copy entire migrations directory to allow empty directory (avoids wildcard match failure)

@@ -20,6 +20,9 @@ COPY packages/admin ./packages/admin
 COPY plugins ./plugins
 COPY config ./config
 
+# Copy root public directory (required by admin vite.config.ts publicDir setting)
+COPY public ./public
+
 # Build packages (test files are excluded via tsconfig.json exclude rules)
 RUN npx lerna run build --scope=@monorepo/shared --scope=@monorepo/admin --include-dependencies
 

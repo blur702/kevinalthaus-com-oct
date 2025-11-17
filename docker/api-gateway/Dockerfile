@@ -18,6 +18,9 @@ RUN npm ci && npm cache clean --force
 COPY packages/shared ./packages/shared
 COPY packages/api-gateway ./packages/api-gateway
 
+# Copy config directory (required by runtime configuration)
+COPY config ./config
+
 # Build packages (only what api-gateway needs)
 RUN npx lerna run build --scope=@monorepo/shared --scope=@monorepo/api-gateway --include-dependencies
 
@@ -46,6 +49,9 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/packages/api-gateway/dist ./packages/api-gateway/dist
 COPY --from=builder /app/packages/api-gateway/package.json ./packages/api-gateway/
+
+# Copy config directory (required by runtime configuration)
+COPY --from=builder /app/config ./config
 
 # Install only production dependencies (this will create proper symlinks to packages/shared)
 RUN npm ci --omit=dev && npm cache clean --force

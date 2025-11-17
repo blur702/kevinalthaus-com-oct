@@ -50,6 +50,74 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  python-service:
+    build:
+      context: .
+      dockerfile: docker/python-service/Dockerfile
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+    environment:
+      NODE_ENV: production
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-kevinalthaus}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: /run/secrets/postgres_ca
+    secrets:
+      - postgres_password
+      - postgres_ca
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
   api-gateway:
     build:
       context: .
@@ -59,6 +127,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - app_network
     restart: always
@@ -67,6 +137,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for api-gateway}
       INTERNAL_GATEWAY_TOKEN: ${INTERNAL_GATEWAY_TOKEN:?INTERNAL_GATEWAY_TOKEN is required for api-gateway}
       MAIN_APP_URL: http://main-app:3001
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
     healthcheck:
       test: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1']
       interval: 30s
@@ -97,6 +168,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      python-service:
+        condition: service_healthy
     networks:
       - app_network
     restart: always
@@ -121,6 +196,8 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       PGSSLROOTCERT: /run/secrets/postgres_ca
       INTERNAL_GATEWAY_TOKEN: ${INTERNAL_GATEWAY_TOKEN:?INTERNAL_GATEWAY_TOKEN is required for main-app}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      PYTHON_SERVICE_URL: http://python-service:8000
     secrets:
       - postgres_password
       - postgres_ca
@@ -211,6 +288,8 @@ volumes:
   postgres_data:
     driver: local
   postgres_backups:
+    driver: local
+  redis_data:
     driver: local
 
 secrets:

@@ -331,6 +331,11 @@ generate_secrets() {
         -subj '/CN=kevinalthaus.com' 2>/dev/null" \
         "Generating SSL certificates"
 
+    # Copy server cert to ca.crt for PostgreSQL SSL verification
+    # For self-signed certs, the server cert acts as its own CA
+    ssh_exec "cp $APP_DIR/secrets/server.crt $APP_DIR/secrets/ca.crt" \
+        "Creating CA certificate"
+
     # Set proper permissions
     ssh_exec "chmod 600 $APP_DIR/secrets/*" "Setting secrets permissions"
 
@@ -354,17 +359,17 @@ deploy_containers() {
 
     # Stop existing containers
     log "Stopping existing containers..."
-    ssh_exec "cd $APP_DIR && docker-compose -f $COMPOSE_FILE -f $COMPOSE_PROD_FILE down" \
+    ssh_exec "cd $APP_DIR && docker compose -f $COMPOSE_PROD_FILE down" \
         "Stopping containers"
 
     # Pull latest images
     log "Pulling latest Docker images..."
-    ssh_exec "cd $APP_DIR && docker-compose -f $COMPOSE_FILE -f $COMPOSE_PROD_FILE pull" \
+    ssh_exec "cd $APP_DIR && docker compose -f $COMPOSE_PROD_FILE pull" \
         "Pulling images"
 
     # Start containers
     log "Starting containers..."
-    ssh_exec "cd $APP_DIR && docker-compose -f $COMPOSE_FILE -f $COMPOSE_PROD_FILE up -d $BUILD_FLAG" \
+    ssh_exec "cd $APP_DIR && docker compose -f $COMPOSE_PROD_FILE up -d $BUILD_FLAG" \
         "Starting containers"
 
     # Wait for services to be healthy
@@ -378,7 +383,7 @@ verify_deployment() {
 
     # Check container status
     log "Checking container status..."
-    CONTAINER_STATUS=$(ssh_output "cd $APP_DIR && docker-compose -f $COMPOSE_FILE -f $COMPOSE_PROD_FILE ps")
+    CONTAINER_STATUS=$(ssh_output "cd $APP_DIR && docker compose -f $COMPOSE_PROD_FILE ps")
     echo "$CONTAINER_STATUS"
 
     # Check for unhealthy containers
@@ -388,7 +393,7 @@ verify_deployment() {
 
     # Test database connection
     log "Testing database connection..."
-    if ssh_output "cd $APP_DIR && docker-compose -f $COMPOSE_FILE -f $COMPOSE_PROD_FILE exec -T postgres pg_isready" &> /dev/null; then
+    if ssh_output "cd $APP_DIR && docker compose -f $COMPOSE_PROD_FILE exec -T postgres pg_isready" &> /dev/null; then
         log "Database is ready ✓"
     else
         warn "Database health check failed"
