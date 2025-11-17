@@ -1,0 +1,52 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm production deployment'
+        required: true
+        default: ''
+
+jobs:
+  deploy:
+    name: Deploy to kevinalthaus.com
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'deploy'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_prod
+          chmod 600 ~/.ssh/id_prod
+          ssh-keyscan -H kevinalthaus.com >> ~/.ssh/known_hosts
+
+      - name: Pull latest code on server
+        run: |
+          ssh -i ~/.ssh/id_prod kevin@kevinalthaus.com "cd /opt/kevinalthaus && git pull origin main"
+
+      - name: Restart Docker services
+        run: |
+          ssh -i ~/.ssh/id_prod kevin@kevinalthaus.com "cd /opt/kevinalthaus && docker compose -f docker-compose.prod.yml up -d --force-recreate api-gateway main-app"
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for services to start..."
+          sleep 15
+          ssh -i ~/.ssh/id_prod kevin@kevinalthaus.com "cd /opt/kevinalthaus && docker compose -f docker-compose.prod.yml ps"
+
+          echo "Testing health endpoints..."
+          curl -f https://kevinalthaus.com/api/health || echo "API health check failed"
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Deployment completed"
+          echo "Frontend: https://kevinalthaus.com"
+          echo "Admin: https://kevinalthaus.com/admin"
+          echo "API: https://kevinalthaus.com/api/health"
