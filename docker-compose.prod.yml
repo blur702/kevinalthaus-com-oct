@@ -212,7 +212,7 @@ services:
     volumes:
       # Use bind mounts for file storage to persist data
       - ./uploads:/app/uploads
-      - ./uploads_quarantine:/app/packages/main-app/uploads_quarantine
+      - ./uploads_quarantine:/app/uploads_quarantine
       - ./storage:/app/storage
     logging:
       driver: 'json-file'
