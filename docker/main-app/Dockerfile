@@ -28,10 +28,11 @@ COPY config ./config
 RUN npx lerna run build --scope=@monorepo/shared
 
 # Build plugins (now that shared is available)
+# Build taxonomy first as it's a dependency for content-manager
+RUN cd plugins/taxonomy && npm run build && cd ../..
 RUN cd plugins/page-builder && npm run build && cd ../..
 RUN cd plugins/file-manager && npm run build && cd ../..
 RUN cd plugins/content-manager && npm run build && cd ../..
-RUN cd plugins/taxonomy && npm run build && cd ../..
 RUN cd plugins/user-manager && npm run build && cd ../..
 
 # Build main-app (now that plugins are available)
