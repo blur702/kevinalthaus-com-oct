@@ -135,6 +135,8 @@ services:
     environment:
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required for api-gateway}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required for api-gateway}
+      CSRF_SECRET: ${CSRF_SECRET:?CSRF_SECRET is required for api-gateway}
       INTERNAL_GATEWAY_TOKEN: ${INTERNAL_GATEWAY_TOKEN:?INTERNAL_GATEWAY_TOKEN is required for api-gateway}
       MAIN_APP_URL: http://main-app:3001
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379

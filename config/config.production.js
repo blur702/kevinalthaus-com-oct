@@ -42,7 +42,7 @@ module.exports = {
   POSTGRES_DB: 'kevinalthaus',
   POSTGRES_USER: 'postgres',
   PGSSLMODE: 'verify-full', // Enforce SSL with certificate validation
-  PGSSLROOTCERT: '/secrets/postgres-ca.crt',
+  PGSSLROOTCERT: '/run/secrets/postgres_ca', // Docker secret path
   SKIP_DB_HEALTHCHECK: false,
 
   // Redis Configuration
