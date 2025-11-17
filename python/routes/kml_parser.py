@@ -9,6 +9,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Union
 import defusedxml.ElementTree as ET
+from xml.etree.ElementTree import Element  # For type hints only
 import logging
 
 router = APIRouter(prefix="/kml", tags=["KML Parser"])
@@ -84,7 +85,7 @@ def parse_coordinates(coord_string: str) -> List[List[float]]:
         raise ValueError(f"Invalid coordinate format: {str(e)}")
 
 
-def parse_polygon(placemark: ET.Element) -> Optional[GeometryCoordinates]:
+def parse_polygon(placemark: Element) -> Optional[GeometryCoordinates]:
     """
     Parse a Polygon or MultiPolygon from KML placemark
 
