@@ -80,7 +80,8 @@ COPY --from=builder /app/packages/main-app/src/db/migrations ./packages/main-app
 RUN mkdir -p /app/uploads \
              /app/packages/main-app/uploads \
              /app/packages/main-app/uploads_quarantine \
-             /app/storage && \
+             /app/storage \
+             /app/storage/.cache && \
     chown -R appuser:appuser /app/uploads \
                               /app/packages/main-app/uploads \
                               /app/packages/main-app/uploads_quarantine \
