@@ -14,7 +14,13 @@
       "Bash(mkdir:*)",
       "Bash(test:*)",
       "Bash(node -e:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(node scripts/manage-ports.js:*)",
+      "Bash(powershell -Command \"Start-Process ''C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe''\")",
+      "Bash(timeout /t 15 /nobreak)",
+      "Bash(nul)",
+      "Bash(docker info:*)",
+      "Bash(docker compose:*)"
     ],
     "deny": [
       "Bash(powershell.exe:*)",
