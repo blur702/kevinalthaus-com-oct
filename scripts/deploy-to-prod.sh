@@ -15,7 +15,9 @@ NC='\033[0m' # No Color
 # Configuration
 PROD_HOST="kevin-prod"
 PROD_USER="kevin"
-PROD_PASSWORD="(130Bpm)"  # Sudo password (will be prompted if needed)
+# Sudo password should be set via environment variable for security
+# Set PROD_SUDO_PASSWORD before running this script
+PROD_PASSWORD="${PROD_SUDO_PASSWORD:-}"
 APP_DIR="/opt/kevinalthaus"
 REPO_URL="git@github.com:yourusername/kevinalthaus-com-oct.git"  # Update with your actual repo
 BRANCH="main"
@@ -25,7 +27,7 @@ COMPOSE_PROD_FILE="docker-compose.prod.yml"
 # Flags
 FORCE_REBUILD=false
 SKIP_CHECKS=false
-SUDO_PASSWORD_PROVIDED=false
+NON_INTERACTIVE=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -38,9 +40,20 @@ while [[ $# -gt 0 ]]; do
             SKIP_CHECKS=true
             shift
             ;;
+        --non-interactive|--yes|-y)
+            NON_INTERACTIVE=true
+            SKIP_CHECKS=true  # Non-interactive implies skip checks
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--force-rebuild] [--skip-checks]"
+            echo "Usage: $0 [--force-rebuild] [--skip-checks] [--non-interactive|--yes|-y]"
+            echo ""
+            echo "Options:"
+            echo "  --force-rebuild       Force rebuild of Docker containers"
+            echo "  --skip-checks         Skip pre-deployment confirmation"
+            echo "  --non-interactive     Run without user prompts (implies --skip-checks)"
+            echo "  --yes, -y             Alias for --non-interactive"
             exit 1
             ;;
     esac
@@ -80,6 +93,11 @@ ssh_exec() {
 ssh_sudo() {
     local cmd="$1"
     local description="${2:-Executing remote sudo command}"
+
+    # Check if sudo password is set
+    if [ -z "$PROD_PASSWORD" ]; then
+        error "PROD_SUDO_PASSWORD environment variable is not set. Required for sudo operations on production server."
+    fi
 
     log "$description"
     # Use echo to pipe password to sudo -S (stdin)
@@ -160,33 +178,42 @@ setup_git_repo() {
     fi
 
     log "Cloning repository..."
-    warn "Make sure the production server has access to the Git repository"
-    echo
-    echo "Options:"
-    echo "  1. Use HTTPS (requires credentials)"
-    echo "  2. Use SSH (requires deploy key setup on GitHub/GitLab)"
-    echo "  3. Skip - I'll clone manually"
-    echo
-    read -p "Choose option (1/2/3): " -n 1 -r
-    echo
 
-    case $REPLY in
-        1)
-            read -p "Enter repository HTTPS URL: " HTTPS_URL
-            ssh_exec "cd $APP_DIR && git clone $HTTPS_URL ." "Cloning repository via HTTPS"
-            ;;
-        2)
-            log "Using SSH URL: $REPO_URL"
-            ssh_exec "cd $APP_DIR && git clone $REPO_URL ." "Cloning repository via SSH"
-            ;;
-        3)
-            warn "Skipping clone. Please clone manually to $APP_DIR"
-            return 0
-            ;;
-        *)
-            error "Invalid option"
-            ;;
-    esac
+    if [ "$NON_INTERACTIVE" = true ]; then
+        # In non-interactive mode, use configured REPO_URL
+        log "Non-interactive mode: Using configured repository URL"
+        log "Using SSH URL: $REPO_URL"
+        ssh_exec "cd $APP_DIR && git clone $REPO_URL ." "Cloning repository via SSH"
+    else
+        # Interactive mode: prompt for options
+        warn "Make sure the production server has access to the Git repository"
+        echo
+        echo "Options:"
+        echo "  1. Use HTTPS (requires credentials)"
+        echo "  2. Use SSH (requires deploy key setup on GitHub/GitLab)"
+        echo "  3. Skip - I'll clone manually"
+        echo
+        read -p "Choose option (1/2/3): " -n 1 -r
+        echo
+
+        case $REPLY in
+            1)
+                read -p "Enter repository HTTPS URL: " HTTPS_URL
+                ssh_exec "cd $APP_DIR && git clone $HTTPS_URL ." "Cloning repository via HTTPS"
+                ;;
+            2)
+                log "Using SSH URL: $REPO_URL"
+                ssh_exec "cd $APP_DIR && git clone $REPO_URL ." "Cloning repository via SSH"
+                ;;
+            3)
+                warn "Skipping clone. Please clone manually to $APP_DIR"
+                return 0
+                ;;
+            *)
+                error "Invalid option"
+                ;;
+        esac
+    fi
 }
 
 # Pull latest code from Git
@@ -203,12 +230,17 @@ git_pull() {
     # Check for uncommitted changes
     if ssh_output "cd $APP_DIR && git status --porcelain" | grep -q .; then
         warn "Uncommitted changes detected on production server"
-        read -p "Stash changes and pull? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [ "$NON_INTERACTIVE" = true ]; then
+            log "Non-interactive mode: Automatically stashing changes"
             ssh_exec "cd $APP_DIR && git stash" "Stashing changes"
         else
-            error "Cannot pull with uncommitted changes"
+            read -p "Stash changes and pull? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                ssh_exec "cd $APP_DIR && git stash" "Stashing changes"
+            else
+                error "Cannot pull with uncommitted changes"
+            fi
         fi
     fi
 
@@ -229,6 +261,9 @@ setup_environment() {
 
     # Check if .env.production exists locally
     if [ ! -f ".env.production" ]; then
+        if [ "$NON_INTERACTIVE" = true ]; then
+            error ".env.production not found. Required for non-interactive deployment."
+        fi
         warn ".env.production not found locally"
         read -p "Create from .env.example? (y/N): " -n 1 -r
         echo
@@ -264,12 +299,17 @@ setup_environment() {
     # Check if secrets need to be generated
     if ! ssh_output "[ -f $APP_DIR/secrets/postgres_password.txt ]" &> /dev/null; then
         warn "Secrets not found on production server"
-        read -p "Generate new secrets? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [ "$NON_INTERACTIVE" = true ]; then
+            log "Non-interactive mode: Automatically generating secrets"
             generate_secrets
         else
-            warn "Skipping secrets generation. Make sure they exist before deployment!"
+            read -p "Generate new secrets? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                generate_secrets
+            else
+                warn "Skipping secrets generation. Make sure they exist before deployment!"
+            fi
         fi
     else
         log "Secrets already exist ✓"
@@ -369,6 +409,12 @@ verify_deployment() {
 rollback_deployment() {
     error "Deployment failed!"
     echo
+
+    if [ "$NON_INTERACTIVE" = true ]; then
+        warn "Non-interactive mode: Skipping rollback (requires manual intervention)"
+        exit 1
+    fi
+
     read -p "Rollback to previous version? (y/N): " -n 1 -r
     echo
 

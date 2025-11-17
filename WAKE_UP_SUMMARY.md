@@ -106,9 +106,10 @@ curl http://localhost:3000/api/blog/public?limit=3
 curl http://localhost:3000/api/users-manager/invalid-id
 
 # Test login (should work with new JWT secret)
+# Replace user@example.com and your_admin_password with actual credentials
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"kevin@kevinalthaus.com","password":"(130Bpm)"}'
+  -d '{"email":"user@example.com","password":"your_admin_password"}'
 ```
 
 ---

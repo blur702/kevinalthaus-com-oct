@@ -13,7 +13,7 @@
  */
 
 import vault from 'node-vault';
-import { createLogger, LogLevel } from '@monorepo/shared';
+import { createLogger, LogLevel, config } from '@monorepo/shared';
 
 const logger = createLogger({
   level: LogLevel.INFO,
@@ -57,18 +57,18 @@ class SecretsService {
   private readonly isDevelopment: boolean;
 
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV !== 'production';
+    this.isDevelopment = config.NODE_ENV !== 'production';
 
     // Load configuration from environment
     this.config = {
-      addr: process.env.VAULT_ADDR || 'http://localhost:8200',
+      addr: config.VAULT_ADDR,
       token: process.env.VAULT_TOKEN,
-      namespace: process.env.VAULT_NAMESPACE,
-      authMethod: (process.env.VAULT_AUTH_METHOD as VaultConfig['authMethod']) || 'token',
+      namespace: config.VAULT_NAMESPACE,
+      authMethod: (config.VAULT_AUTH_METHOD as VaultConfig['authMethod']) || 'token',
       roleId: process.env.VAULT_ROLE_ID,
       secretId: process.env.VAULT_SECRET_ID,
-      maxRetries: parseInt(process.env.VAULT_MAX_RETRIES || '3', 10),
-      timeout: parseInt(process.env.VAULT_TIMEOUT || '10000', 10),
+      maxRetries: config.VAULT_MAX_RETRIES,
+      timeout: config.VAULT_TIMEOUT,
     };
   }
 
@@ -209,7 +209,7 @@ class SecretsService {
         const jwtToken = await this._readKubernetesServiceAccountToken();
         const k8sClient = this.client as vault.client;
         const k8sResult = await k8sClient.kubernetesLogin({
-          role: process.env.VAULT_K8S_ROLE || 'default',
+          role: config.VAULT_K8S_ROLE || 'default',
           jwt: jwtToken,
         });
 

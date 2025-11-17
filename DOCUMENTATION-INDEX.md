@@ -10,7 +10,7 @@ This document provides an index of where SSH deployment and credential informati
 
 **Server**: kevinalthaus.com (65.181.112.77)
 **Username**: kevin
-**Password/Sudo**: (130Bpm)
+**Password/Sudo**: [Stored in PROD_SUDO_PASSWORD environment variable or secure credentials management system]
 
 ### Documentation Locations
 
@@ -48,8 +48,8 @@ This document provides an index of where SSH deployment and credential informati
 ### Supporting Documentation
 
 3. **`CREDENTIALS.md`** (gitignored)
-   - SSH password: (130Bpm)
-   - Sudo password: (130Bpm)
+   - SSH password: [PROD_SUDO_PASSWORD environment variable]
+   - Sudo password: [PROD_SUDO_PASSWORD environment variable]
    - Password usage and security
    - After-deployment security improvements
 
@@ -82,7 +82,7 @@ This document provides an index of where SSH deployment and credential informati
 ### SSH Authentication
 
 **Initial Setup**:
-- Password: `(130Bpm)`
+- Password: [PROD_SUDO_PASSWORD environment variable]
 - Used once with `./scripts/setup-ssh-keys.sh`
 - Creates SSH key pair at `~/.ssh/id_kevin_prod`
 
@@ -94,7 +94,7 @@ This document provides an index of where SSH deployment and credential informati
 ### Sudo Authentication
 
 **Configuration**:
-- Password: `(130Bpm)` (same as SSH password)
+- Password: [PROD_SUDO_PASSWORD environment variable]
 - Configured in: `scripts/deploy-to-prod.sh:18`
 - Used automatically by `ssh_sudo()` function
 
@@ -163,7 +163,7 @@ This document provides an index of where SSH deployment and credential informati
 
 To find credential documentation, search for these terms:
 
-- `(130Bpm)` - The password itself
+- `PROD_SUDO_PASSWORD` - Sudo password environment variable
 - `PROD_PASSWORD` - Sudo password variable
 - `kevin-prod` - SSH config alias
 - `ssh_sudo` - Sudo helper function
@@ -261,8 +261,8 @@ When updating deployment/credential information, update these files:
 
 ### Passwords
 ```bash
-SSH Password: (130Bpm)        # Used once for SSH key setup
-Sudo Password: (130Bpm)       # Used automatically in scripts
+SSH Password: $PROD_SUDO_PASSWORD        # Used once for SSH key setup
+Sudo Password: $PROD_SUDO_PASSWORD       # Used automatically in scripts
 ```
 
 ### Key Files

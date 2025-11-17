@@ -156,8 +156,8 @@ const exists = await page.locator(selector).count() > 0;
 
 ## Test Credentials
 
-- **Username**: kevin
-- **Password**: (130Bpm)
+- **Username**: Set via TEST_ADMIN_USERNAME environment variable (default: kevin)
+- **Password**: Set via TEST_ADMIN_PASSWORD environment variable (default: test-password-changeme)
 
 ## Directory Structure
 

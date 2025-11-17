@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import http from 'http';
 import https from 'https';
-import { createLogger, LogLevel } from '@monorepo/shared';
+import { createLogger, LogLevel, config } from '@monorepo/shared';
 import {
   compressionMiddleware,
   rateLimitMiddleware,
@@ -36,17 +36,13 @@ function parseBoolean(value: string | undefined, defaultValue: boolean): boolean
   return defaultValue;
 }
 
-function parseSampleRate(value: string | undefined, defaultValue: number): number {
-  if (!value) {
-    return defaultValue;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : defaultValue;
-}
-
 function setupSentry(): boolean {
-  const dsn = (process.env.SENTRY_DSN || '').trim();
-  const enabled = Boolean(dsn) && parseBoolean(process.env.SENTRY_ENABLED, true);
+  const dsn = (config.SENTRY_DSN || '').trim();
+  const sentryEnabledValue =
+    typeof config.SENTRY_ENABLED === 'string'
+      ? config.SENTRY_ENABLED
+      : String(config.SENTRY_ENABLED ?? '');
+  const enabled = Boolean(dsn) && parseBoolean(sentryEnabledValue, Boolean(config.SENTRY_ENABLED));
 
   if (!enabled) {
     return false;
@@ -54,12 +50,12 @@ function setupSentry(): boolean {
 
   Sentry.init({
     dsn,
-    environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
-    release: process.env.SENTRY_RELEASE || process.env.VERSION || 'api-gateway@unknown',
+    environment: config.SENTRY_ENVIRONMENT || config.NODE_ENV,
+    release: config.SENTRY_RELEASE || `api-gateway@${config.VERSION}`,
     integrations: [Sentry.expressIntegration()],
-    tracesSampleRate: parseSampleRate(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.05),
-    sampleRate: parseSampleRate(process.env.SENTRY_ERROR_SAMPLE_RATE, 1.0),
-    sendDefaultPii: parseBoolean(process.env.SENTRY_SEND_DEFAULT_PII, false),
+    tracesSampleRate: config.SENTRY_TRACES_SAMPLE_RATE,
+    sampleRate: config.SENTRY_ERROR_SAMPLE_RATE,
+    sendDefaultPii: config.SENTRY_SEND_DEFAULT_PII,
   });
 
   return true;
@@ -70,7 +66,7 @@ export const isSentryEnabled = setupSentry();
 
 // Normalize LOG_LEVEL to valid enum value
 const normalizedLogLevel = (() => {
-  const rawLevel = (process.env.LOG_LEVEL || '').trim().toUpperCase();
+  const rawLevel = (config.LOG_LEVEL || '').trim().toUpperCase();
   const validLevels: Record<string, LogLevel> = {
     DEBUG: LogLevel.DEBUG,
     INFO: LogLevel.INFO,
@@ -81,10 +77,8 @@ const normalizedLogLevel = (() => {
 })();
 
 // Normalize LOG_FORMAT to 'json' or 'text'
-const normalizedLogFormat = (() => {
-  const rawFormat = (process.env.LOG_FORMAT || '').trim().toLowerCase();
-  return (rawFormat === 'json' || rawFormat === 'text') ? rawFormat : 'text';
-})();
+const normalizedLogFormat: 'json' | 'text' =
+  config.LOG_FORMAT === 'json' || config.LOG_FORMAT === 'text' ? config.LOG_FORMAT : 'text';
 
 // Initialize structured logger
 const logger = createLogger({
@@ -94,7 +88,7 @@ const logger = createLogger({
 });
 
 logger.info(
-  `[Gateway] Booting with NODE_ENV=${process.env.NODE_ENV ?? 'undefined'}, E2E_TESTING=${process.env.E2E_TESTING ?? 'undefined'}, RATE_LIMIT_BYPASS_E2E=${process.env.RATE_LIMIT_BYPASS_E2E ?? 'undefined'}`
+  `[Gateway] Booting with NODE_ENV=${config.NODE_ENV}, E2E_TESTING=${config.E2E_TESTING}, RATE_LIMIT_BYPASS_E2E=${config.RATE_LIMIT_BYPASS_E2E}`
 );
 
 // Enforce JWT secret handling
@@ -103,14 +97,14 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is required for API Gateway. Set the same secret for both gateway and main-app.');
 }
-const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3003';
-const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
-const PLUGIN_ENGINE_URL = process.env.PLUGIN_ENGINE_URL || 'http://localhost:3004';
+const MAIN_APP_URL = config.MAIN_APP_URL;
+const PYTHON_SERVICE_URL = config.PYTHON_SERVICE_URL;
+const PLUGIN_ENGINE_URL = config.PLUGIN_ENGINE_URL;
 
 // Internal gateway token for service-to-service authentication
 let INTERNAL_GATEWAY_TOKEN = process.env.INTERNAL_GATEWAY_TOKEN;
 if (!INTERNAL_GATEWAY_TOKEN) {
-  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+  if (config.NODE_ENV === 'development' || config.NODE_ENV === 'test') {
     // Persist a shared dev token to a well-known file so all services reuse the same value
     const baseDir = process.cwd();
     const tokenFile = path.resolve(baseDir, '.internal_gateway_token');
@@ -144,16 +138,14 @@ if (!INTERNAL_GATEWAY_TOKEN) {
 const ALLOWED_PROXY_TARGETS = [MAIN_APP_URL, PYTHON_SERVICE_URL, PLUGIN_ENGINE_URL];
 
 // Parse CORS_ORIGIN from environment
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
-  : ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003'];
+const corsOrigins = config.CORS_ORIGIN;
 const allowAllCors = corsOrigins.includes('*');
 const corsOriginSet = new Set(corsOrigins);
 
-const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
+const corsCredentials = config.CORS_CREDENTIALS;
 
 // Security check: reject wildcard origins with credentials in production
-if (process.env.NODE_ENV === 'production' && corsOrigins.includes('*') && corsCredentials) {
+if (config.NODE_ENV === 'production' && corsOrigins.includes('*') && corsCredentials) {
   throw new Error(
     'Security Error: Wildcard CORS origin (*) cannot be used with credentials in production. ' +
     'Set CORS_ORIGIN to an explicit allowlist of origins.'
@@ -198,11 +190,11 @@ const helmetOptions: {
   hsts?: typeof hstsSettings;
 } = {};
 
-if (process.env.HELMET_CSP_ENABLED === 'true') {
+if (config.HELMET_CSP_ENABLED) {
   helmetOptions.contentSecurityPolicy = { directives: cspDirectives };
 }
 
-if (process.env.HELMET_HSTS_ENABLED === 'true') {
+if (config.HELMET_HSTS_ENABLED) {
   helmetOptions.hsts = hstsSettings;
 }
 
@@ -239,16 +231,7 @@ app.use(cacheMiddleware);
 
 // Stricter rate limit for auth endpoints
 // In development/test mode, use more permissive limits to allow automated testing
-const RATE_LIMIT_BYPASS_ENABLED = (() => {
-  if (process.env.DISABLE_AUTH_RATE_LIMIT === 'true') {
-    return true;
-  }
-  const explicitFlag =
-    process.env.RATE_LIMIT_BYPASS_E2E ??
-    process.env.E2E_TESTING ??
-    (process.env.NODE_ENV !== 'production' ? 'true' : 'false');
-  return String(explicitFlag).toLowerCase() !== 'false';
-})();
+const RATE_LIMIT_BYPASS_ENABLED = config.DISABLE_AUTH_RATE_LIMIT || config.RATE_LIMIT_BYPASS_E2E;
 
 const baseAuthRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -295,7 +278,7 @@ async function checkServiceHealth(url: string, timeoutMs: number = 5000): Promis
 }
 
 // Health check endpoints
-const HEALTH_CACHE_MS = Number(process.env.HEALTH_CACHE_MS || 5000);
+const HEALTH_CACHE_MS = config.HEALTH_CACHE_MS;
 
 interface HealthCacheEntry<T> {
   data: T;
@@ -341,7 +324,7 @@ async function getOverallHealth(): Promise<HealthPayload> {
     status: allHealthy ? 'healthy' : 'degraded',
     service: 'api-gateway',
     timestamp: new Date().toISOString(),
-    version: process.env.VERSION || '1.0.0',
+    version: config.VERSION,
     uptime: process.uptime(),
     checks,
   };
@@ -393,7 +376,7 @@ app.get('/', (_req, res) => {
   res.json({
     message: 'Kevin Althaus API Gateway',
     version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
+    environment: config.NODE_ENV,
   });
 });
 
@@ -909,7 +892,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 
   res.status(statusCode).json({
     error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+    message: config.NODE_ENV === 'development' ? err.message : 'Something went wrong',
   });
 });
 

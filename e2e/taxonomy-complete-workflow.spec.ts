@@ -26,8 +26,8 @@ test.describe('Complete Taxonomy Workflow', () => {
     // Login to get auth token
     const loginResponse = await request.post(`${API_URL}/api/auth/login`, {
       data: {
-        username: 'kevin',
-        password: '(130Bpm)',
+        username: process.env.TEST_ADMIN_USERNAME || 'kevin',
+        password: process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme',
       },
     });
 

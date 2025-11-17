@@ -3,10 +3,18 @@ import { ConsoleMonitor } from '../../e2e/utils/console-monitor';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Production test credentials (from user requirements)
+// Validate credentials are set for production tests (fail fast in CI)
+if (!process.env.TEST_ADMIN_PASSWORD) {
+  throw new Error(
+    'TEST_ADMIN_PASSWORD must be set in environment variables for production tests. ' +
+    'This is required to prevent running tests with insecure default credentials in CI/production environments.'
+  );
+}
+
+// Production test credentials (from environment variables)
 const PROD_ADMIN_CREDENTIALS = {
-  username: 'kevin',
-  password: '(130Bpm)'
+  username: process.env.TEST_ADMIN_USERNAME || 'kevin',
+  password: process.env.TEST_ADMIN_PASSWORD
 };
 
 // Extend test with console monitoring

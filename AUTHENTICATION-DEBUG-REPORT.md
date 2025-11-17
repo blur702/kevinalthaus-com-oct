@@ -1,5 +1,7 @@
 # Authentication Debug Report
 
+> **NOTE**: This is a test report document. For current test credentials, use environment variables: TEST_ADMIN_PASSWORD, TEST_ADMIN_USERNAME
+
 ## Issue Summary
 E2E test at `e2e/change-site-name.spec.ts` was failing with "Invalid credentials" error when trying to login with username "kevin" and password "kevin".
 
@@ -16,13 +18,13 @@ E2E test at `e2e/change-site-name.spec.ts` was failing with "Invalid credentials
 
 3. Tested password hashes against stored bcrypt hash:
    - Password "kevin": **NO MATCH**
-   - Password "(130Bpm)": **MATCH**
+   - Password from TEST_ADMIN_PASSWORD: **MATCH**
 
 ### Root Cause
-The user "kevin" was created using the seed script `packages/main-app/scripts/seed-ci-user.js`, which has a default password of `(130Bpm)` (not "kevin"):
+The user "kevin" was created using the seed script `packages/main-app/scripts/seed-ci-user.js`, which uses the TEST_ADMIN_PASSWORD environment variable with a fallback default (not "kevin"):
 
 ```javascript
-const plainPassword = process.env.TEST_ADMIN_PASSWORD || '(130Bpm)';
+const plainPassword = process.env.TEST_ADMIN_PASSWORD || '[default test password]';
 ```
 
 The `.env` file had:
@@ -30,7 +32,7 @@ The `.env` file had:
 TEST_ADMIN_PASSWORD=kevin
 ```
 
-But the database contained a user with password `(130Bpm)`, indicating the user was created when the environment variable was not set or was set to a different value.
+But the database contained a user with a different password (the default test password), indicating the user was created when the environment variable was not set or was set to a different value.
 
 ## Solution
 
@@ -40,14 +42,14 @@ Updated `.env` file to use the correct password:
 ```diff
 TEST_ADMIN_USERNAME=kevin
 - TEST_ADMIN_PASSWORD=kevin
-+ TEST_ADMIN_PASSWORD=(130Bpm)
++ TEST_ADMIN_PASSWORD=[test password]
 ```
 
 ### File Location
 `E:\dev\kevinalthaus-com-oct\.env`
 
 ### Verification
-Password verification confirmed that `(130Bpm)` matches the stored bcrypt hash in the database.
+Password verification confirmed that the TEST_ADMIN_PASSWORD environment variable matches the stored bcrypt hash in the database.
 
 ## How Authentication Works
 
@@ -66,7 +68,7 @@ Password verification confirmed that `(130Bpm)` matches the stored bcrypt hash i
 ### User Creation Scripts
 
 1. **Seed CI User** (`packages/main-app/scripts/seed-ci-user.js`):
-   - Default password: `(130Bpm)`
+   - Password: From `TEST_ADMIN_PASSWORD` environment variable
    - Username: `kevin` (from `TEST_ADMIN_USERNAME`)
    - Upserts user on conflict
 
@@ -106,7 +108,7 @@ npx playwright test e2e/change-site-name.spec.ts
 # 3. Or test login manually
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"kevin","password":"(130Bpm)"}'
+  -d '{"username":"kevin","password":"[test password]"}'
 ```
 
 ## Related Files
@@ -121,6 +123,6 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 **Issue**: Mismatch between `.env` TEST_ADMIN_PASSWORD and actual database password
 
-**Fix**: Updated `.env` to use correct password `(130Bpm)`
+**Fix**: Updated `.env` to use correct TEST_ADMIN_PASSWORD value
 
 **Status**: RESOLVED

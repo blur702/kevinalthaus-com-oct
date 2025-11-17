@@ -8,8 +8,8 @@ This directory contains automated SSH-based deployment scripts for deploying to 
 
 - **Server**: kevinalthaus.com (65.181.112.77)
 - **Username**: kevin
-- **SSH Password**: (130Bpm) - Used once for SSH key setup
-- **Sudo Password**: (130Bpm) - Used automatically by deployment scripts
+- **SSH Password**: Server login password - Used once for SSH key setup (typically the same value as PROD_SUDO_PASSWORD)
+- **Sudo Password**: Read from PROD_SUDO_PASSWORD environment variable by deployment scripts
 
 ## Deployment Scripts
 
@@ -78,7 +78,7 @@ This directory contains automated SSH-based deployment scripts for deploying to 
 - `usermod -aG docker kevin` - Adding user to groups
 
 **Configuration**:
-- Line 18: `PROD_PASSWORD="(130Bpm)"` - Sudo password
+- Line 18: Reads sudo password from `PROD_SUDO_PASSWORD` environment variable
 - Line 20: `REPO_URL="git@github.com:..."` - Your Git repository URL
 
 ---
@@ -114,8 +114,9 @@ This directory contains automated SSH-based deployment scripts for deploying to 
 
 ```bash
 # Step 1: Setup SSH keys (1-2 minutes)
+export PROD_SUDO_PASSWORD="your_sudo_password"
 ./scripts/setup-ssh-keys.sh
-# Enter password when prompted: (130Bpm)
+# Enter your SSH password when prompted (typically the same as PROD_SUDO_PASSWORD)
 
 # Step 2: Create production environment file (30 seconds)
 cp .env.example .env.production
@@ -136,11 +137,19 @@ cp .env.example .env.production
 
 ### SSH Password vs Sudo Password
 
-| Type | Value | When Used | How Used |
-|------|-------|-----------|----------|
-| SSH Password | (130Bpm) | Once (SSH key setup) | Manual entry |
-| Sudo Password | (130Bpm) | Every deployment | Automatic (in script) |
-| SSH Key | Auto-generated | Every connection | Automatic |
+| Type | Value | When Used | How Used | Source |
+|------|-------|-----------|----------|--------|
+| SSH Password | Server login password | Once (SSH key setup) | Manual entry at prompt | User types password when prompted |
+| Sudo Password | Server sudo password | Only during initial infrastructure setup | Automatic (piped to sudo) | Read from $PROD_SUDO_PASSWORD env var |
+| SSH Key | Auto-generated | Every connection | Automatic | ~/.ssh/id_kevin_prod |
+
+**Important**: `PROD_SUDO_PASSWORD` is **only required for initial infrastructure setup** (installing Git, Docker, Docker Compose, and creating application directories). Once the infrastructure is set up, subsequent application deployments (`git pull`, `docker-compose up`, etc.) run without sudo and do not require `PROD_SUDO_PASSWORD`.
+
+**When sudo is used**:
+- Initial setup: `apt install`, `systemctl enable/start`, `usermod -aG docker`, `mkdir -p /opt/kevinalthaus`
+- After setup: All deployment operations (Git, Docker) run as the `kevin` user without sudo
+
+**Note**: For convenience, operators typically set `PROD_SUDO_PASSWORD` to the same value as the server's sudo password. The deployment scripts read the sudo password from the `$PROD_SUDO_PASSWORD` environment variable and pipe it to `sudo -S` commands automatically during infrastructure setup.
 
 ### How Authentication Works
 
@@ -149,7 +158,7 @@ Development Machine                Production Server
        │                                  │
        │  1. SSH Key Setup                │
        ├──────────────────────────────────>
-       │  Enter password: (130Bpm)        │
+       │  Enter password: [SSH_SETUP_PASSWORD]│
        │  (copies public key)             │
        │                                  │
        │  2. SSH Connection               │
@@ -158,7 +167,7 @@ Development Machine                Production Server
        │                                  │
        │  3. Sudo Command                 │
        ├──────────────────────────────────>
-       │  echo '(130Bpm)' | sudo -S ...   │
+       │  echo '$PROD_SUDO_PASSWORD' | sudo -S ...│
        │  (password piped automatically)  │
 ```
 
@@ -230,7 +239,7 @@ Key configuration variables:
 ```bash
 PROD_HOST="kevin-prod"              # SSH config alias
 PROD_USER="kevin"                   # Server username
-PROD_PASSWORD="(130Bpm)"            # Sudo password
+# Sudo password read from PROD_SUDO_PASSWORD environment variable
 APP_DIR="/opt/kevinalthaus"         # Application directory
 REPO_URL="git@github.com:..."       # Git repository URL
 BRANCH="main"                       # Git branch to deploy
@@ -278,7 +287,7 @@ ssh -v kevin@65.181.112.77
 # Test manually
 ssh kevin@65.181.112.77
 sudo echo "test"
-# Enter: (130Bpm)
+# Enter: your_sudo_password
 
 # Check if user is in sudo group
 ssh kevin@65.181.112.77 groups
@@ -337,13 +346,22 @@ docker-compose restart
 
 ### Recommended Improvements
 
-After initial deployment, consider:
+After initial infrastructure setup (once Docker, Git, and application directories are configured), consider:
 
-**1. Remove password from script**:
+**1. Unset the PROD_SUDO_PASSWORD environment variable** (safe after infrastructure is complete):
 ```bash
-# Edit scripts/deploy-to-prod.sh line 18
-PROD_PASSWORD=""  # No longer needed after initial setup
+# After the first successful deployment that completes setup_server(),
+# you can safely unset this variable since subsequent deployments don't need sudo
+unset PROD_SUDO_PASSWORD
+
+# Or remove it from your shell profile (~/.bashrc, ~/.zshrc, etc.)
+# Remove or comment out the line: export PROD_SUDO_PASSWORD="..."
 ```
+
+**When is it safe to unset?**
+- ✅ Safe after: First deployment completes successfully and shows "✓ Docker is already installed", "✓ Git is already installed", "✓ Application directory exists"
+- ❌ Not safe: If you plan to re-run infrastructure setup or need to install new system packages
+- 💡 Alternative: Store in CI/CD secret store and inject only when needed for infrastructure changes
 
 **2. Configure passwordless sudo** for specific commands:
 ```bash

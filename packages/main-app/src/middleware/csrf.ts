@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { randomBytes, createHmac, timingSafeEqual } from 'crypto';
 import { AuthenticatedRequest } from '../auth';
+import { config } from '@monorepo/shared';
 
 // CSRF token configuration
 const CSRF_TOKEN_LENGTH = 32;
@@ -120,7 +121,7 @@ export function attachCSRFToken(req: AuthenticatedRequest, res: Response, next: 
     // Set token in both cookie and response header
     res.cookie(CSRF_COOKIE_NAME, token, {
       httpOnly: false, // Must be readable by JavaScript
-      secure: process.env.NODE_ENV === 'production',
+      secure: config.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: TOKEN_EXPIRY_MS
     });
@@ -144,7 +145,7 @@ export function getCSRFToken(req: AuthenticatedRequest, res: Response): void {
 
   res.cookie(CSRF_COOKIE_NAME, token, {
     httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
+    secure: config.NODE_ENV === 'production',
     sameSite: 'strict',
     maxAge: TOKEN_EXPIRY_MS
   });

@@ -9,7 +9,7 @@ import { expect, Page } from '@playwright/test';
  */
 export async function adminLogin(page: Page): Promise<void> {
   const adminUsername = process.env.TEST_ADMIN_USERNAME || 'kevin';
-  const adminPassword = process.env.TEST_ADMIN_PASSWORD || '(130Bpm)';
+  const adminPassword = process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme';
 
   await page.goto('http://localhost:3003/login');
   await page.waitForLoadState('domcontentloaded');

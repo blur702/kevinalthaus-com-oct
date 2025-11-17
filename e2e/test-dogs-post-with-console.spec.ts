@@ -45,8 +45,8 @@ test.describe('Dogs Blog Post Creation with Console Monitoring', () => {
 
     // Step 2: Fill in credentials and login
     await page.waitForSelector('input[name="identifier"]', { timeout: 30000 });
-    await page.fill('input[name="identifier"]', 'kevin');
-    await page.fill('input[name="password"]', '(130Bpm)');
+    await page.fill('input[name="identifier"]', process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.fill('input[name="password"]', process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
     await page.click('button[type="submit"]');
 
     // Wait for redirect to dashboard

@@ -1,3 +1,6 @@
+> **ARCHIVED DOCUMENT** - This document contains historical testing data and may reference outdated credentials.
+> For current credentials, refer to environment variables: TEST_ADMIN_PASSWORD, ADMIN_INITIAL_PASSWORD
+
 # Manual Test Guide - Complete Workflow Verification
 
 ## Overview
@@ -21,7 +24,7 @@ This guide walks through the complete user management workflow to verify all fun
 1. Navigate to http://localhost:3003/login
 2. Enter credentials:
    - **Username**: `kevin`
-   - **Password**: `(130Bpm)`
+   - **Password**: `[test password]` (use TEST_ADMIN_PASSWORD from environment)
 3. Click "Sign In"
 4. ✅ **Expected**: Redirect to dashboard, see "Welcome" message
 
@@ -64,7 +67,7 @@ This guide walks through the complete user management workflow to verify all fun
 
 1. Enter new user credentials:
    - **Username**: `testuser1`
-   - **Password**: `Test123!@#`
+   - **Password**: `[test password used during creation]`
 2. Click "Sign In"
 3. ✅ **Expected**: Successful login, redirect to dashboard
 

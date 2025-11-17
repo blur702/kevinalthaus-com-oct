@@ -130,7 +130,12 @@ const ProtectedLayout: React.FC<ProtectedLayoutProps> = ({
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
           Kevin Althaus - Admin Dashboard
         </Typography>
-        <Button color="inherit" onClick={handleLogout} startIcon={<LogoutIcon />}>
+        <Button
+          color="inherit"
+          onClick={handleLogout}
+          startIcon={<LogoutIcon />}
+          data-testid="logout-button"
+        >
           Logout
         </Button>
       </Toolbar>

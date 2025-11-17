@@ -12,10 +12,13 @@ build/
 *.tsbuildinfo
 .turbo/
 
-# Environment variables
+# Environment variables (secrets only - config files are tracked)
 .env
 .env.*
 !.env.example
+!config/
+!config/*.js
+!config/*.ts
 
 # IDEs and editors
 .vscode/
@@ -30,6 +33,7 @@ coverage/
 .nyc_output/
 *.lcov
 test-results/
+test-results-production/
 playwright-report/
 e2e/.auth/
 test-output*.txt
@@ -135,6 +139,7 @@ NUL
 
 # Playwright
 /playwright-report/
+/playwright-report-production/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/

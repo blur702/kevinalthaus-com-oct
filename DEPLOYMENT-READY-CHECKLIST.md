@@ -13,7 +13,7 @@ All scripts have been created, tested, and configured with the sudo password.
 - **Authentication tested**: Server accepts publickey and password methods
 
 #### 2. ✅ Sudo Configuration
-- **Password configured**: `(130Bpm)` in `scripts/deploy-to-prod.sh:18`
+- **Password configured**: Via `PROD_SUDO_PASSWORD` environment variable in `scripts/deploy-to-prod.sh:18`
 - **Helper function created**: `ssh_sudo()` for automatic password handling
 - **All sudo commands updated**: Using new `ssh_sudo()` function
 
@@ -41,7 +41,7 @@ cd /e/dev/kevinalthaus-com-oct
 **What it does:**
 - Uses existing SSH key at `~/.ssh/id_kevin_prod`
 - Copies public key to production server
-- Asks for password: `(130Bpm)` (only once!)
+- Asks for password from PROD_SUDO_PASSWORD environment variable (only once!)
 - Tests the connection
 - Configures SSH config file
 
@@ -109,8 +109,8 @@ nano scripts/deploy-to-prod.sh
 
 | Type | Value | Usage | Location |
 |------|-------|-------|----------|
-| SSH Password | `(130Bpm)` | SSH key setup (once) | Not stored |
-| Sudo Password | `(130Bpm)` | System commands | `scripts/deploy-to-prod.sh:18` |
+| SSH Password | $PROD_SUDO_PASSWORD | SSH key setup (once) | Environment variable |
+| Sudo Password | $PROD_SUDO_PASSWORD | System commands | Environment variable (read by script) |
 | SSH Key | Auto-generated | All connections | `~/.ssh/id_kevin_prod` |
 
 ### How They Work Together
@@ -120,12 +120,12 @@ nano scripts/deploy-to-prod.sh
 │ Development Machine                                     │
 │                                                         │
 │  1. Run: ./scripts/setup-ssh-keys.sh                   │
-│     ├─ Enter password: (130Bpm) ◄── ONE TIME ONLY     │
+│     ├─ Enter password: $PROD_SUDO_PASSWORD ◄── ONE TIME ONLY     │
 │     └─ SSH key copied to server                        │
 │                                                         │
 │  2. Run: ./scripts/deploy-to-prod.sh                   │
 │     ├─ Connect via SSH key ◄── NO PASSWORD            │
-│     ├─ Need sudo? Use: (130Bpm) ◄── AUTOMATIC         │
+│     ├─ Need sudo? Use: $PROD_SUDO_PASSWORD ◄── AUTOMATIC         │
 │     └─ Deploy application                              │
 └─────────────────────────────────────────────────────────┘
                           │
@@ -151,7 +151,7 @@ Before running deployment, verify:
 - [ ] **Environment file created**: `.env.production` exists
 - [ ] **Repository URL updated**: In `scripts/deploy-to-prod.sh:20`
 - [ ] **Deploy key configured**: On GitHub/GitLab (for private repos)
-- [ ] **Sudo password correct**: `(130Bpm)` in `scripts/deploy-to-prod.sh:18`
+- [ ] **Sudo password set**: `export PROD_SUDO_PASSWORD="your_sudo_password"` before running deployment
 
 ## 🧪 Testing Without Deployment
 
@@ -187,7 +187,7 @@ chmod 600 ~/.ssh/id_kevin_prod
 # Test manually
 ssh kevin@65.181.112.77
 sudo echo "test"
-# Enter: (130Bpm)
+# Enter: your_sudo_password
 
 # If fails, user may not be in sudo group:
 # (requires root access to fix)

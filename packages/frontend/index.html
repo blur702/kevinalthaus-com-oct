@@ -11,6 +11,99 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Remove the legacy service worker that still exists on production and breaks asset loading -->
+    <script>
+      (function () {
+        if (!('serviceWorker' in navigator)) {
+          return;
+        }
+
+        var RELOAD_FLAG = '__swCleanupReloaded';
+        var legacyPattern = /\/sw(\.[a-z0-9_-]+)?\.js$/i;
+
+        function matchesLegacy(scriptURL) {
+          if (!scriptURL) {
+            return false;
+          }
+
+          try {
+            var url = new URL(scriptURL, document.baseURI);
+            return legacyPattern.test(url.pathname);
+          } catch (_error) {
+            return scriptURL.indexOf('sw.js') !== -1;
+          }
+        }
+
+        function clearCaches() {
+          if (!('caches' in window) || typeof caches.keys !== 'function') {
+            return Promise.resolve();
+          }
+
+          return caches.keys().then(function (keys) {
+            return Promise.all(
+              keys.map(function (key) {
+                return caches.delete(key).catch(function () {
+                  return false;
+                });
+              })
+            );
+          });
+        }
+
+        navigator.serviceWorker
+          .getRegistrations()
+          .then(function (registrations) {
+            if (!registrations.length) {
+              return [];
+            }
+
+            return Promise.all(
+              registrations.map(function (registration) {
+                var scriptURL =
+                  (registration.active && registration.active.scriptURL) ||
+                  (registration.waiting && registration.waiting.scriptURL) ||
+                  (registration.installing && registration.installing.scriptURL);
+
+                if (!matchesLegacy(scriptURL)) {
+                  return false;
+                }
+
+                return registration.unregister().catch(function () {
+                  return false;
+                });
+              })
+            );
+          })
+          .then(function (results) {
+            if (!results || !results.some(Boolean)) {
+              return;
+            }
+
+            clearCaches()
+              .catch(function () {
+                return undefined;
+              })
+              .finally(function () {
+                try {
+                  if (window.sessionStorage && !sessionStorage.getItem(RELOAD_FLAG)) {
+                    sessionStorage.setItem(RELOAD_FLAG, '1');
+                    window.location.reload();
+                    return;
+                  }
+
+                  if (window.sessionStorage) {
+                    sessionStorage.removeItem(RELOAD_FLAG);
+                  }
+                } catch (_err) {
+                  // Ignore session storage failures
+                }
+              });
+          })
+          .catch(function (error) {
+            console.warn('[sw-cleanup] Failed to clean up legacy service workers', error);
+          });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

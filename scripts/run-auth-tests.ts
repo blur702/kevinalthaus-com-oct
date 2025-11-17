@@ -23,7 +23,7 @@ Usage: npm run test:auth:[smoke|ui|api|all|watch]
 Flags:
   --smoke      Run smoke authentication tests (tests/e2e/comp_auth.spec.ts)
   --ui         Run UI authentication tests (e2e/auth.spec.ts)
-  --api        Run API authentication tests (e2e/api-auth.spec.ts)
+  --api        Run API authentication tests (e2e/api/auth.spec.ts)
   --all        Run all authentication tests
   --watch      Run tests in watch mode (re-run on file changes)
   --help, -h   Display this help message
@@ -48,9 +48,9 @@ if (flags.smoke) {
 } else if (flags.ui) {
   testFiles.push('e2e/auth.spec.ts');
 } else if (flags.api) {
-  testFiles.push('e2e/api-auth.spec.ts');
+  testFiles.push('e2e/api/auth.spec.ts');
 } else if (flags.all) {
-  testFiles.push('e2e/auth.spec.ts', 'e2e/api-auth.spec.ts', 'tests/e2e/comp_auth.spec.ts');
+  testFiles.push('e2e/auth.spec.ts', 'e2e/api/auth.spec.ts', 'tests/e2e/comp_auth.spec.ts');
 } else {
   // Default to smoke tests
   testFiles.push('tests/e2e/comp_auth.spec.ts');

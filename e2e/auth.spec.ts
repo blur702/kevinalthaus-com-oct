@@ -10,10 +10,9 @@ import { selectors } from './utils/selectors';
  */
 
 test.describe('Authentication', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear any existing auth state before each test
-    await clearAuth(page);
-  });
+  // Note: Auth tests run in a dedicated project (chromium-auth) with no pre-authenticated state
+  // See playwright.config.ts - the chromium-auth project has storageState: undefined
+  // This ensures each test starts from a clean, unauthenticated session
 
   test.describe('Login', () => {
     test('should login successfully with valid credentials', async ({ page }) => {

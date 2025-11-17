@@ -154,8 +154,9 @@ export const selectors = {
     contentLink: 'a[href="/content"]',
     analyticsLink: 'a[href="/analytics"]',
     settingsLink: 'a[href="/settings"]',
-    userMenu: '[data-testid="user-menu"]',
-    logoutButton: '[data-testid="logout-button"]',
+    // Logout button is rendered directly in the AppBar toolbar
+    // Using role-based selector for better accessibility and robustness
+    logoutButton: 'button:has-text("Logout")',
   },
 };
 

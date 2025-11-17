@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Complete User Management Workflow', () => {
   const adminUsername = process.env.TEST_ADMIN_USERNAME || 'kevin';
-  const adminPassword = process.env.TEST_ADMIN_PASSWORD || '(130Bpm)';
+  const adminPassword = process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme';
 
   const testUser = {
     username: `testuser_${Date.now()}`,

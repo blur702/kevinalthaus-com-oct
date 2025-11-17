@@ -1,9 +1,25 @@
 #!/bin/bash
 # SSH Key Setup Script for Production Deployment
 # Sets up passwordless SSH authentication from dev to prod server
-# Usage: ./scripts/setup-ssh-keys.sh
+# Usage: ./scripts/setup-ssh-keys.sh [--non-interactive|--yes|-y]
 
 set -euo pipefail
+
+# Parse arguments
+NON_INTERACTIVE=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --non-interactive|--yes|-y)
+            NON_INTERACTIVE=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--non-interactive|--yes|-y]"
+            exit 1
+            ;;
+    esac
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -45,6 +61,10 @@ setup_ssh_directory() {
 generate_ssh_key() {
     if [ -f "$KEY_PATH" ]; then
         warn "SSH key already exists at $KEY_PATH"
+        if [ "$NON_INTERACTIVE" = true ]; then
+            log "Non-interactive mode: Keeping existing key"
+            return 0
+        fi
         read -p "Overwrite existing key? (y/N): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -143,13 +163,32 @@ setup_ssh_config() {
     # Check if config already has this entry
     if [ -f "$SSH_CONFIG" ] && grep -q "Host kevin-prod" "$SSH_CONFIG"; then
         warn "SSH config entry already exists"
-        read -p "Update existing entry? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            # Remove old entry
-            sed -i.bak '/Host kevin-prod/,/^$/d' "$SSH_CONFIG"
+        if [ "$NON_INTERACTIVE" = true ]; then
+            log "Non-interactive mode: Updating existing entry"
+            # Remove old entry robustly: from "Host kevin-prod" to next "Host " or EOF
+            # Save backup first, then atomically replace with filtered content
+            cp "$SSH_CONFIG" "$SSH_CONFIG.bak"
+            awk '
+                /^Host kevin-prod$/ { skip=1; next }
+                /^Host / && skip { skip=0 }
+                !skip { print }
+            ' "$SSH_CONFIG.bak" > "$SSH_CONFIG"
             echo "$CONFIG_ENTRY" >> "$SSH_CONFIG"
             log "Updated SSH config"
+        else
+            read -p "Update existing entry? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                # Remove old entry robustly: from "Host kevin-prod" to next "Host " or EOF
+                cp "$SSH_CONFIG" "$SSH_CONFIG.bak"
+                awk '
+                    /^Host kevin-prod$/ { skip=1; next }
+                    /^Host / && skip { skip=0 }
+                    !skip { print }
+                ' "$SSH_CONFIG.bak" > "$SSH_CONFIG"
+                echo "$CONFIG_ENTRY" >> "$SSH_CONFIG"
+                log "Updated SSH config"
+            fi
         fi
     else
         echo "$CONFIG_ENTRY" >> "$SSH_CONFIG"
@@ -169,7 +208,7 @@ show_security_recommendations() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo
     echo "1. ✓ SSH keys have been set up for passwordless authentication"
-    echo "2. ⚠️  The temporary password (130Bpm) is no longer needed"
+    echo "2. ⚠️  The initial setup password is no longer needed for SSH"
     echo "3. 🔒 Keep your private key secure: $KEY_PATH"
     echo "4. 📝 Key permissions set to 600 (read/write for owner only)"
     echo "5. 🔑 Consider adding a passphrase to the key for extra security:"

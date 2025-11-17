@@ -17,7 +17,7 @@ PROD_HOST="kevin-prod"
 PROD_USER="kevin"
 PROD_SERVER="kevinalthaus.com"
 PROD_IP="65.181.112.77"
-PROD_PASSWORD="(130Bpm)"  # Sudo password from SUDO-PASSWORD-SETUP.md
+PROD_PASSWORD="${PROD_SUDO_PASSWORD:-}"  # Sudo password from environment variable
 APP_DIR="/opt/kevinalthaus"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -129,6 +129,11 @@ scp_to_server() {
 # Pre-flight checks
 preflight_checks() {
     step "Running pre-flight checks..."
+
+    # Check if sudo password is set
+    if [ -z "$PROD_PASSWORD" ]; then
+        error "PROD_SUDO_PASSWORD environment variable is not set. Please set it before running this script."
+    fi
 
     # Check if SSH config exists for production server
     if ! grep -q "Host $PROD_HOST" ~/.ssh/config 2>/dev/null; then

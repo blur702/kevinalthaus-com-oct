@@ -53,13 +53,23 @@ async function globalSetup(config: FullConfig): Promise<void> {
     console.log(`[Global Setup] Successfully connected to ${baseURL}`);
 
     // Attempt to perform an authenticated login and persist storage state
-    const username = process.env.TEST_ADMIN_USERNAME;
-    const password = process.env.TEST_ADMIN_PASSWORD;
+    // In CI/production, credentials MUST be set via environment variables
+    // In local/dev, fallback to default credentials for convenience
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.CI;
+
+    let username = process.env.TEST_ADMIN_USERNAME;
+    let password = process.env.TEST_ADMIN_PASSWORD;
 
     if (!username || !password) {
-      throw new Error(
-        'TEST_ADMIN_USERNAME and TEST_ADMIN_PASSWORD must be set in the environment to run Playwright tests.'
-      );
+      if (isProduction) {
+        throw new Error(
+          'TEST_ADMIN_USERNAME and TEST_ADMIN_PASSWORD must be set in environment variables for CI/production environments'
+        );
+      }
+      // Fallback to default credentials for local/dev testing
+      username = username || 'kevin';
+      password = password || 'test-password-changeme';
+      console.log('[Global Setup] Using default credentials for local/dev environment');
     }
 
     // Verify login page loads (but do not authenticate via UI to avoid rate limiting proxies)

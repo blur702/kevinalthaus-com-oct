@@ -79,7 +79,7 @@ Since the automated test has timing issues, here's how to manually verify the fu
 1. Navigate to `http://localhost:3003/login`
 2. Login with:
    - Username: `kevin`
-   - Password: `(130Bpm)`
+   - Password: [TEST_ADMIN_PASSWORD environment variable]
 3. Navigate to **Settings** page
 4. Click on the **"Site Configuration"** tab
 5. Change the **"Site Name"** field to a unique value (e.g., "My Awesome Site")

@@ -16,8 +16,8 @@ test.describe('Email Configuration', () => {
 
     // Login
     await page.goto('/login');
-    await page.locator('input[name="identifier"]').fill('kevin');
-    await page.locator('input[name="password"]').fill('(130Bpm)');
+    await page.locator('input[name="identifier"]').fill(process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.locator('input[name="password"]').fill(process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
     await page.locator('button[type="submit"]').click();
 
     // Wait for redirect to dashboard
@@ -90,8 +90,8 @@ test.describe('Email Configuration', () => {
 
     // Login
     await page.goto('/login');
-    await page.locator('input[name="identifier"]').fill('kevin');
-    await page.locator('input[name="password"]').fill('(130Bpm)');
+    await page.locator('input[name="identifier"]').fill(process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.locator('input[name="password"]').fill(process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL('/', { timeout: 10000 });
 

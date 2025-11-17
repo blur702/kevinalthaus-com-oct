@@ -1,7 +1,7 @@
 # Testing Session Summary
 **Date:** 2025-11-11
 **Session Goal:** Comprehensive testing to achieve 100% bug-free application
-**Test Credentials:** kevin / (130Bpm)
+**Test Credentials:** kevin / [TEST_ADMIN_PASSWORD environment variable]
 
 ---
 
@@ -33,7 +33,7 @@ const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3003';
 ```bash
 $ curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"kevin","password":"(130Bpm)"}'
+  -d '{"username":"kevin","password":"your_admin_password"}'
 
 HTTP/1.1 200 OK ✅
 {

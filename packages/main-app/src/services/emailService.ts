@@ -13,7 +13,7 @@
  */
 
 import * as brevo from '@getbrevo/brevo';
-import { createLogger, LogLevel } from '@monorepo/shared';
+import { createLogger, LogLevel, config } from '@monorepo/shared';
 import { secretsService } from './secretsService';
 import { query } from '../db';
 
@@ -80,14 +80,30 @@ class EmailService {
   private readonly vaultPath: string;
 
   constructor() {
+    // Validate required configuration values
+    const smtpFromEmail = config.SMTP_FROM_EMAIL?.trim();
+    if (!smtpFromEmail) {
+      throw new Error('Missing config: SMTP_FROM_EMAIL');
+    }
+
+    const smtpFromName = config.SMTP_FROM_NAME?.trim();
+    if (!smtpFromName) {
+      throw new Error('Missing config: SMTP_FROM_NAME');
+    }
+
+    const brevoApiKeyVaultPath = config.BREVO_API_KEY_VAULT_PATH?.trim();
+    if (!brevoApiKeyVaultPath) {
+      throw new Error('Missing config: BREVO_API_KEY_VAULT_PATH');
+    }
+
     // Load default sender from environment
     this.defaultFrom = {
-      email: process.env.SMTP_FROM_EMAIL || 'noreply@kevinalthaus.com',
-      name: process.env.SMTP_FROM_NAME || 'Kevin Althaus',
+      email: smtpFromEmail,
+      name: smtpFromName,
     };
 
     // Vault path for Brevo API key
-    this.vaultPath = process.env.BREVO_API_KEY_VAULT_PATH || 'secret/email/brevo';
+    this.vaultPath = brevoApiKeyVaultPath;
   }
 
   /**

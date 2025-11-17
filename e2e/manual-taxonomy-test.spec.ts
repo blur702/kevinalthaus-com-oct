@@ -21,8 +21,8 @@ test.describe('Manual Taxonomy Verification', () => {
     await page.waitForSelector('input[name="identifier"]', { timeout: 30000 });
 
     // Fill in credentials
-    await page.fill('input[name="identifier"]', 'kevin');
-    await page.fill('input[name="password"]', '(130Bpm)');
+    await page.fill('input[name="identifier"]', process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.fill('input[name="password"]', process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
 
     // Submit
     await page.click('button[type="submit"]');
@@ -50,8 +50,8 @@ test.describe('Manual Taxonomy Verification', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('input[name="identifier"]', { timeout: 30000 });
 
-    await page.fill('input[name="identifier"]', 'kevin');
-    await page.fill('input[name="password"]', '(130Bpm)');
+    await page.fill('input[name="identifier"]', process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.fill('input[name="password"]', process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
     await page.click('button[type="submit"]');
 
     await page.waitForURL(/\/$/, { timeout: 15000 });
@@ -76,8 +76,8 @@ test.describe('Manual Taxonomy Verification', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('input[name="identifier"]', { timeout: 30000 });
 
-    await page.fill('input[name="identifier"]', 'kevin');
-    await page.fill('input[name="password"]', '(130Bpm)');
+    await page.fill('input[name="identifier"]', process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.fill('input[name="password"]', process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
     await page.click('button[type="submit"]');
 
     await page.waitForURL(/\/$/, { timeout: 15000 });

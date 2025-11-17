@@ -1,3 +1,6 @@
+> **ARCHIVED DOCUMENT** - This document contains historical testing data and may reference outdated credentials.
+> For current credentials, refer to environment variables: TEST_ADMIN_PASSWORD, ADMIN_INITIAL_PASSWORD
+
 # Final Implementation Summary
 
 ## 🎯 Project Completion Status
@@ -20,7 +23,7 @@
 
 **Solutions Implemented**:
 - ✅ Fixed seed script column name
-- ✅ Recreated admin user: `kevin` / `(130Bpm)`
+- ✅ Recreated admin user: `kevin` / `[redacted]`
 - ✅ Updated CORS to include all frontend origins
 - ✅ Created database trigger to prevent deletion of kevin user
 - ✅ Added migration for permanent user protection
@@ -218,7 +221,7 @@ docker exec kevinalthaus-main-app ls -la /app/packages/main-app/dist/routes/
 # API endpoint testing:
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"kevin","password":"(130Bpm)"}'
+  -d '{"username":"kevin","password":"[redacted]"}'
 # Result: ✅ {"message":"Login successful",...}
 
 curl -b /tmp/cookies.txt "http://localhost:3000/api/users-manager?page=1&limit=5"

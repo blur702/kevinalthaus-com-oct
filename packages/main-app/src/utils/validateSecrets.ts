@@ -4,6 +4,8 @@
  * Prevents deployment with placeholder or insecure values
  */
 
+import { config } from '@monorepo/shared';
+
 const PLACEHOLDER_PATTERNS = [
   /REPLACE_WITH/i,
   /YOUR_.*_HERE/i,
@@ -41,7 +43,7 @@ export function validateSecrets(): ValidationResult {
   const warnings: string[] = [];
 
   // Only validate in production
-  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+  if (config.NODE_ENV === 'development' || config.NODE_ENV === 'test') {
     return { isValid: true, errors, warnings };
   }
 

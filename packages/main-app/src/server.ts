@@ -11,7 +11,7 @@ import { Sentry, isSentryEnabled } from './instrument';
 import { Server } from 'http';
 import { runMigrations } from './db/migrations';
 import { pool, closePool } from './db';
-import { createLogger, LogLevel, PORTS, ensurePortAvailable } from '@monorepo/shared';
+import { createLogger, LogLevel, ensurePortAvailable, config } from '@monorepo/shared';
 import { ensureUploadDirectory } from './middleware/upload';
 import { initializeRedisRateLimiter, closeRedisRateLimiter } from './middleware/rateLimitRedis';
 import { secretsService } from './services/secretsService';
@@ -27,16 +27,19 @@ import { MenuService } from './services/MenuService';
 const { default: app } = require('./index');
 
 function getLogLevel(): LogLevel {
-  const envLevel = process.env.LOG_LEVEL;
+  const envLevel = config.LOG_LEVEL?.toLowerCase();
   const valid = Object.values(LogLevel);
-  if (envLevel && valid.includes(envLevel as LogLevel)) {
-    return envLevel as LogLevel;
+  if (envLevel) {
+    const normalized = envLevel as LogLevel;
+    if (valid.includes(normalized)) {
+      return normalized;
+    }
   }
   return LogLevel.INFO;
 }
 
 function getLogFormat(): 'json' | 'text' {
-  const envFormat = process.env.LOG_FORMAT;
+  const envFormat = config.LOG_FORMAT;
   return envFormat === 'json' || envFormat === 'text' ? envFormat : 'text';
 }
 
@@ -46,7 +49,7 @@ const logger = createLogger({
   format: getLogFormat(),
 });
 
-const PORT = Number(process.env.MAIN_APP_PORT || process.env.PORT || PORTS.MAIN_APP);
+const PORT = Number(config.MAIN_APP_PORT);
 
 // Validate PORT is a valid number in range
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
@@ -67,7 +70,7 @@ if (
 }
 
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
-const SENTRY_FLUSH_TIMEOUT = Number(process.env.SENTRY_FLUSH_TIMEOUT_MS) || 2000;
+const SENTRY_FLUSH_TIMEOUT = config.SENTRY_FLUSH_TIMEOUT_MS;
 
 let server: Server | undefined;
 let isShuttingDown = false; // Idempotency guard for graceful shutdown
@@ -199,7 +202,7 @@ async function start(): Promise<void> {
   }
 }
 
-if (process.env.NODE_ENV !== 'test') {
+if (config.NODE_ENV !== 'test') {
   void start();
 }
 

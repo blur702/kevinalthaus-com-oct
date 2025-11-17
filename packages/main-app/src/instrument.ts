@@ -1,42 +1,21 @@
 // Sentry instrumentation - MUST be imported before any other modules
 // This file initializes Sentry and exports the configuration status
 import * as Sentry from '@sentry/node';
-
-function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
-  if (value === undefined) {
-    return defaultValue;
-  }
-  const normalized = value.trim().toLowerCase();
-  if (['true', '1', 'yes', 'on'].includes(normalized)) {
-    return true;
-  }
-  if (['false', '0', 'no', 'off'].includes(normalized)) {
-    return false;
-  }
-  return defaultValue;
-}
-
-function parseSampleRate(value: string | undefined, defaultValue: number): number {
-  if (!value) {
-    return defaultValue;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : defaultValue;
-}
+import { config } from '@monorepo/shared';
 
 // Initialize Sentry immediately when this module is loaded
 const dsn = (process.env.SENTRY_DSN || '').trim();
-const enabled = Boolean(dsn) && parseBoolean(process.env.SENTRY_ENABLED, true);
+const enabled = Boolean(dsn) && config.SENTRY_ENABLED;
 
 if (enabled) {
   Sentry.init({
     dsn,
-    environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
-    release: process.env.SENTRY_RELEASE || process.env.VERSION || 'main-app@unknown',
+    environment: config.SENTRY_ENVIRONMENT || config.NODE_ENV,
+    release: config.SENTRY_RELEASE || `main-app@${config.VERSION}`,
     integrations: [Sentry.expressIntegration()],
-    tracesSampleRate: parseSampleRate(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.05),
-    sampleRate: parseSampleRate(process.env.SENTRY_ERROR_SAMPLE_RATE, 1.0),
-    sendDefaultPii: parseBoolean(process.env.SENTRY_SEND_DEFAULT_PII, false),
+    tracesSampleRate: config.SENTRY_TRACES_SAMPLE_RATE,
+    sampleRate: config.SENTRY_ERROR_SAMPLE_RATE,
+    sendDefaultPii: config.SENTRY_SEND_DEFAULT_PII,
   });
 }
 

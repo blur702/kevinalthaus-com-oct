@@ -3,25 +3,16 @@ import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { promises as fs, mkdirSync } from 'fs';
 import { randomBytes } from 'crypto';
-import { sanitizeFilename, defaultLogger as logger } from '@monorepo/shared';
+import { sanitizeFilename, defaultLogger as logger, config } from '@monorepo/shared';
 
-// Validate upload max size from environment variables
-const parsedMaxSize = parseInt(process.env.UPLOAD_MAX_SIZE || '10485760', 10);
-const UPLOAD_MAX_SIZE =
-  Number.isFinite(parsedMaxSize) && parsedMaxSize > 0 ? parsedMaxSize : 10485760; // Default 10MB
+const UPLOAD_MAX_SIZE = config.UPLOAD_MAX_SIZE;
 
 // Use absolute path for upload directory
-const UPLOAD_DIRECTORY = path.resolve(
-  process.env.UPLOAD_DIRECTORY || path.join(__dirname, '../../uploads')
-);
+const UPLOAD_DIRECTORY = path.resolve(config.UPLOAD_DIRECTORY);
 // Quarantine directory for uploads before validation (TOCTOU mitigation)
-const QUARANTINE_DIRECTORY = path.resolve(
-  process.env.UPLOAD_QUARANTINE_DIR || path.join(__dirname, '../../uploads_quarantine')
-);
+const QUARANTINE_DIRECTORY = path.resolve(config.UPLOAD_QUARANTINE_DIR);
 
-const ALLOWED_FILE_TYPES = process.env.ALLOWED_FILE_TYPES
-  ? process.env.ALLOWED_FILE_TYPES.split(',').map((type) => type.trim())
-  : ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+const ALLOWED_FILE_TYPES = config.ALLOWED_FILE_TYPES;
 
 // MIME type to file extension mapping
 // Note: This map includes a few MIME types (e.g., text/plain, application/json, text/csv)

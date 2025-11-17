@@ -1,6 +1,7 @@
 // Import Sentry instrumentation FIRST, before any other imports including express
 // This ensures Sentry can instrument Express properly
 import { Sentry } from './instrument';
+import { config } from '@monorepo/shared';
 
 // Validate environment secrets at startup (production only)
 import { validateSecretsOrThrow } from './utils/validateSecrets';
@@ -58,24 +59,41 @@ import { createPluginFileRoutes } from './routes/plugin-files';
 import { createPublicShareRoutes } from './routes/public-shares';
 import pageBuilderRouter from './routes/page-builder';
 
+const logLevel = Object.values(LogLevel).includes(config.LOG_LEVEL as LogLevel)
+  ? (config.LOG_LEVEL as LogLevel)
+  : LogLevel.INFO;
+const logFormat: 'json' | 'text' =
+  config.LOG_FORMAT === 'json' || config.LOG_FORMAT === 'text' ? config.LOG_FORMAT : 'text';
+
 const logger = createLogger({
-  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
+  level: logLevel,
   service: 'main-app',
-  format: (process.env.LOG_FORMAT as 'json' | 'text') || 'text',
+  format: logFormat,
 });
 
 // Internal gateway token for service-to-service authentication
-const INTERNAL_GATEWAY_TOKEN = process.env.INTERNAL_GATEWAY_TOKEN;
-if (!INTERNAL_GATEWAY_TOKEN && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+const INTERNAL_GATEWAY_TOKEN =
+  typeof config.getSecret === 'function'
+    ? config.getSecret('INTERNAL_GATEWAY_TOKEN', false)
+    : process.env.INTERNAL_GATEWAY_TOKEN;
+if (
+  !INTERNAL_GATEWAY_TOKEN &&
+  config.NODE_ENV !== 'development' &&
+  config.NODE_ENV !== 'test'
+) {
   throw new Error(
     'INTERNAL_GATEWAY_TOKEN is required for main-app in production. Must match the token configured in API Gateway.'
   );
 }
 
 // Middleware to verify requests come from the API gateway
-function verifyInternalToken(req: express.Request, res: express.Response, next: express.NextFunction): void {
+function verifyInternalToken(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): void {
   // Skip verification in development/test environments (regardless of token configuration)
-  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+  if (config.NODE_ENV === 'development' || config.NODE_ENV === 'test') {
     next();
     return;
   }
@@ -127,22 +145,13 @@ function verifyInternalToken(req: express.Request, res: express.Response, next: 
 
 const app = express();
 
-// Trust proxy configuration - can be number of hops, specific IPs, or CIDR ranges
-// Defaults to 1 (first proxy hop) for typical reverse proxy setup
-// Set TRUST_PROXY env var to customize (e.g., "1", "loopback", or specific IPs/CIDRs)
-const trustProxyConfig = process.env.TRUST_PROXY
-  ? Number.isNaN(Number(process.env.TRUST_PROXY))
-    ? process.env.TRUST_PROXY
-    : Number(process.env.TRUST_PROXY)
-  : 1;
-app.set('trust proxy', trustProxyConfig);
+// Trust proxy configuration - configured via centralized config
+app.set('trust proxy', config.TRUST_PROXY);
 
 // Parse CORS_ORIGIN from environment
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
-  : ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003'];
+const corsOrigins = config.CORS_ORIGIN;
 
-const corsCredentials = process.env.CORS_CREDENTIALS === 'true';
+const corsCredentials = config.CORS_CREDENTIALS;
 
 // Startup validation: reject wildcard CORS with credentials
 if (corsOrigins.includes('*') && corsCredentials) {
@@ -185,17 +194,11 @@ const helmetConfig: {
   hsts?: typeof hstsSettings;
 } = {};
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = config.NODE_ENV === 'production';
 
-// In production, CSP and HSTS default to enabled unless explicitly disabled
-// In development, they must be explicitly enabled
-const cspEnabled = isProduction
-  ? process.env.HELMET_CSP_ENABLED !== 'false'
-  : process.env.HELMET_CSP_ENABLED === 'true';
+const cspEnabled = config.HELMET_CSP_ENABLED;
 
-const hstsEnabled = isProduction
-  ? process.env.HELMET_HSTS_ENABLED !== 'false'
-  : process.env.HELMET_HSTS_ENABLED === 'true';
+const hstsEnabled = config.HELMET_HSTS_ENABLED;
 
 // Warn if security features are disabled in production
 if (isProduction) {
@@ -223,43 +226,103 @@ if (Object.keys(helmetConfig).length > 0) {
 }
 app.use(securityHeadersMiddleware);
 app.use(keepAliveMiddleware);
-  app.use(
-    cors((req, callback) => {
-      const allowAll = corsOrigins.includes('*');
 
-      // Handle wildcard origin
-      if (allowAll) {
-        if (corsCredentials) {
-          // Reject wildcard with credentials - security violation
-          // Browsers will block this, so we must reject the configuration
-          callback(null, { origin: false, credentials: false });
-          return;
+// CORS logging configuration
+const corsDebugLogging = config.NODE_ENV === 'development';
+const corsWarnRateLimit = 10; // Max 10 warnings per minute
+let corsWarningCount = 0;
+let corsWarningResetTime = Date.now() + 60000;
+
+// Helper to check if CORS warnings should be logged (rate-limited)
+const shouldLogCorsWarning = (): boolean => {
+  const now = Date.now();
+  if (now > corsWarningResetTime) {
+    // Reset counter every minute
+    corsWarningCount = 0;
+    corsWarningResetTime = now + 60000;
+  }
+  if (corsWarningCount < corsWarnRateLimit) {
+    corsWarningCount++;
+    return true;
+  }
+  return false;
+};
+
+app.use(
+  cors((req, callback) => {
+    const allowAll = corsOrigins.includes('*');
+
+    // Handle wildcard origin
+    if (allowAll) {
+      if (corsCredentials) {
+        // Reject wildcard with credentials - security violation
+        // Browsers will block this, so we must reject the configuration
+        if (shouldLogCorsWarning()) {
+          logger.warn('CORS request rejected: wildcard origin with credentials', {
+            origin: req.header('Origin'),
+            corsCredentials: true,
+            allowedOrigins: ['*'],
+            isAllowed: false,
+            credentialsForResponse: false
+          });
         }
-        // Allow wildcard without credentials
-        callback(null, { origin: true, credentials: false });
+        callback(null, { origin: false, credentials: false });
         return;
       }
-
-      // Non-wildcard: check specific origin against allowlist
-      const origin = req.header('Origin');
-      logger.info(`[CORS] Request to ${req.path} from origin: ${origin}`);
-      logger.info(`[CORS] Allowed origins: ${corsOrigins.join(', ')}`);
-      let isAllowed = false;
-
-      if (origin) {
-        // Request has Origin header - check if it's in allowlist
-        isAllowed = corsOrigins.includes(origin);
-        logger.info(`[CORS] Origin ${origin} is ${isAllowed ? 'allowed' : 'not allowed'}`);
-      } else {
-        logger.info(`[CORS] No Origin header in request`);
+      // Allow wildcard without credentials
+      if (corsDebugLogging) {
+        logger.debug('CORS request processed', {
+          origin: req.header('Origin'),
+          path: req.path,
+          allowedOrigins: ['*'],
+          isAllowed: true,
+          credentialsForResponse: false,
+          isWildcard: true
+        });
       }
+      callback(null, { origin: true, credentials: false });
+      return;
+    }
 
-      // Only send credentials when origin is allowed
-      const credentialsForResponse = isAllowed ? corsCredentials : false;
-      logger.info(`[CORS] Response: origin=${isAllowed}, credentials=${credentialsForResponse}`);
-      callback(null, { origin: isAllowed, credentials: credentialsForResponse });
-    })
-  );
+    // Non-wildcard: check specific origin against allowlist
+    const origin = req.header('Origin');
+    let isAllowed = false;
+
+    if (origin) {
+      // Request has Origin header - check if it's in allowlist
+      isAllowed = corsOrigins.includes(origin);
+    }
+
+    // Only send credentials when origin is allowed
+    const credentialsForResponse = isAllowed ? corsCredentials : false;
+
+    // Log rejection or normal processing
+    if (!isAllowed && origin) {
+      if (shouldLogCorsWarning()) {
+        logger.warn('CORS request rejected: origin not in allowlist', {
+          origin,
+          path: req.path,
+          allowedOrigins: corsOrigins.join(', '),
+          isAllowed: false,
+          credentialsForResponse: false
+        });
+      }
+    } else {
+      if (corsDebugLogging) {
+        logger.debug('CORS request processed', {
+          origin,
+          path: req.path,
+          allowedOrigins: corsOrigins.join(', '),
+          isAllowed,
+          credentialsForResponse,
+          isWildcard: false
+        });
+      }
+    }
+
+    callback(null, { origin: isAllowed, credentials: credentialsForResponse });
+  })
+);
 app.use(morgan('combined'));
 app.use(express.json({ limit: '1mb' })); // Reduced from 10mb to prevent DoS
 app.use(express.urlencoded({ extended: true, limit: '100kb' })); // Reduced from 10mb
@@ -302,7 +365,7 @@ app.get(
       status,
       service: 'main-app',
       timestamp: new Date().toISOString(),
-      version: process.env.VERSION || '1.0.0',
+      version: config.VERSION,
       uptime: process.uptime(),
       checks: {
         database: dbHealthy ? 'healthy' : 'unhealthy',
@@ -331,14 +394,14 @@ app.get(
 app.get('/', (_req, res) => {
   res.json({
     message: 'Kevin Althaus Main Application',
-    version: process.env.VERSION || '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
+    version: config.VERSION,
+    environment: config.NODE_ENV,
   });
 });
 
 // Test error endpoint for Sentry verification (development only)
 // Only register this endpoint in development environments
-if (process.env.NODE_ENV === 'development') {
+if (config.NODE_ENV === 'development') {
   app.get('/api/test-sentry-error', (_req, _res) => {
     logger.info('Test error endpoint triggered - throwing intentional error for Sentry');
     throw new Error('Test error for Sentry verification - this is intentional');
@@ -508,8 +571,7 @@ app.use((err: Error & { status?: number; type?: string }, req: express.Request, 
     method: req.method,
   });
 
-  const isLocalDev =
-    process.env.NODE_ENV === 'development' && (process.env.DEPLOY_ENV ?? 'local') === 'local';
+  const isLocalDev = config.NODE_ENV === 'development' && (config.DEPLOY_ENV || 'local') === 'local';
   const body: Record<string, unknown> = {
     error: 'Internal Server Error',
     statusCode: 500,

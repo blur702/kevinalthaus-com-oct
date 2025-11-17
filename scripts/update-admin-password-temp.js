@@ -11,7 +11,17 @@ const pool = new Pool({
 
 async function updatePassword() {
   try {
-    const passwordHash = await bcrypt.hash('(130Bpm)', 10);
+    // Get password from environment variable
+    const adminPassword = process.env.ADMIN_INITIAL_PASSWORD;
+    if (!adminPassword) {
+      console.error('✗ Error: ADMIN_INITIAL_PASSWORD environment variable is not set');
+      console.error('Please set it before running this script:');
+      console.error('  export ADMIN_INITIAL_PASSWORD="your_secure_password"');
+      await pool.end();
+      process.exit(1);
+    }
+
+    const passwordHash = await bcrypt.hash(adminPassword, 10);
     const result = await pool.query(
       'UPDATE users SET password_hash = $1 WHERE email = $2 OR username = $3 RETURNING id, email, username',
       [passwordHash, 'kevin@kevinalthaus.com', 'kevin']

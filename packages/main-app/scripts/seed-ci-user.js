@@ -18,8 +18,18 @@ async function main() {
 
   const username = process.env.TEST_ADMIN_USERNAME || 'kevin';
   const email = process.env.TEST_ADMIN_EMAIL || `${username}@example.com`;
-  const plainPassword = process.env.TEST_ADMIN_PASSWORD || '(130Bpm)';
+  const plainPassword = process.env.TEST_ADMIN_PASSWORD;
   const role = process.env.TEST_ADMIN_ROLE || 'admin';
+
+  // Validate required password is set
+  if (!plainPassword) {
+    console.error('✗ Error: TEST_ADMIN_PASSWORD environment variable is required');
+    console.error('Please set it before running this script:');
+    console.error('  export TEST_ADMIN_PASSWORD="your_test_password"');
+    process.exitCode = 1;
+    await pool.end();
+    return;
+  }
 
   try {
     const passwordHash = await bcrypt.hash(plainPassword, 12);

@@ -1,17 +1,41 @@
+> **ARCHIVED DOCUMENT** - This document contains historical testing data and may reference outdated credentials.
+> For current credentials, refer to environment variables: TEST_ADMIN_PASSWORD, ADMIN_INITIAL_PASSWORD
+
 # Manual Testing Checklist - Blog Post Creation
 
 ## Prerequisites
+
+### Environment Setup
 - Admin panel running on http://localhost:3005 (auto-selected port)
 - Main app running on http://localhost:3001
 - PostgreSQL database running
+
+### Required Environment Variables
+Before running tests, ensure the following environment variables are set:
+
+```bash
+# Test credentials
+export TEST_ADMIN_USERNAME="kevin"  # Default test username
+export TEST_ADMIN_PASSWORD="your_test_password"  # Your test password
+
+# Admin initialization (for seeding)
+export ADMIN_INITIAL_PASSWORD="your_admin_password"  # Initial admin password
+```
+
+**Where to get these values:**
+- **Local development**: Set them in your `.env` file (see `.env.example` for guidance)
+- **CI/CD environment**: Configure them as secrets in your CI platform (GitHub Actions, GitLab CI, etc.)
+- **Production**: Use a secrets manager (HashiCorp Vault, AWS Secrets Manager, etc.)
+
+For detailed setup instructions, see the [project configuration documentation](../../README.md#environment-setup).
 
 ## Step-by-Step Testing Guide
 
 ### Step 1: Log In
 1. Navigate to: `http://localhost:3005/login`
 2. Enter credentials:
-   - Username: `kevin`
-   - Password: `(130Bpm)`
+   - Username: `[TEST_ADMIN_USERNAME]` (default: kevin)
+   - Password: `[TEST_ADMIN_PASSWORD]`
 3. Click "Login" button
 4. **Expected Result:** Redirected to Dashboard at `http://localhost:3005/`
 

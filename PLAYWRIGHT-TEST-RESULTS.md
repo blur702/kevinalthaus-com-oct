@@ -53,7 +53,7 @@ Successfully created test admin user:
 - Username: `kevin`
 - Email: `kevin@test.com`
 - Role: `admin`
-- Password: `(130Bpm)` (hashed with bcrypt)
+- Password: [TEST_ADMIN_PASSWORD environment variable] (hashed with bcrypt)
 
 ## Test Execution Summary
 

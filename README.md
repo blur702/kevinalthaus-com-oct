@@ -42,6 +42,8 @@ npm install
 # Configure environment
 cp .env.example .env
 # Edit .env with your settings
+# Update config/config.*.js as needed, then validate
+npm run validate:config
 
 # Generate JWT secret (required for authentication)
 ./scripts/ensure-jwt-secret.sh
@@ -54,6 +56,21 @@ mkdir -p secrets
 # Start services
 docker-compose up -d postgres redis
 npm run dev:all
+```
+
+## Configuration
+
+This repository uses a two-tier configuration system to keep non-secret settings tracked in Git while isolating sensitive values in `.env` files:
+
+- **Config files**: `config/config.development.js` and `config/config.production.js` hold ports, service URLs, feature flags, logging levels, rate limits, and other non-secret knobs. Edit these files to customize behavior per environment. The loader in `config/index.ts` automatically picks the correct file according to `NODE_ENV`.
+- **.env files**: store only secrets (JWT_SECRET, database passwords, API keys, Vault/AppRole credentials, etc.). Copy `.env.example` to `.env`, fill in secure values, and never commit the file.
+
+`NODE_ENV` controls which config file is loaded. Update `config/config.production.js` for production overrides and keep `.env` for secrets on the server. Remember that the Vite-based frontend/admin apps read config at build time, so restart/rebuild after changing config files.
+
+Whenever you edit a config file, run the validation script to ensure both environments define every required key before starting services or sending a pull request:
+
+```bash
+npm run validate:config
 ```
 
 ### Breaking Change: JWT_SECRET Required
@@ -160,6 +177,83 @@ For complete deployment procedures, see `docs/deployment.md`.
 - **Plugin Engine** (Node.js) - Isolated plugin execution
 - **Database** (PostgreSQL) - Primary data store
 - **Cache** (Redis) - Sessions and caching
+
+## Testing
+
+### Authentication Testing Workflow
+
+This project includes a comprehensive authentication testing system with console monitoring for iterative debugging. The workflow supports test-fix-deploy cycles to achieve bug-free authentication.
+
+**Running Authentication Tests:**
+
+```bash
+# Quick smoke tests (recommended for rapid iteration)
+npm run test:auth:smoke
+
+# Comprehensive UI authentication tests
+npm run test:auth:ui
+
+# API endpoint authentication tests
+npm run test:auth:api
+
+# All authentication tests
+npm run test:auth:all
+
+# Watch mode (re-run on file changes)
+npm run test:auth:watch
+```
+
+**Console Monitoring:**
+
+Tests automatically capture and aggregate:
+- **Browser console errors**: JavaScript errors, warnings, network failures
+- **Server logs**: API Gateway (localhost:3000) and Main App (localhost:3003) error/warn logs
+- **All errors**: Aggregated in `test-results/console-errors.log`
+
+**Test-Fix-Deploy Cycle:**
+
+1. Run tests locally: `npm run test:auth:smoke`
+2. Review failures and console errors:
+   - Test results in `test-results/`
+   - Console errors in `test-results/console-errors.log`
+   - Detailed cycle report in `AUTH_TEST_CYCLE_REPORT.md`
+3. Fix issues locally and test fixes
+4. Document fixes in `AUTH_TEST_CYCLE_REPORT.md`
+5. Push changes to GitHub
+6. SSH agent pulls changes to production server
+7. Re-run tests on server
+8. Repeat until all tests pass with zero console errors
+
+**Documentation:**
+- `AUTH_TEST_CYCLE_REPORT.md` - Detailed test cycle reports and debugging history
+- `BUG_TRACKING.md` - High-level bug status and tracking
+- `test-results/console-errors.log` - Real-time console error log
+
+**Prerequisites:**
+- Node.js 20+ (as specified in package.json engines)
+- All services running (API Gateway, Main App, Admin)
+- Test credentials configured in environment variables
+
+**Goal:** Achieve all green tests with zero browser console errors, zero API Gateway errors, and zero Main App errors.
+
+### Other Test Commands
+
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Run E2E tests with UI
+npm run test:e2e:ui
+
+# Run smoke tests
+npm run test:smoke
+
+# Run regression tests
+npm run test:regression
+
+# Run unit tests
+npm run test:unit
+```
 
 ## Contributing
 

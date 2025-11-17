@@ -1,3 +1,6 @@
+> **ARCHIVED DOCUMENT** - This document contains historical testing data and may reference outdated credentials.
+> For current credentials, refer to environment variables: TEST_ADMIN_PASSWORD, ADMIN_INITIAL_PASSWORD
+
 # Blog Post Creation Test - Authentication Analysis
 
 ## Test File Location
@@ -5,7 +8,7 @@
 
 ## Test Credentials
 - **Username**: `kevin`
-- **Password**: `(130Bpm)` (stored in `e2e/utils/auth.ts`)
+- **Password**: `[test password]` (stored in `e2e/utils/auth.ts`, use TEST_ADMIN_PASSWORD environment variable)
 
 ## Authentication Setup Analysis
 

@@ -3,24 +3,30 @@ import react from '@vitejs/plugin-react';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import developmentConfig from '../../config/config.development.js';
+import productionConfig from '../../config/config.production.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Vite reads configuration at build time. Changes require restarting dev server or rebuilding.
+const isProd = process.env.NODE_ENV === 'production';
+const appConfig = isProd ? productionConfig : developmentConfig;
+
 // https://vitejs.dev/config/
 export default defineConfig({
   // Set base path for production deployment under /admin route
-  base: process.env.NODE_ENV === 'production' ? '/admin/' : '/',
+  base: isProd ? '/admin/' : '/',
   plugins: [
     react(),
     // Upload source maps to Sentry on production builds
-    process.env.NODE_ENV === 'production' && process.env.SENTRY_AUTH_TOKEN
+    isProd && process.env.SENTRY_AUTH_TOKEN
       ? sentryVitePlugin({
           org: process.env.SENTRY_ORG,
           project: process.env.SENTRY_PROJECT,
           authToken: process.env.SENTRY_AUTH_TOKEN,
           release: {
-            name: process.env.VITE_APP_VERSION || '1.0.0',
+            name: appConfig.VERSION || '1.0.0',
           },
           sourcemaps: {
             assets: './dist/**',
@@ -38,25 +44,25 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0', // Listen on all network interfaces (IPv4 and IPv6)
-    port: 3002,
+    port: appConfig.ADMIN_PORT || 3002,
     strictPort: true,
     proxy: {
       // Proxy theme override CSS files to main app
       '/admin-theme-overrides.css': {
-        target: 'http://localhost:3003',
+        target: appConfig.MAIN_APP_URL,
         changeOrigin: true,
-        secure: false,
+        secure: appConfig.VITE_PROXY_SECURE,
       },
       '/frontend-theme-overrides.css': {
-        target: 'http://localhost:3003',
+        target: appConfig.MAIN_APP_URL,
         changeOrigin: true,
-        secure: false,
+        secure: appConfig.VITE_PROXY_SECURE,
       },
       // Admin files need special handling - strip /api prefix
       '/api/admin/files': {
-        target: 'http://localhost:3003',
+        target: appConfig.MAIN_APP_URL,
         changeOrigin: true,
-        secure: false,
+        secure: appConfig.VITE_PROXY_SECURE,
         cookieDomainRewrite: 'localhost',
         rewrite: (path) => path.replace(/^\/api/, ''),
         ws: true,
@@ -65,15 +71,21 @@ export default defineConfig({
             console.log('[Proxy Error]', err);
           });
           proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('[Proxy Request]', req.method, req.url, '-> http://localhost:3003' + req.url.replace(/^\/api/, ''));
+            console.log(
+              '[Proxy Request]',
+              req.method,
+              req.url,
+              '->',
+              `${appConfig.MAIN_APP_URL}${req.url.replace(/^\/api/, '')}`
+            );
           });
         },
       },
       '/api': {
         // Point directly to Main App (bypassing gateway for reliability)
-        target: 'http://localhost:3003',
+        target: appConfig.MAIN_APP_URL,
         changeOrigin: true,
-        secure: false,
+        secure: appConfig.VITE_PROXY_SECURE,
         cookieDomainRewrite: 'localhost',
         ws: true,
         configure: (proxy, options) => {
@@ -81,7 +93,13 @@ export default defineConfig({
             console.log('[Proxy Error]', err);
           });
           proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('[Proxy Request]', req.method, req.url, '-> http://localhost:3003' + req.url);
+            console.log(
+              '[Proxy Request]',
+              req.method,
+              req.url,
+              '->',
+              `${appConfig.MAIN_APP_URL}${req.url}`
+            );
           });
         },
       },

@@ -100,18 +100,32 @@ export default defineConfig({
 
   // Configure projects for major browsers
   projects: [
+    // Auth tests - NO pre-authenticated state (clean session for login flow testing)
+    {
+      name: 'chromium-auth',
+      testMatch: ['**/auth.spec.ts', '**/api/auth.spec.ts'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: undefined, // Override global storageState for auth tests
+      },
+    },
+
+    // All other tests - use pre-authenticated state for efficiency
     {
       name: 'chromium',
+      testIgnore: ['**/auth.spec.ts', '**/api/auth.spec.ts'],
       use: { ...devices['Desktop Chrome'] },
     },
 
     {
       name: 'firefox',
+      testIgnore: ['**/auth.spec.ts', '**/api/auth.spec.ts'],
       use: { ...devices['Desktop Firefox'] },
     },
 
     {
       name: 'webkit',
+      testIgnore: ['**/auth.spec.ts', '**/api/auth.spec.ts'],
       use: { ...devices['Desktop Safari'] },
     },
 

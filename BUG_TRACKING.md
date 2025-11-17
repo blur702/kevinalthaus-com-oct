@@ -1,6 +1,52 @@
 # Bug Tracking - Comprehensive Testing Session
 ## Session Date: 2025-11-11
-## Test Credentials: kevin / (130Bpm)
+## Test Credentials: kevin / [TEST_ADMIN_PASSWORD environment variable]
+
+---
+
+## AUTHENTICATION TEST CYCLE ISSUES
+
+**Documentation:** See [AUTH_TEST_CYCLE_REPORT.md](./AUTH_TEST_CYCLE_REPORT.md) for detailed test cycle reports.
+
+This section tracks bugs discovered during the iterative authentication test-fix-deploy cycle with comprehensive console monitoring.
+
+### Authentication Test Infrastructure
+
+**Status:** ✅ READY
+**Date:** 2025-11-16
+**Components:**
+- Console monitoring for browser errors (JavaScript, network failures)
+- Server log monitoring (API Gateway, Main App, Admin)
+- Automated test execution with error aggregation
+- Test cycle documentation workflow
+
+**Test Commands:**
+- `npm run test:auth:smoke` - Quick smoke tests (comp_auth.spec.ts)
+- `npm run test:auth:ui` - Comprehensive UI tests (auth.spec.ts)
+- `npm run test:auth:api` - API endpoint tests (api-auth.spec.ts)
+- `npm run test:auth:all` - All authentication tests
+
+**Artifacts:**
+- Console errors: `test-results/console-errors.log`
+- Test reports: `test-results/`
+- Cycle documentation: `AUTH_TEST_CYCLE_REPORT.md`
+
+### Discovered Issues
+
+*Issues will be added here as they are discovered during authentication test cycles.*
+
+**Format:**
+```
+### AUTH-XXX: [Brief Description]
+- **Status:** OPEN | IN_PROGRESS | FIXED | VERIFIED
+- **Priority:** CRITICAL | HIGH | MEDIUM | LOW
+- **Discovered:** Test Cycle #N (YYYY-MM-DD)
+- **Test:** path/to/test.spec.ts:line
+- **Description:** Detailed description
+- **Console Errors:** Link to console-errors.log section
+- **Fix:** Description of fix applied (if any)
+- **Commit:** GitHub commit hash (if pushed)
+```
 
 ---
 
@@ -13,7 +59,7 @@
 - **Impact**: All API requests including login returned 500 errors, making entire application unusable
 - **Status**: ✅ FIXED
 - **Fix Applied**: Changed `const MAIN_APP_URL = process.env.MAIN_APP_URL || 'http://localhost:3001';` to `'http://localhost:3003'`
-- **Verification**: Login API tested successfully with kevin/(130Bpm) - Returns HTTP 200 with valid access tokens
+- **Verification**: Login API tested successfully with test credentials - Returns HTTP 200 with valid access tokens
 
 ### 2. JWT_SECRET Too Short (SECURITY)
 - **Severity**: HIGH - Security Risk
@@ -133,7 +179,7 @@
 ## MANUAL TESTING COMPLETED
 
 ### Phase 1: Authentication & Access ✅
-- [x] Login with kevin/(130Bpm) - **PASSED** - HTTP 200, tokens issued correctly
+- [x] Login with test credentials - **PASSED** - HTTP 200, tokens issued correctly
 - [x] Verify authentication flow - **PASSED** - accessToken and refreshToken set as HttpOnly cookies
 - [x] Test API authentication - **PASSED** - Protected endpoints work with cookies
 

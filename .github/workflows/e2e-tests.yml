@@ -66,6 +66,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate configuration
+        run: npm run validate:config
+
       - name: Build packages
         run: npm run build
 
@@ -85,6 +88,8 @@ jobs:
           echo "JWT_SECRET=test-jwt-secret-for-ci-only-not-production" >> $GITHUB_ENV
           echo "SESSION_SECRET=test-session-secret-for-ci-only" >> $GITHUB_ENV
           echo "CSRF_SECRET=test-csrf-secret-for-ci-only" >> $GITHUB_ENV
+          echo "TEST_ADMIN_USERNAME=kevin" >> $GITHUB_ENV
+          echo "TEST_ADMIN_PASSWORD=${{ secrets.TEST_ADMIN_PASSWORD || 'ci-test-password-changeme' }}" >> $GITHUB_ENV
           # Ensure admin preview calls the correct API origin/port in CI
           echo "VITE_API_URL=http://localhost:3001/api" >> $GITHUB_ENV
           # Allow admin preview origin for CORS
@@ -102,7 +107,7 @@ jobs:
           node packages/main-app/scripts/seed-ci-user.js
         env:
           TEST_ADMIN_USERNAME: kevin
-          TEST_ADMIN_PASSWORD: (130Bpm)
+          TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD || 'ci-test-password-changeme' }}
           TEST_ADMIN_EMAIL: kevin@example.com
           TEST_ADMIN_ROLE: admin
 

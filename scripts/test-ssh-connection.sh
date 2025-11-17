@@ -116,7 +116,7 @@ echo
 step "Step 6: Copy public key to server"
 echo
 log "To enable passwordless SSH, we need to copy your public key to the server"
-log "This requires the password: (130Bpm)"
+log "You will be prompted for the production server password"
 echo
 read -p "Would you like to copy the public key now? (y/N): " -n 1 -r
 echo
@@ -132,7 +132,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Manual method
         log "ssh-copy-id not found, using manual method"
         echo
-        warn "You will be prompted for the password: (130Bpm)"
+        warn "You will be prompted for the production server password"
         echo
 
         # Create .ssh directory on remote

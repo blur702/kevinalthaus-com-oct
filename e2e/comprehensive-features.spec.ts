@@ -19,8 +19,8 @@ import { test, expect, Page } from '@playwright/test';
  */
 async function loginAsKevin(page: Page): Promise<void> {
   await page.goto('/login');
-  await page.locator('input[name="identifier"]').fill('kevin');
-  await page.locator('input[name="password"]').fill('(130Bpm)');
+  await page.locator('input[name="identifier"]').fill(process.env.TEST_ADMIN_USERNAME || 'kevin');
+  await page.locator('input[name="password"]').fill(process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
   await page.locator('button[type="submit"]').click();
 
   // Wait for successful login (redirect to dashboard)

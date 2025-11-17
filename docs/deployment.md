@@ -18,6 +18,34 @@ The production deployment process is divided into three phases:
 
 This guide covers all three phases with automated scripts for each step.
 
+## Configuration Management
+
+The platform now separates non-secret configuration from runtime secrets:
+
+- **Config files (`config/config.development.js`, `config/config.production.js`)** contain ports, service URLs, feature toggles, rate limits, logging preferences, and infrastructure defaults. These files are version-controlled so all environments share the same baseline.
+- **`.env` files** on each server contain only secrets (JWT, database passwords, Vault/AppRole credentials, Brevo API keys, Sentry tokens, etc.). Copy `.env.example` to `.env` on the target machine and fill in secure values before deploying.
+
+### Customizing Production Settings
+
+1. Edit `config/config.production.js` to adjust non-secret settings (domains, ports, feature flags, rate limits, analytics, etc.).
+2. Commit the changes so every production deployment picks up the same configuration.
+3. Keep secrets out of the config file—set them via `/opt/kevinalthaus/.env` on the server or in your CI secrets store.
+
+### Deployment Checklist
+
+1. **Review config**: confirm `config/config.production.js` reflects the desired base URLs, CORS allowlist, logging level, feature flags, and rate limits.
+2. **Sync secrets**: create/update `/opt/kevinalthaus/.env` with all required secrets (`JWT_SECRET`, `SESSION_SECRET`, `POSTGRES_PASSWORD`, `SENTRY_DSN`, Vault tokens, etc.).
+3. **Set `NODE_ENV=production`** for all services (Docker compose already exports this).
+4. **Rebuild Vite apps** whenever config changes (`npm run build` in `packages/frontend` and `packages/admin` or run the top-level build).
+5. **Run `npm run validate:config`** locally to ensure config files load without throwing.
+
+### Troubleshooting Configuration
+
+- **Config not loading**: ensure `NODE_ENV` is set correctly (`production` on the server). The loader defaults to `config.production.js` when `NODE_ENV=production` and `config.development.js` otherwise.
+- **Missing secrets**: run `npm run validate:config` to check for missing required keys, and verify `.env` on the target server contains the value mentioned in the error.
+- **Wrong URLs / ports**: edit `config/config.production.js` and redeploy (plus rebuild any Vite apps for frontend/admin changes).
+- **Frontend/admin still using old values**: restart dev server or rebuild production bundles because Vite inlines config at build time.
+
 ## Phase 1: Initial Server Infrastructure Setup
 
 Phase 1 establishes the foundational infrastructure required for the application. This includes system packages, Docker, firewall configuration, and security tools.
@@ -111,8 +139,8 @@ ssh kevin@kevinalthaus.com
 
 **Sudo password authentication fails**:
 ```bash
-# Verify password is correct in scripts/setup-server-infrastructure.sh
-# Password should be: (130Bpm)
+# Set PROD_SUDO_PASSWORD environment variable before running script
+export PROD_SUDO_PASSWORD="your_sudo_password"
 
 # Test sudo access manually
 ssh kevin@kevinalthaus.com
@@ -203,7 +231,7 @@ Before running automated deployments:
 2. **Production server access**:
    - Server: `kevinalthaus.com` (IP: 65.181.112.77)
    - Username: `kevin`
-   - Initial password: `(130Bpm)` (only used once for SSH key setup)
+   - Initial password: Set via PROD_SUDO_PASSWORD environment variable (only used once for SSH key setup)
 
 3. **Repository SSH access**:
    - Set up a deploy key on GitHub/GitLab for the production server
@@ -226,7 +254,7 @@ This script will:
 4. Configure SSH config file for easy access (`ssh kevin-prod`)
 
 **Security Notes:**
-- The temporary password `(130Bpm)` is only used during initial setup
+- The sudo password (PROD_SUDO_PASSWORD) is only used during initial setup
 - After setup, all connections use SSH keys (no password needed)
 - Private key is stored at `~/.ssh/id_kevin_prod` (keep secure, never commit)
 - Consider adding a passphrase to the key: `ssh-keygen -p -f ~/.ssh/id_kevin_prod`
@@ -559,8 +587,14 @@ DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres:5432/kevinalthaus
 
 ## Critical Secrets (set in .env)
 
-- `POSTGRES_PASSWORD`, `JWT_SECRET`, `SESSION_SECRET`, `ENCRYPTION_KEY`, `PLUGIN_SIGNATURE_SECRET`, `ADMIN_PASSWORD`
-- `COOKIE_SAMESITE` (lax/strict/none) — use `lax` unless you require cross-site cookies with HTTPS
+Only secrets now live in `.env`. Ensure the following are set on the production server before deploying:
+
+- `POSTGRES_PASSWORD`, `JWT_SECRET`, `SESSION_SECRET`, `CSRF_SECRET`, `ENCRYPTION_KEY`, `PLUGIN_SIGNATURE_SECRET`, `INTERNAL_GATEWAY_TOKEN`, `FINGERPRINT_SECRET`
+- Third-party credentials: `BREVO_API_KEY`, `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `VITE_SENTRY_DSN`
+- Vault/AppRole credentials: `VAULT_TOKEN`, `VAULT_ROLE_ID`, `VAULT_SECRET_ID`
+- Any script-specific usernames/passwords stored outside Git
+
+Non-secret configuration such as `COOKIE_SAMESITE`, CORS allowlists, ports, feature flags, and rate limits live in `config/config.production.js`.
 
 ## Backups
 
@@ -580,7 +614,7 @@ DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres:5432/kevinalthaus
 
 **Server**: kevinalthaus.com (65.181.112.77)
 **Username**: kevin
-**Password/Sudo**: (130Bpm)
+**Password/Sudo**: Set via PROD_SUDO_PASSWORD environment variable
 
 ### Authentication Methods
 
@@ -590,7 +624,7 @@ DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres:5432/kevinalthaus
    - Setup once with `./scripts/setup-ssh-keys.sh`
 
 2. **Sudo Password** (for privileged operations)
-   - Password: `(130Bpm)`
+   - Password: Set via PROD_SUDO_PASSWORD environment variable
    - Configured in `scripts/deploy-to-prod.sh:18`
    - Used automatically by deployment script
    - Required for: package installation, service management, system directories
@@ -610,10 +644,11 @@ DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres:5432/kevinalthaus
 
 ### Security Notes
 
-- SSH password `(130Bpm)` only used once for key setup
+- Sudo password (PROD_SUDO_PASSWORD) only used once for key setup
 - Sudo password transmitted over encrypted SSH
 - Private key protected in `.gitignore`
 - All secrets excluded from version control
+- Store PROD_SUDO_PASSWORD in a secure password manager or environment variable system
 
 See `CREDENTIALS.md` for detailed password documentation.
 

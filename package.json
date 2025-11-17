@@ -27,7 +27,13 @@
     "test:e2e:report": "playwright show-report",
     "test:unit": "lerna run test --stream",
     "test:smoke": "playwright test --grep @smoke",
-    "test:regression": "playwright test --grep @regression"
+    "test:regression": "playwright test --grep @regression",
+    "test:auth:smoke": "ts-node scripts/run-auth-tests.ts --smoke",
+    "test:auth:ui": "ts-node scripts/run-auth-tests.ts --ui",
+    "test:auth:api": "ts-node scripts/run-auth-tests.ts --api",
+    "test:auth:all": "ts-node scripts/run-auth-tests.ts --all",
+    "test:auth:watch": "ts-node scripts/run-auth-tests.ts --smoke --watch",
+    "validate:config": "ts-node config/index.ts"
   },
   "devDependencies": {
     "@mapbox/node-pre-gyp": "^2.0.0",
@@ -42,6 +48,7 @@
     "eslint-plugin-security": "^1.7.1",
     "lerna": "^7.0.0",
     "prettier": "^3.0.0",
+    "ts-node": "^10.9.2",
     "typescript": "5.0.4",
     "yaml": "^2.8.1"
   },

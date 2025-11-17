@@ -2,13 +2,13 @@
 
 ## ✅ What I've Updated
 
-The deployment script has been enhanced to handle sudo operations automatically using the password `(130Bpm)`.
+The deployment script has been enhanced to handle sudo operations automatically using the PROD_SUDO_PASSWORD environment variable.
 
 ### Changes Made
 
 1. **Added sudo password configuration** (`scripts/deploy-to-prod.sh:18`)
    ```bash
-   PROD_PASSWORD="(130Bpm)"  # Sudo password for privileged operations
+   PROD_PASSWORD="${PROD_SUDO_PASSWORD}"  # Sudo password for privileged operations
    ```
 
 2. **Created `ssh_sudo()` helper function** (`scripts/deploy-to-prod.sh:79-89`)
@@ -149,7 +149,7 @@ kevin ALL=(ALL) NOPASSWD: /usr/bin/docker-compose *
 **Option 3**: Use environment variables (recommended)
 ```bash
 # Don't hardcode password in script
-export PROD_SUDO_PASSWORD="(130Bpm)"
+export PROD_SUDO_PASSWORD="your_sudo_password"
 
 # Modify scripts/deploy-to-prod.sh line 18:
 PROD_PASSWORD="${PROD_SUDO_PASSWORD:-}"
@@ -161,14 +161,14 @@ Before running the full deployment, you can test sudo access:
 
 ```bash
 # Test 1: Simple sudo echo
-ssh kevin@65.181.112.77 "echo '(130Bpm)' | sudo -S echo 'Sudo works!'"
+ssh kevin@65.181.112.77 "echo 'your_sudo_password' | sudo -S echo 'Sudo works!'"
 
 # Test 2: Check sudo group membership
 ssh kevin@65.181.112.77 "groups"
 # Should show: kevin sudo docker (or similar)
 
 # Test 3: Test package installation
-ssh kevin@65.181.112.77 "echo '(130Bpm)' | sudo -S apt update"
+ssh kevin@65.181.112.77 "echo 'your_sudo_password' | sudo -S apt update"
 ```
 
 ## Deployment Flow with Sudo
@@ -184,7 +184,7 @@ sequenceDiagram
     SSH->>Prod: Authenticated (no password)
 
     Dev->>SSH: Execute: ssh_sudo "apt install git"
-    SSH->>Prod: echo '(130Bpm)' | sudo -S apt install git
+    SSH->>Prod: echo '$PROD_PASSWORD' | sudo -S apt install git
     Prod->>Sudo: Receive password via stdin
     Sudo->>Prod: Password verified, execute command
     Prod->>SSH: Command output
@@ -205,7 +205,7 @@ sequenceDiagram
 # Test manually
 ssh kevin-prod
 sudo echo "test"
-# Enter: (130Bpm)
+# Enter: your_sudo_password
 ```
 
 ### Issue: User not in sudo group
@@ -258,15 +258,16 @@ ssh kevin-prod
 # Connect to server (no password after SSH key setup)
 ssh kevin-prod
 
-# Run command that needs sudo (password in script)
+# Run command that needs sudo (password from environment variable)
+export PROD_SUDO_PASSWORD="your_sudo_password"
 ./scripts/deploy-to-prod.sh
 
 # Manual sudo command
-ssh kevin-prod "echo '(130Bpm)' | sudo -S apt update"
+ssh kevin-prod "echo 'your_sudo_password' | sudo -S apt update"
 
 # Test sudo access
 ssh kevin-prod "sudo echo test"
-# Enter: (130Bpm)
+# Enter: your_sudo_password
 ```
 
 The deployment script is now fully configured to handle both SSH authentication (via keys) and sudo operations (via password) automatically!

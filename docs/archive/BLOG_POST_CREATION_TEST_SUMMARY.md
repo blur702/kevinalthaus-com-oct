@@ -1,3 +1,6 @@
+> **ARCHIVED DOCUMENT** - This document contains historical testing data and may reference outdated credentials.
+> For current credentials, refer to environment variables: TEST_ADMIN_PASSWORD, ADMIN_INITIAL_PASSWORD
+
 # Blog Post Creation Test - Implementation Summary
 
 ## Overview
@@ -34,7 +37,7 @@ Comprehensive analysis covering:
 Located in `e2e/utils/auth.ts`:
 ```typescript
 username: 'kevin'
-password: '(130Bpm)'
+password: '[test password]' // Use TEST_ADMIN_PASSWORD environment variable
 ```
 
 ## Architecture Analysis

@@ -14,8 +14,20 @@ async function seedAdminUser(): Promise<void> {
   });
 
   try {
-    // Hash the password
-    const hashedPassword = await hashPassword('(130Bpm)');
+    // Get password from environment variable
+    const adminPassword = process.env.ADMIN_INITIAL_PASSWORD;
+    if (!adminPassword) {
+      // eslint-disable-next-line no-console
+      console.error('✗ Error: ADMIN_INITIAL_PASSWORD environment variable is not set');
+      // eslint-disable-next-line no-console
+      console.error('Please set it before running this script:');
+      // eslint-disable-next-line no-console
+      console.error('  export ADMIN_INITIAL_PASSWORD="your_secure_password"');
+      process.exit(1);
+    }
+
+    // Hash the password (inside try/catch to ensure proper cleanup)
+    const hashedPassword = await hashPassword(adminPassword);
 
     // Check if admin user already exists
     const existingUser = await pool.query(
@@ -26,7 +38,6 @@ async function seedAdminUser(): Promise<void> {
     if (existingUser.rows.length > 0) {
       // eslint-disable-next-line no-console
       console.log('✓ Admin user already exists');
-      await pool.end();
       return;
     }
 
@@ -49,13 +60,13 @@ async function seedAdminUser(): Promise<void> {
     console.log('  Role:', adminUser.role);
     // eslint-disable-next-line no-console
     console.log('  ID:', adminUser.id);
-
-    await pool.end();
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('✗ Error seeding admin user:', error);
-    await pool.end();
     process.exit(1);
+  } finally {
+    // Always close the pool regardless of success or failure
+    await pool.end();
   }
 }
 

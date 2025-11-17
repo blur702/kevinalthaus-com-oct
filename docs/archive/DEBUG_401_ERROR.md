@@ -1,3 +1,6 @@
+> **ARCHIVED DOCUMENT** - This document contains historical testing data and may reference outdated credentials.
+> For current credentials, refer to environment variables: TEST_ADMIN_PASSWORD, ADMIN_INITIAL_PASSWORD
+
 # Debug: 401 Unauthorized Error Despite Being Logged In
 
 ## The Problem
@@ -76,7 +79,7 @@ Since your admin is on port 3005 (not 3003):
 
 1. **Log out:** Click "Logout" button
 2. **Navigate to:** http://localhost:3005/login
-3. **Log in again** with kevin/(130Bpm)
+3. **Log in again** with kevin/[test password]
 4. **Check cookies** are set for localhost:3005
 5. **Try creating a post again**
 

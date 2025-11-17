@@ -13,8 +13,8 @@ test.describe('Cookie Diagnostics', () => {
     const initialCookies = await context.cookies();
 
     // Fill login form
-    await page.fill('input[name="identifier"]', 'kevin');
-    await page.fill('input[name="password"]', '(130Bpm)');
+    await page.fill('input[name="identifier"]', process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.fill('input[name="password"]', process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
 
     // Monitor network requests
     const loginRequest = page.waitForResponse(resp =>

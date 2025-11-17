@@ -5,10 +5,19 @@
 
 const http = require('http');
 
+// Get admin password from environment variable
+const adminPassword = process.env.ADMIN_INITIAL_PASSWORD;
+if (!adminPassword) {
+  console.error('[Create Admin User] ✗ Error: ADMIN_INITIAL_PASSWORD environment variable is not set');
+  console.error('[Create Admin User] Please set it before running this script:');
+  console.error('[Create Admin User]   export ADMIN_INITIAL_PASSWORD="your_secure_password"');
+  process.exit(1);
+}
+
 const adminUser = {
   email: 'kevin@kevinalthaus.com',
   username: 'kevin',
-  password: '(130Bpm)!SecurePassword2024',
+  password: adminPassword,
   role: 'admin'
 };
 

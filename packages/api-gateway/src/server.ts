@@ -54,11 +54,11 @@ if (!loaded) {
 }
 
 import { Server } from 'http';
-import { createLogger, LogLevel, PORTS, ensurePortAvailable } from '@monorepo/shared';
+import { createLogger, LogLevel, ensurePortAvailable, config } from '@monorepo/shared';
 
 // Validate and extract log level from environment
 function getLogLevel(): LogLevel {
-  const envLevel = process.env.LOG_LEVEL;
+  const envLevel = config.LOG_LEVEL?.toUpperCase();
   const validLevels = Object.values(LogLevel);
   if (envLevel && validLevels.includes(envLevel as LogLevel)) {
     return envLevel as LogLevel;
@@ -68,7 +68,7 @@ function getLogLevel(): LogLevel {
 
 // Validate and extract log format from environment
 function getLogFormat(): 'json' | 'text' {
-  const envFormat = process.env.LOG_FORMAT;
+  const envFormat = config.LOG_FORMAT;
   if (envFormat === 'json' || envFormat === 'text') {
     return envFormat;
   }
@@ -81,7 +81,7 @@ const logger = createLogger({
   format: getLogFormat(),
 });
 
-const PORT = Number(process.env.API_GATEWAY_PORT || process.env.PORT || PORTS.API_GATEWAY);
+const PORT = Number(config.API_GATEWAY_PORT);
 
 // Validate PORT is a valid number in range
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
@@ -92,7 +92,7 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   process.exit(1);
 }
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
-const SENTRY_FLUSH_TIMEOUT = Number(process.env.SENTRY_FLUSH_TIMEOUT_MS) || 2000;
+const SENTRY_FLUSH_TIMEOUT = config.SENTRY_FLUSH_TIMEOUT_MS;
 
 // Ensure port is available before starting server
 // Load application after environment is configured to ensure rate limit bypass flags are available

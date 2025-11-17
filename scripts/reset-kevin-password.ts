@@ -7,8 +7,18 @@ async function resetPassword(): Promise<void> {
   });
 
   try {
+    // Get password from environment variable
+    const adminPassword = process.env.ADMIN_INITIAL_PASSWORD;
+    if (!adminPassword) {
+      console.error('✗ Error: ADMIN_INITIAL_PASSWORD environment variable is not set');
+      console.error('Please set it before running this script:');
+      console.error('  export ADMIN_INITIAL_PASSWORD="your_secure_password"');
+      await pool.end();
+      process.exit(1);
+    }
+
     // Hash the password
-    const hashedPassword = await hashPassword('(130Bpm)');
+    const hashedPassword = await hashPassword(adminPassword);
 
     // Update kevin user password
     const result = await pool.query(
@@ -22,7 +32,7 @@ async function resetPassword(): Promise<void> {
       console.log('  Username:', user.username);
       console.log('  Email:', user.email);
       console.log('  ID:', user.id);
-      console.log('  New password: (130Bpm)');
+      console.log('  Password updated (not logged for security)');
     } else {
       console.log('✗ User "kevin" not found');
     }

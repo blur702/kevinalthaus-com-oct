@@ -20,8 +20,8 @@ test.describe('Taxonomy API Tests', () => {
     // Login to get auth cookies
     const loginResponse = await request.post(`${API_URL}/api/auth/login`, {
       data: {
-        username: 'kevin',
-        password: '(130Bpm)',
+        username: process.env.TEST_ADMIN_USERNAME || 'kevin',
+        password: process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme',
       },
     });
 
@@ -353,8 +353,8 @@ test.describe('Taxonomy Integration Tests', () => {
     // Login to get auth token for integration tests
     const loginResponse = await request.post(`${API_URL}/api/auth/login`, {
       data: {
-        username: 'kevin',
-        password: '(130Bpm)',
+        username: process.env.TEST_ADMIN_USERNAME || 'kevin',
+        password: process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme',
       },
     });
 

@@ -1,3 +1,6 @@
+> **ARCHIVED DOCUMENT** - This document contains historical testing data and may reference outdated credentials.
+> For current credentials, refer to environment variables: TEST_ADMIN_PASSWORD, ADMIN_INITIAL_PASSWORD
+
 # Blog Post Creation Test - Quick Reference
 
 ## Quick Start
@@ -20,7 +23,7 @@ npx playwright test e2e/blog-post-creation.spec.ts --debug
 ### Test Credentials
 ```typescript
 Username: 'kevin'
-Password: '(130Bpm)'
+Password: '[test password]'
 ```
 
 ## Test Files
@@ -109,7 +112,7 @@ npx playwright test --timeout=60000
 ```typescript
 test.beforeEach(async ({ page }) => {
   // Login before each test
-  await login(page, 'kevin', '(130Bpm)');
+  await login(page, 'kevin', '[test password]');
 
   // Verify cookies
   expect(await hasAuthCookies(page)).toBeTruthy();
@@ -196,7 +199,7 @@ npx playwright show-trace test-results/.../trace.zip
 
 ```typescript
 // Login
-await login(page, username, password);
+await login(page, username, password); // Use environment variables for credentials
 
 // Check auth
 const hasAuth = await hasAuthCookies(page);

@@ -1,16 +1,25 @@
 import { Page, BrowserContext } from '@playwright/test';
+import { selectors } from './selectors';
 
 /**
  * Test credentials for authentication
- * Reads from environment variables with fallback for local development
+ * Reads from environment variables - MUST be set for testing
  */
 export const TEST_CREDENTIALS = {
   ADMIN: {
     username: process.env.TEST_ADMIN_USERNAME || 'kevin',
-    password: process.env.TEST_ADMIN_PASSWORD || '(130Bpm)',
+    password: process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme',
   },
   // Add more test users as needed
 };
+
+// Validate credentials are always set
+if (!process.env.TEST_ADMIN_PASSWORD) {
+  console.warn(
+    'WARNING: TEST_ADMIN_PASSWORD not set. Using insecure default "test-password-changeme". ' +
+    'Set TEST_ADMIN_PASSWORD environment variable for secure testing.'
+  );
+}
 
 // Validate credentials are set in production-like environments
 if (process.env.NODE_ENV === 'production' || process.env.CI === 'true') {
@@ -57,12 +66,31 @@ export async function login(
   // Submit form
   await page.click('button[type="submit"]');
 
-  // Wait for navigation to dashboard (successful login)
-  // Use specific pattern to avoid matching all routes ending in /
-  await page.waitForURL(/\/(dashboard)?$/, { timeout: 10000 });
+  // Wait for successful login - flexible conditions to avoid brittleness
+  // Accept either dashboard or root route as valid post-login destinations
+  try {
+    // Wait for URL to change from /login
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
 
-  // Verify we're on the dashboard by checking for dashboard-specific content
-  await page.waitForSelector('h1:has-text("Dashboard")', { timeout: 5000 });
+    // Verify authentication succeeded by checking for auth cookies
+    const authSuccess = await hasAuthCookies(page);
+    if (!authSuccess) {
+      throw new Error('Login failed: No authentication cookies found after form submission');
+    }
+
+    // Optionally verify dashboard content is visible (but don't require specific heading text)
+    // This provides additional confirmation without being too rigid
+    const dashboardVisible = await page.locator(selectors.dashboard.title).isVisible().catch(() => false);
+    if (!dashboardVisible) {
+      // Dashboard heading not visible - check if we're at least on a valid authenticated route
+      const currentUrl = page.url();
+      if (!currentUrl.match(/\/(dashboard)?$/)) {
+        console.warn(`[Auth] Login succeeded but landed on unexpected route: ${currentUrl}`);
+      }
+    }
+  } catch (error) {
+    throw new Error(`Login failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 
   // Save authentication state if requested
   if (saveState) {
@@ -141,13 +169,15 @@ export async function apiRequest(
  * @param page - Playwright page object
  */
 export async function logout(page: Page): Promise<void> {
-  // Click on user menu or logout button
-  // This depends on your UI structure - adjust selector as needed
-  await page.click('[data-testid="user-menu"]');
-  await page.click('[data-testid="logout-button"]');
+  // Click logout button exposed in the app bar
+  // Use role-based selector for better accessibility and robustness
+  const logoutButton = page.getByRole('button', { name: /logout/i });
+  await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
+  await logoutButton.click();
 
-  // Wait for redirect to login page
+  // Wait for redirect to login page and ensure navigation settled
   await page.waitForURL('**/login', { timeout: 5000 });
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**

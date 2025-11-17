@@ -21,6 +21,13 @@ RUN npm ci && npm cache clean --force
 COPY packages/shared ./packages/shared
 COPY packages/main-app ./packages/main-app
 
+# Build plugins first (required by main-app)
+RUN cd plugins/page-builder && npm run build && cd ../..
+RUN cd plugins/file-manager && npm run build && cd ../..
+RUN cd plugins/content-manager && npm run build && cd ../..
+RUN cd plugins/taxonomy && npm run build && cd ../..
+RUN cd plugins/user-manager && npm run build && cd ../..
+
 # Build packages (only what main-app needs)
 RUN npx lerna run build --scope=@monorepo/shared --scope=@monorepo/main-app --include-dependencies
 

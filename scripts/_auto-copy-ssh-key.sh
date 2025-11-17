@@ -1,21 +1,63 @@
 #!/bin/bash
 # Automated SSH key copy script
-# This will attempt to copy the SSH key with the known password
+# This will attempt to copy the SSH key using SSH_SETUP_PASSWORD environment variable
+# Usage: export SSH_SETUP_PASSWORD='your_password' before running this script
 
-PUBKEY=$(cat ~/.ssh/id_kevin_prod.pub)
-PASSWORD="(130Bpm)"
+# Cleanup function to clear SSHPASS variable
+cleanup_sshpass() {
+    SSHPASS=""
+    unset SSHPASS
+}
+
+# Register cleanup to run on exit and signals
+trap cleanup_sshpass EXIT INT TERM
+
+if [ -z "$SSH_SETUP_PASSWORD" ]; then
+    echo "Error: SSH_SETUP_PASSWORD environment variable is not set"
+    echo "Please set it before running this script:"
+    echo "  export SSH_SETUP_PASSWORD='your_password'"
+    exit 1
+fi
+
+# Check if sshpass is installed
+if ! command -v sshpass &> /dev/null; then
+    echo "Error: sshpass is not installed"
+    echo "Please install sshpass to use automated password authentication:"
+    echo "  - Ubuntu/Debian: sudo apt-get install sshpass"
+    echo "  - macOS: brew install hudochenkov/sshpass/sshpass"
+    echo "  - Windows (Git Bash): Download from https://sourceforge.net/projects/sshpass/"
+    exit 1
+fi
+
+# Export password for sshpass
+export SSHPASS="$SSH_SETUP_PASSWORD"
 
 echo "Attempting to copy SSH key to production server..."
 
-# Create a temporary script that will be executed on the server
-REMOTE_CMD="mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo 'KEY_COPY_SUCCESS'"
+# Detect if we need winpty (Windows Git Bash/CYGWIN/MINGW)
+WINPTY_CMD=""
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+    # Check if winpty exists
+    if command -v winpty &> /dev/null; then
+        WINPTY_CMD="winpty"
+    fi
+fi
 
-# Use SSH with password (interactive prompt)
+# Use sshpass with SSH for automated password authentication
 echo "Connecting to kevin@kevinalthaus.com..."
-echo "When prompted, enter password: (130Bpm)"
-echo ""
 
-winpty ssh -o StrictHostKeyChecking=accept-new kevin@kevinalthaus.com "$REMOTE_CMD"
+# First, create the .ssh directory and set permissions (safe, no user input)
+$WINPTY_CMD sshpass -e ssh -o StrictHostKeyChecking=accept-new kevin@kevinalthaus.com 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
+
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+    echo "✗ Failed to create .ssh directory"
+    exit 1
+fi
+
+# Second, pipe the public key data to the remote shell to avoid command injection
+# The key content is sent as stdin, not as part of the command string
+cat ~/.ssh/id_kevin_prod.pub | $WINPTY_CMD sshpass -e ssh kevin@kevinalthaus.com 'cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo "KEY_COPY_SUCCESS"'
 
 RESULT=$?
 

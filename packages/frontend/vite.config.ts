@@ -3,9 +3,14 @@ import react from '@vitejs/plugin-react';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import developmentConfig from '../../config/config.development.js';
+import productionConfig from '../../config/config.production.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Vite reads configuration at build time. Changes require rebuilding dev server or production bundle.
+const appConfig = process.env.NODE_ENV === 'production' ? productionConfig : developmentConfig;
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -30,7 +35,7 @@ export default defineConfig({
         project: process.env.SENTRY_PROJECT!,
         authToken: process.env.SENTRY_AUTH_TOKEN!,
         release: {
-          name: process.env.VITE_APP_VERSION || '1.0.0',
+          name: appConfig.VERSION || '1.0.0',
         },
         sourcemaps: {
           assets: './dist/**',
@@ -46,13 +51,16 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001,
+    // Explicit port configuration with safe fallback
+    port: appConfig.FRONTEND_PORT ?? (process.env.NODE_ENV === 'production' ? 3000 : 3001),
     strictPort: true,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_TARGET || 'http://localhost:3000',
+        // Proxy target for API requests (see config files for expected values per environment)
+        target: appConfig.API_GATEWAY_URL ?? 'http://localhost:3000',
         changeOrigin: true,
-        secure: process.env.VITE_PROXY_SECURE === 'false' ? false : true,
+        // Explicit SSL verification setting (false for local dev, true for production)
+        secure: appConfig.VITE_PROXY_SECURE ?? false,
       },
     },
   },

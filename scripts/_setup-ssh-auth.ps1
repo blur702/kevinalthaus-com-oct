@@ -1,8 +1,9 @@
 # PowerShell script to copy SSH key to production server
+# NOTE: This script prompts interactively for the SSH password.
+# It does not use environment variables for password authentication.
+# Usage: .\scripts\_setup-ssh-auth.ps1
+
 $pubKey = Get-Content "$env:USERPROFILE\.ssh\id_kevin_prod.pub"
-$password = "(130Bpm)"
-$securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential ("kevin", $securePassword)
 
 Write-Host "Copying SSH key to production server..." -ForegroundColor Green
 
@@ -16,7 +17,7 @@ echo 'SSH_KEY_ADDED'
 "@
 
 # Try to execute via SSH (this will prompt for password in PowerShell)
-Write-Host "You will be prompted for password: (130Bpm)" -ForegroundColor Yellow
+Write-Host "You will be prompted for your SSH password" -ForegroundColor Yellow
 ssh kevin@kevinalthaus.com "$remoteScript"
 
 if ($LASTEXITCODE -eq 0) {

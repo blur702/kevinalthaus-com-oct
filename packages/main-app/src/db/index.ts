@@ -2,6 +2,7 @@ import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { config } from '@monorepo/shared';
 
 // Re-export types from pg for consumers
 export type { PoolClient, QueryResult, QueryResultRow } from 'pg';
@@ -26,7 +27,7 @@ if (
   !useConnString &&
   !process.env.POSTGRES_PASSWORD &&
   !process.env.POSTGRES_PASSWORD_FILE &&
-  process.env.NODE_ENV !== 'test'
+  config.NODE_ENV !== 'test'
 ) {
   throw new Error(
     'POSTGRES_PASSWORD environment variable is required when not using DATABASE_URL. ' +
@@ -41,7 +42,7 @@ function sanitizePath(filePath: string): string {
 
 // Parse PostgreSQL SSL mode from environment
 function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } {
-  const sslMode = process.env.PGSSLMODE || 'prefer';
+  const sslMode = config.PGSSLMODE || 'prefer';
 
   switch (sslMode) {
     case 'disable': {
@@ -49,15 +50,16 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
     }
     case 'prefer':
     case 'require': {
-      // NOTE: 'prefer' mode is currently treated as 'require' (no fallback to non-SSL)
-      // PostgreSQL's documented 'prefer' behavior attempts SSL first and falls back to non-SSL
-      // on handshake failure or if server doesn't support SSL. This implementation does not
-      // implement the fallback logic and treats 'prefer' as 'require' for simplicity.
-      // Both require SSL but don't verify the certificate
+      // 'require': SSL is required but certificate is not verified (rejectUnauthorized: false)
+      // 'prefer': Treated as 'require' for simplicity (no fallback logic implemented)
+      //   PostgreSQL's documented 'prefer' behavior attempts SSL first and falls back to non-SSL
+      //   on handshake failure or if server doesn't support SSL. This implementation does not
+      //   implement the fallback logic and treats 'prefer' as 'require'.
       if (sslMode === 'prefer') {
         console.warn(
-          '[DB] PGSSLMODE=prefer is currently treated as "require" (SSL required, no fallback to non-SSL). ' +
-          'If SSL connection fails, the connection will not fall back to unencrypted mode.'
+          '[DB] PGSSLMODE=prefer is treated as "require" (SSL required, no fallback to non-SSL). ' +
+          'If SSL connection fails, the connection will not fall back to unencrypted mode. ' +
+          'Consider using PGSSLMODE=require explicitly if this is the intended behavior.'
         );
       }
       return { rejectUnauthorized: false };
@@ -65,7 +67,7 @@ function getSSLConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
     case 'verify-ca':
     case 'verify-full': {
       // Require SSL and verify the certificate
-      const ca = process.env.PGSSLROOTCERT;
+      const ca = config.PGSSLROOTCERT;
       if (!ca) {
         throw new Error(
           `PGSSLROOTCERT is required when PGSSLMODE is '${sslMode}'. ` +
@@ -150,10 +152,10 @@ const pool = new Pool(
         connectionTimeoutMillis: 30000,
       }
     : {
-        host: process.env.POSTGRES_HOST || 'localhost',
-        port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
-        database: process.env.POSTGRES_DB || 'kevinalthaus',
-        user: process.env.POSTGRES_USER || 'postgres',
+        host: config.POSTGRES_HOST,
+        port: config.POSTGRES_PORT,
+        database: config.POSTGRES_DB,
+        user: config.POSTGRES_USER,
         password: resolveDbPassword(),
         ssl: sslConfig,
         min: 2,
@@ -168,7 +170,7 @@ pool.on('error', (err) => {
   console.error('[DB] Unexpected pool error:', err);
 });
 
-if (process.env.NODE_ENV === 'development') {
+if (config.NODE_ENV === 'development') {
   // eslint-disable-next-line no-console
   console.info(
     '[DB] Using',
@@ -179,7 +181,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Query fingerprint secret for HMAC (required in production)
 const FINGERPRINT_SECRET = process.env.FINGERPRINT_SECRET;
-if (!FINGERPRINT_SECRET && process.env.NODE_ENV === 'production') {
+if (!FINGERPRINT_SECRET && config.NODE_ENV === 'production') {
   throw new Error(
     'FINGERPRINT_SECRET environment variable is required in production for secure query fingerprinting. ' +
       'Please set FINGERPRINT_SECRET in your .env file to a secure random value.'
@@ -190,8 +192,8 @@ const fingerprintSecret = FINGERPRINT_SECRET || crypto.randomBytes(32).toString(
 // Logging configuration for query execution
 // LOG_LEVEL: controls verbosity (debug logs all queries, info/warn/error use sampling)
 // QUERY_LOG_SAMPLE_RATE: log every Nth successful query (default: 10)
-const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
-const QUERY_LOG_SAMPLE_RATE = parseInt(process.env.QUERY_LOG_SAMPLE_RATE || '10', 10);
+const LOG_LEVEL = config.LOG_LEVEL || 'info';
+const QUERY_LOG_SAMPLE_RATE = config.QUERY_LOG_SAMPLE_RATE || 10;
 
 // Simple counter for sampling successful queries to reduce log noise in production
 let queryCounter = 0;
@@ -287,7 +289,7 @@ export async function healthCheck(): Promise<boolean> {
   // In test mode, skip DB healthcheck only if explicitly opted out via SKIP_DB_HEALTHCHECK
   // This allows tests to exercise DB connection unless using mocked DB
   // Set SKIP_DB_HEALTHCHECK=true when using mocked DB in tests to bypass healthcheck
-  if (process.env.NODE_ENV === 'test' && process.env.SKIP_DB_HEALTHCHECK === 'true') {
+  if (config.NODE_ENV === 'test' && config.SKIP_DB_HEALTHCHECK) {
     return true;
   }
   try {

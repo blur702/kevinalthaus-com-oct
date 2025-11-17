@@ -6,6 +6,7 @@ import './express-types';
 // Re-export Role for convenience
 export { Role };
 export type { Role as RoleType };
+export type { AppConfig } from './appConfig';
 
 export interface BaseEntity {
   id: string;

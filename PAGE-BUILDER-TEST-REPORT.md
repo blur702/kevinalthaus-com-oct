@@ -108,7 +108,7 @@ Add name attributes to login form inputs in the admin panel component:
 Update Playwright selectors to use placeholder text:
 ```typescript
 await page.fill('input[placeholder="Email or Username"]', 'kevin');
-await page.fill('input[placeholder*="Password"]', '(130Bpm)');
+await page.fill('input[placeholder*="Password"]', process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
 ```
 
 ---

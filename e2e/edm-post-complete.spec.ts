@@ -33,8 +33,8 @@ test.describe('EDM in the 90s Blog Post', () => {
     await page.waitForLoadState('domcontentloaded');
 
     await page.waitForSelector('input[name="identifier"]', { timeout: 30000 });
-    await page.fill('input[name="identifier"]', 'kevin');
-    await page.fill('input[name="password"]', '(130Bpm)');
+    await page.fill('input[name="identifier"]', process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.fill('input[name="password"]', process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
     await page.click('button[type="submit"]');
 
     await page.waitForURL(/\/$/, { timeout: 15000 });

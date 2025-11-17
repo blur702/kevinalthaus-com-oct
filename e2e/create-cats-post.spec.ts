@@ -8,8 +8,8 @@ test.describe('Create Cats Blog Post', () => {
   test('should create a blog post about cats with 3 paragraphs', async ({ page }) => {
     // Step 1: Login as kevin
     await page.goto('/login');
-    await page.locator('input[name="identifier"]').fill('kevin');
-    await page.locator('input[name="password"]').fill('(130Bpm)');
+    await page.locator('input[name="identifier"]').fill(process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.locator('input[name="password"]').fill(process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL('/', { timeout: 10000 });
 
@@ -77,8 +77,8 @@ test.describe('Create Cats Blog Post', () => {
   test('should verify the cats post appears in the blog list', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.locator('input[name="identifier"]').fill('kevin');
-    await page.locator('input[name="password"]').fill('(130Bpm)');
+    await page.locator('input[name="identifier"]').fill(process.env.TEST_ADMIN_USERNAME || 'kevin');
+    await page.locator('input[name="password"]').fill(process.env.TEST_ADMIN_PASSWORD || 'test-password-changeme');
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL('/', { timeout: 10000 });
 

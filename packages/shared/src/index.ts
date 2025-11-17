@@ -17,6 +17,7 @@ export * from './menus/types';
 
 // Export Sentry utilities
 export * from './sentry';
+export { config, loadRuntimeConfig, getRuntimeConfig } from './config/runtimeConfig';
 
 // Export Components
 export { RichTextEditor } from './components/editor/RichTextEditor';

@@ -74,7 +74,7 @@ test.describe('Feature Name', () => {
 
 1. **Node.js 20+** installed
 2. **Admin panel running** on http://localhost:3003
-3. **Test user credentials** configured (username: kevin, password: (130Bpm))
+3. **Test user credentials** configured via TEST_ADMIN_USERNAME and TEST_ADMIN_PASSWORD environment variables
 
 ### Install Dependencies
 

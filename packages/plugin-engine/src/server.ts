@@ -5,7 +5,7 @@ import { timingSafeEqual, createHash } from 'crypto';
 import { Server } from 'http';
 import { Pool } from 'pg';
 
-import { createLogger, LogLevel, Role, PORTS, ensurePortAvailable } from '@monorepo/shared';
+import { createLogger, LogLevel, Role, ensurePortAvailable, config } from '@monorepo/shared';
 
 // Plugin context interface
 interface PluginContext {
@@ -14,7 +14,7 @@ interface PluginContext {
   logger: {
     info: (message: string, ...args: unknown[]) => void;
     warn: (message: string, ...args: unknown[]) => void;
-    error: (message: string, error?: Error, ...args: unknown[]) => void;
+    error: (message: string, err?: Error | unknown, ...args: unknown[]) => void;
     debug: (message: string, ...args: unknown[]) => void;
   };
   services: {
@@ -27,10 +27,10 @@ interface PluginContext {
 }
 
 // Dynamic SSDD Validator plugin loader
-let SSDDValidatorPlugin: { new(): { onActivate(context: PluginContext): Promise<void> } };
+let SSDDValidatorPlugin: { new (): { onActivate(context: PluginContext): Promise<void> } };
 (function resolvePlugin() {
   try {
-    const explicitPath = process.env.PLUGIN_SSDD_PATH;
+    const explicitPath = config.PLUGIN_SSDD_PATH?.trim();
     const defaultPath = require('path').resolve(__dirname, '../../../plugins/ssdd-validator/dist/index');
     const mod = require(explicitPath || defaultPath);
     SSDDValidatorPlugin = (mod && (mod.default || mod)) || null;
@@ -72,12 +72,12 @@ pool.on('error', (err) => {
   logger.error('[plugin-engine] PG pool error', err as unknown as Error);
 });
 
-const PORT = Number(process.env.PLUGIN_ENGINE_PORT || process.env.PORT || PORTS.PLUGIN_ENGINE);
+const PORT = Number(config.PLUGIN_ENGINE_PORT ?? 3004);
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
 // Internal gateway token for service-to-service authentication
 const INTERNAL_GATEWAY_TOKEN = process.env.INTERNAL_GATEWAY_TOKEN;
-if (!INTERNAL_GATEWAY_TOKEN && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+if (!INTERNAL_GATEWAY_TOKEN && config.NODE_ENV !== 'development' && config.NODE_ENV !== 'test') {
   throw new Error(
     'INTERNAL_GATEWAY_TOKEN is required for plugin-engine in production. Must match the token configured in API Gateway.'
   );
@@ -86,7 +86,7 @@ if (!INTERNAL_GATEWAY_TOKEN && process.env.NODE_ENV !== 'development' && process
 // Middleware to verify requests come from the API gateway
 function verifyInternalToken(req: express.Request, res: express.Response, next: express.NextFunction): void {
   // Skip verification in development/test if token not configured
-  if (!INTERNAL_GATEWAY_TOKEN && (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test')) {
+  if (!INTERNAL_GATEWAY_TOKEN && (config.NODE_ENV === 'development' || config.NODE_ENV === 'test')) {
     next();
     return;
   }
@@ -187,6 +187,38 @@ app.use((req, _res, next) => {
   next();
 });
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function buildMetadata(args: unknown[]): Record<string, unknown> | undefined {
+  if (args.length === 0) {
+    return undefined;
+  }
+
+  if (args.length === 1 && isRecord(args[0])) {
+    return args[0];
+  }
+
+  const metadata: Record<string, unknown> = {};
+
+  args.forEach((arg, index) => {
+    const key = `arg${index}`;
+    if (isRecord(arg)) {
+      metadata[key] = arg;
+    } else if (arg instanceof Error) {
+      metadata[key] = {
+        message: arg.message,
+        stack: arg.stack,
+      };
+    } else {
+      metadata[key] = arg;
+    }
+  });
+
+  return metadata;
+}
+
 
 // Health
 app.get('/health', (_req, res) => {
@@ -204,10 +236,12 @@ async function loadPlugins(): Promise<void> {
       app,
       db: pool,
       logger: {
-        info: (message: string, ...args: unknown[]) => logger.info(message, ...args),
-        warn: (message: string, ...args: unknown[]) => logger.warn(message, ...args),
-        error: (message: string, error?: Error, ...args: unknown[]) => logger.error(message, error, ...args),
-        debug: (message: string, ...args: unknown[]) => logger.debug(message, ...args),
+        info: (message: string, ...args: unknown[]) => logger.info(message, buildMetadata(args)),
+        warn: (message: string, ...args: unknown[]) => logger.warn(message, buildMetadata(args)),
+        error: (message: string, err?: Error | unknown, ...args: unknown[]) => {
+          logger.error(message, err, buildMetadata(args));
+        },
+        debug: (message: string, ...args: unknown[]) => logger.debug(message, buildMetadata(args)),
       },
       services: {
         blog: null,
@@ -370,4 +404,3 @@ process.on('unhandledRejection', (reason) => {
   // Use setImmediate to ensure log is flushed before exit
   setImmediate(() => process.exit(1));
 });
-

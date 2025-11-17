@@ -5,7 +5,7 @@
 **Date**: 2025-11-14
 **Production Server**: kevinalthaus.com (65.181.112.77)
 **Username**: kevin
-**Password/Sudo Password**: (130Bpm)
+**Password/Sudo Password**: [Stored in PROD_SUDO_PASSWORD environment variable]
 
 ### Successful Tests:
 
@@ -30,7 +30,7 @@
 ### ⏳ Pending: Public Key Upload
 
 The SSH key pair has been generated, but the public key hasn't been copied to the server yet.
-This step requires the password: `(130Bpm)`
+This step requires your sudo password stored in the PROD_SUDO_PASSWORD environment variable.
 
 ## 🚀 Next Steps - Complete the Setup
 
@@ -45,7 +45,7 @@ cd /e/dev/kevinalthaus-com-oct
 
 When prompted:
 1. Type `y` to copy the public key
-2. Enter the password when prompted: `(130Bpm)`
+2. Enter your sudo password when prompted (set in PROD_SUDO_PASSWORD environment variable)
 3. The script will automatically verify the connection
 
 ### Option 2: Use the Full Setup Script
@@ -92,7 +92,7 @@ ssh kevin-prod
 - ✅ SSH key pair generated (ED25519, most secure algorithm)
 - ✅ Private key stored locally: `~/.ssh/id_kevin_prod`
 - ✅ Public key ready: `~/.ssh/id_kevin_prod.pub`
-- ⚠️ Password `(130Bpm)` still required (until public key is uploaded)
+- ⚠️ Sudo password still required (until public key is uploaded)
 
 ### After Setup:
 - 🔐 Password will no longer be needed
@@ -211,10 +211,25 @@ Before your first deployment:
 - SSH key generated locally ✅
 
 **What you need to do:**
-1. Run one of the scripts above to copy the public key
-2. Enter password `(130Bpm)` when prompted (only once)
-3. Test connection: `ssh kevin-prod`
-4. Deploy: `./scripts/deploy-to-prod.sh`
+1. Set environment variable securely (choose one method):
+   ```bash
+   # Option A: Read from a secured file (recommended)
+   export PROD_SUDO_PASSWORD=$(cat ~/.secrets/prod_sudo_password)
+
+   # Option B: Prompt interactively (doesn't save to history)
+   read -sp "Enter sudo password: " PROD_SUDO_PASSWORD && export PROD_SUDO_PASSWORD
+   echo  # new line after hidden input
+
+   # Option C: Use leading space to avoid history (if HISTCONTROL=ignorespace)
+   #  export PROD_SUDO_PASSWORD="your_sudo_password"  # note the leading space
+   ```
+
+   **Security Note**: Never type secrets directly in the shell without precautions, as they may be captured in shell history (~/.bash_history). Avoid committing secrets to dotfiles or environment files tracked by Git.
+
+2. Run one of the scripts above to copy the public key
+3. Enter your sudo password when prompted (only once)
+4. Test connection: `ssh kevin-prod`
+5. Deploy: `./scripts/deploy-to-prod.sh`
 
 **Estimated time:** 2-3 minutes
 
