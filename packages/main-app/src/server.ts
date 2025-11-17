@@ -197,6 +197,11 @@ async function start(): Promise<void> {
         process.exit(1);
       });
   } catch (error) {
+    console.error('❌ FATAL ERROR - Failed to start application:');
+    console.error('Error name:', (error as Error).name);
+    console.error('Error message:', (error as Error).message);
+    console.error('Error stack:', (error as Error).stack);
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     logger.error('Failed to start application', error as Error);
     process.exit(1);
   }
