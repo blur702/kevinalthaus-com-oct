@@ -16,9 +16,9 @@ module.exports = {
   SENTRY_RELEASE: '1.0.0',
 
   // Service Configuration
-  API_GATEWAY_PORT: 4000,
+  API_GATEWAY_PORT: 3000, // Internal container port (mapped to 4000 externally)
   API_GATEWAY_HOST: '0.0.0.0',
-  API_GATEWAY_URL: 'http://api-gateway:4000', // Internal Docker network
+  API_GATEWAY_URL: 'http://api-gateway:3000', // Internal Docker network
 
   MAIN_APP_PORT: 3001,
   MAIN_APP_HOST: '0.0.0.0',
