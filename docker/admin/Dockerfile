@@ -1,6 +1,10 @@
 # Builder stage
 FROM node:22-alpine AS builder
 
+# Build arguments for Vite environment variables
+ARG VITE_SENTRY_DSN
+ARG VITE_ENABLE_SENTRY=true
+
 # Set working directory
 WORKDIR /app
 

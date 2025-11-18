@@ -258,6 +258,9 @@ services:
     build:
       context: .
       dockerfile: docker/admin/Dockerfile
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN}
+        VITE_ENABLE_SENTRY: ${VITE_ENABLE_SENTRY:-true}
     ports:
       - '3003:3000'
     networks:
