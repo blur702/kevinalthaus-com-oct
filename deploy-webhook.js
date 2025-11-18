@@ -49,10 +49,10 @@ function deploy() {
     console.log('[DEPLOY] Pulling latest code...');
     execSync('git pull origin main', { cwd: '/opt/kevinalthaus', stdio: 'inherit' });
 
-    // Restart containers
-    console.log('[DEPLOY] Restarting containers...');
+    // Rebuild and restart containers
+    console.log('[DEPLOY] Rebuilding and restarting containers...');
     execSync(
-      'docker compose -f docker-compose.prod.yml up -d --force-recreate api-gateway main-app',
+      'docker compose -f docker-compose.prod.yml up -d --build --force-recreate api-gateway main-app',
       { cwd: '/opt/kevinalthaus', stdio: 'inherit' }
     );
 
