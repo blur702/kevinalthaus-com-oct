@@ -37,62 +37,32 @@ test.describe('Complete Taxonomy Workflow', () => {
     expect(accessToken).toBeTruthy();
   });
 
-  test('should create categories vocabulary', async ({ request }) => {
-    const response = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
+  test('should verify categories vocabulary exists (seeded on startup)', async ({ request }) => {
+    const response = await request.get(`${API_URL}/api/taxonomy/vocabularies/machine-name/categories`, {
       headers: { Cookie: `accessToken=${accessToken}` },
-      data: {
-        name: 'Categories',
-        machine_name: 'categories',
-        description: 'Blog post categories',
-        allow_multiple: true,
-        required: false,
-        hierarchy_depth: 2,
-        weight: 0,
-      },
     });
 
-    // May already exist, accept either 201 or 409 (conflict)
-    expect([201, 409].includes(response.status())).toBeTruthy();
-
-    if (response.status() === 201) {
-      const data = await response.json();
-      categoriesVocabId = data.vocabulary.id;
-    } else {
-      // Get existing vocabulary
-      const getResponse = await request.get(`${API_URL}/api/taxonomy/vocabularies/machine-name/categories`, {
-        headers: { Cookie: `accessToken=${accessToken}` },
-      });
-      const data = await getResponse.json();
-      categoriesVocabId = data.vocabulary.id;
-    }
+    expect(response.status()).toBe(200);
+    const data = await response.json();
+    expect(data.vocabulary).toBeDefined();
+    expect(data.vocabulary.machine_name).toBe('categories');
+    expect(data.vocabulary.hierarchy_depth).toBe(2);
+    expect(data.vocabulary.allow_multiple).toBe(true);
+    categoriesVocabId = data.vocabulary.id;
   });
 
-  test('should create tags vocabulary', async ({ request }) => {
-    const response = await request.post(`${API_URL}/api/taxonomy/vocabularies`, {
+  test('should verify tags vocabulary exists (seeded on startup)', async ({ request }) => {
+    const response = await request.get(`${API_URL}/api/taxonomy/vocabularies/machine-name/tags`, {
       headers: { Cookie: `accessToken=${accessToken}` },
-      data: {
-        name: 'Tags',
-        machine_name: 'tags',
-        description: 'Blog post tags',
-        allow_multiple: true,
-        required: false,
-        hierarchy_depth: 0,
-        weight: 1,
-      },
     });
 
-    expect([201, 409].includes(response.status())).toBeTruthy();
-
-    if (response.status() === 201) {
-      const data = await response.json();
-      tagsVocabId = data.vocabulary.id;
-    } else {
-      const getResponse = await request.get(`${API_URL}/api/taxonomy/vocabularies/machine-name/tags`, {
-        headers: { Cookie: `accessToken=${accessToken}` },
-      });
-      const data = await getResponse.json();
-      tagsVocabId = data.vocabulary.id;
-    }
+    expect(response.status()).toBe(200);
+    const data = await response.json();
+    expect(data.vocabulary).toBeDefined();
+    expect(data.vocabulary.machine_name).toBe('tags');
+    expect(data.vocabulary.hierarchy_depth).toBe(0);
+    expect(data.vocabulary.allow_multiple).toBe(true);
+    tagsVocabId = data.vocabulary.id;
   });
 
   test('should create category terms', async ({ request }) => {

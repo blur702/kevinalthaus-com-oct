@@ -25,6 +25,7 @@ Full docs are now consolidated under `/docs`:
 - Implementation Status: `docs/status.md`
 - Scripts: `docs/scripts.md`
 - CodeRabbit CLI Integration: `docs/coderabbit-cli.md`
+- Taxonomy System: `docs/taxonomy-setup.md`
 
 ## Quick Start
 
@@ -56,6 +57,9 @@ mkdir -p secrets
 # Start services
 docker-compose up -d postgres redis
 npm run dev:all
+
+# Note: Default taxonomy vocabularies (categories, tags) are automatically
+# seeded on first startup. See docs/taxonomy-setup.md for details.
 ```
 
 ## Configuration
@@ -254,6 +258,26 @@ npm run test:regression
 # Run unit tests
 npm run test:unit
 ```
+
+## Troubleshooting
+
+### Taxonomy 404 Errors
+
+If you see 404 errors for `/api/taxonomy/vocabularies/machine-name/categories` or `/api/taxonomy/vocabularies/machine-name/tags`:
+
+1. Verify vocabularies were seeded on startup:
+   ```bash
+   # Check application logs for:
+   # [Seed] Created "categories" vocabulary
+   # [Seed] Created "tags" vocabulary
+   ```
+
+2. If missing, restart the main-app service to trigger seeding:
+   ```bash
+   docker compose -f docker-compose.prod.yml restart main-app
+   ```
+
+3. For detailed troubleshooting, see `docs/taxonomy-setup.md`
 
 ## Contributing
 

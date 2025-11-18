@@ -102,6 +102,11 @@ export const TaxonomyField: React.FC<TaxonomyFieldProps> = ({
       });
 
       if (!vocabResponse.ok) {
+        if (vocabResponse.status === 404) {
+          throw new Error(
+            `Vocabulary "${vocabularyMachineName || vocabularyId}" not found. Please contact an administrator to set up taxonomy vocabularies.`
+          );
+        }
         throw new Error('Failed to load vocabulary');
       }
 
@@ -141,11 +146,11 @@ export const TaxonomyField: React.FC<TaxonomyFieldProps> = ({
 
   if (loading) {
     return (
-      <FormControl fullWidth disabled>
+      <FormControl fullWidth disabled data-testid="taxonomy-field-loading">
         <InputLabel>{label}</InputLabel>
         <Box sx={{ display: 'flex', alignItems: 'center', p: 2 }}>
           <CircularProgress size={20} sx={{ mr: 1 }} />
-          Loading...
+          {vocabulary?.name ? `Loading ${vocabulary.name}...` : 'Loading...'}
         </Box>
       </FormControl>
     );
@@ -153,7 +158,7 @@ export const TaxonomyField: React.FC<TaxonomyFieldProps> = ({
 
   if (loadError) {
     return (
-      <FormControl fullWidth error>
+      <FormControl fullWidth error data-testid="taxonomy-field-error">
         <InputLabel>{label}</InputLabel>
         <OutlinedInput label={label} disabled value="" />
         <FormHelperText>{loadError}</FormHelperText>
@@ -171,6 +176,7 @@ export const TaxonomyField: React.FC<TaxonomyFieldProps> = ({
       <Select
         labelId={`taxonomy-${vocabulary.machine_name}-label`}
         id={`taxonomy-${vocabulary.machine_name}`}
+        data-testid="taxonomy-field-select"
         multiple={isMultiple}
         value={value}
         onChange={handleChange}

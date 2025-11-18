@@ -10,6 +10,7 @@ import { Sentry, isSentryEnabled } from './instrument';
 // NOW import all other dependencies - Sentry is already initialized and will instrument them
 import { Server } from 'http';
 import { runMigrations } from './db/migrations';
+import { seedDefaultVocabularies } from './db/seed-default-vocabularies';
 import { pool, closePool } from './db';
 import { createLogger, LogLevel, ensurePortAvailable, config } from '@monorepo/shared';
 import { ensureUploadDirectory } from './middleware/upload';
@@ -148,6 +149,15 @@ async function initializeServices(): Promise<void> {
     } catch (error) {
       logger.warn(`Taxonomy service initialization failed: ${(error as Error).message}`);
       // Don't exit - service will handle errors gracefully
+    }
+
+    // Seed default vocabularies (categories and tags)
+    try {
+      await seedDefaultVocabularies(pool);
+      logger.info('Default vocabularies seeded');
+    } catch (error) {
+      logger.warn(`Failed to seed default vocabularies: ${(error as Error).message}`);
+      // Don't exit - allow app to continue even if seeding fails
     }
 
     // Initialize storage service
