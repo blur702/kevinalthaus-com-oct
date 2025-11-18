@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import * as Sentry from '@sentry/react';
 import {
   Alert,
   Box,
@@ -536,43 +537,76 @@ const MenusPage: React.FC = () => {
     }
   };
 
-  const renderMenuTree = (items: MenuItemType[]) => {
-    return items.map((item) => (
-      <TreeItem
-        key={item.id}
-        nodeId={item.id}
-        label={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2">{item.label}</Typography>
-            {!item.is_active && <Chip label="Inactive" size="small" color="warning" />}
-            {item.is_external && (
-              <Tooltip title="External link">
-                <LinkIcon fontSize="small" color="action" />
-              </Tooltip>
-            )}
-            <Box sx={{ marginLeft: 'auto' }}>
-              <Tooltip title="Edit item">
-                <IconButton size="small" onClick={() => handleOpenItemDialog(item)}>
-                  <EditIcon fontSize="inherit" aria-label={`Edit ${item.label}`} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Delete item">
-                <IconButton
-                  size="small"
-                  aria-label={`Delete ${item.label}`}
-                  onClick={() => setDeleteItemTarget({ menuId: item.menu_id, itemId: item.id })}
-                >
-                  <DeleteIcon fontSize="inherit" />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
+  const renderMenuTree = (items: MenuItemType[]): React.ReactNode[] => {
+    // Filter out items without valid IDs to prevent TreeView errors
+    const validItems = items.filter((item) => {
+      if (!item.id) {
+        // Log error in development only (avoid exposing sensitive data in production console)
+        if (import.meta.env.DEV) {
+          console.error('CRITICAL: Menu item missing ID - data corruption detected', {
+            menuId: item.menu_id,
+            label: item.label,
+            parentId: item.parent_id,
+          });
         }
-      >
-        {/* Service guarantees item.children is always an array */}
-        {item.children.length > 0 && renderMenuTree(item.children)}
-      </TreeItem>
-    ));
+
+        // Report to Sentry for production monitoring
+        Sentry.captureMessage('Menu item missing ID', {
+          level: 'error',
+          extra: {
+            menuId: item.menu_id,
+            label: item.label,
+            parentId: item.parent_id,
+            hasChildren: item.children?.length > 0,
+          },
+        });
+
+        return false;
+      }
+      return true;
+    });
+
+    return validItems.map((item) => {
+      // Ensure we have a valid string ID (defensive check)
+      const nodeId = String(item.id);
+
+      return (
+        <TreeItem
+          key={nodeId}
+          nodeId={nodeId}
+          label={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2">{item.label}</Typography>
+              {!item.is_active && <Chip label="Inactive" size="small" color="warning" />}
+              {item.is_external && (
+                <Tooltip title="External link">
+                  <LinkIcon fontSize="small" color="action" />
+                </Tooltip>
+              )}
+              <Box sx={{ marginLeft: 'auto' }}>
+                <Tooltip title="Edit item">
+                  <IconButton size="small" onClick={() => handleOpenItemDialog(item)}>
+                    <EditIcon fontSize="inherit" aria-label={`Edit ${item.label}`} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete item">
+                  <IconButton
+                    size="small"
+                    aria-label={`Delete ${item.label}`}
+                    onClick={() => setDeleteItemTarget({ menuId: item.menu_id, itemId: item.id })}
+                  >
+                    <DeleteIcon fontSize="inherit" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+          }
+        >
+          {/* Service guarantees item.children is always an array */}
+          {item.children.length > 0 && renderMenuTree(item.children)}
+        </TreeItem>
+      );
+    });
   };
 
   return (
