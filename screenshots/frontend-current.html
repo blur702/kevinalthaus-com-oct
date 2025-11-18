@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kevin Althaus - Full Stack Developer</title>
+    <meta name="description" content="Kevin Althaus - Full Stack Developer specializing in React, Node.js, and modern web technologies" />
+    <!-- Custom theme overrides (loaded last to override MUI styles) -->
+    <link rel="stylesheet" href="/frontend-theme-overrides.css" />
+    <script type="module" crossorigin src="/assets/index-bc6503b2.js"></script>
+    <link rel="stylesheet" href="/assets/index-3a6bef6f.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (function () {
+        if (!('serviceWorker' in navigator)) {
+          return;
+        }
+
+        navigator.serviceWorker.addEventListener('message', function (event) {
+          try {
+            if (event && event.data && event.data.type === 'SW_CLEANUP_RELOAD') {
+              window.location.reload();
+            }
+          } catch (error) {
+            console.warn('[sw-cleanup] reload handler failed', error);
+          }
+        });
+      })();
+    </script>
+    
+  </body>
+</html>

@@ -14,7 +14,7 @@ const Header: React.FC = () => {
 
   // Fetch site name from public settings API
   React.useEffect(() => {
-    fetch('http://localhost:3000/api/public-settings')
+    fetch('/api/public-settings')
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon-admin.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-admin.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - Kevin Althaus</title>
+    <meta name="description" content="Admin dashboard for Kevin Althaus website management" />
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- Custom theme overrides (loaded last to override MUI styles) -->
+    <!-- In dev, this is served from main-app on port 3003; in prod, it's served from the same origin -->
+    <link rel="stylesheet" id="theme-overrides-link" href="/admin/admin-theme-overrides.css" onerror="this.remove()" />
+    <script type="module" crossorigin src="/admin/assets/index-1ab30a21.js"></script>
+    <link rel="stylesheet" href="/admin/assets/index-77e128ce.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (function () {
+        if (!('serviceWorker' in navigator)) {
+          return;
+        }
+
+        navigator.serviceWorker.addEventListener('message', function (event) {
+          try {
+            if (event && event.data && event.data.type === 'SW_CLEANUP_RELOAD') {
+              window.location.reload();
+            }
+          } catch (error) {
+            console.warn('[sw-cleanup] reload handler failed', error);
+          }
+        });
+      })();
+    </script>
+    
+  </body>
+</html>
