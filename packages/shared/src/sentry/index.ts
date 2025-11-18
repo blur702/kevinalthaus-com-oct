@@ -35,7 +35,11 @@ export function initializeSentry(config: SentryConfig): void {
 
   // Don't initialize if disabled or no DSN provided
   if (!enabled || !dsn) {
-    console.info('[Sentry] Not initialized (disabled or missing DSN)');
+    // Only log a warning if Sentry was enabled but DSN is missing (configuration issue)
+    // Don't log when Sentry is intentionally disabled (enabled=false)
+    if (enabled && !dsn) {
+      console.warn('[Sentry] Enabled but missing DSN - error tracking will not work');
+    }
     return;
   }
 
