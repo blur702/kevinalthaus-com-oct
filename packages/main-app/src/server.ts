@@ -22,7 +22,25 @@ import { TaxonomyService } from './services/TaxonomyService';
 import { StorageService } from './services/StorageService';
 import { MenuService } from './services/MenuService';
 
-// Load application after environment configuration to ensure env flags take effect
+// Initialize services BEFORE loading the app to avoid circular dependency issues
+// The app (index.ts) imports these services, so they must be defined first
+
+// Initialize Blog Service
+export const blogService = new BlogService(pool);
+
+// Initialize Editor Service
+export const editorService = new EditorService();
+
+// Initialize Taxonomy Service
+export const taxonomyService = new TaxonomyService(pool);
+
+// Initialize Storage Service
+export const storageService = new StorageService('./storage', pool);
+
+// Initialize Menu Service
+export const menuService = new MenuService(pool);
+
+// Load application after environment configuration and service initialization
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { default: app } = require('./index');
 
@@ -74,21 +92,6 @@ const SENTRY_FLUSH_TIMEOUT = config.SENTRY_FLUSH_TIMEOUT_MS;
 
 let server: Server | undefined;
 let isShuttingDown = false; // Idempotency guard for graceful shutdown
-
-// Initialize Blog Service
-export const blogService = new BlogService(pool);
-
-// Initialize Editor Service
-export const editorService = new EditorService();
-
-// Initialize Taxonomy Service
-export const taxonomyService = new TaxonomyService(pool);
-
-// Initialize Storage Service
-export const storageService = new StorageService('./storage', pool);
-
-// Initialize Menu Service
-export const menuService = new MenuService(pool);
 
 // Initialize services (Vault, Redis, Email, Settings Cache, Blog, Storage)
 async function initializeServices(): Promise<void> {
