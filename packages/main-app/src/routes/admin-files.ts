@@ -91,6 +91,30 @@ export function createAdminFileRoutes(storageService: StorageService, dbPool: im
   });
 
   /**
+   * GET /admin/files/allowed-types
+   * Get list of allowed file types
+   * Requires: FILE_VIEW capability
+   * NOTE: Must come BEFORE /:id route to avoid parameter matching
+   */
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  router.get('/allowed-types', requireCapability(Capability.FILE_VIEW), async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { category } = req.query;
+      const allowedTypes = await storageService.getAllowedFileTypes(
+        category ? String(category) : undefined
+      );
+
+      res.json({ allowedTypes });
+    } catch (error) {
+      console.error('[AdminFileRoutes] Get allowed file types error:', error);
+      res.status(500).json({
+        error: 'Failed to retrieve allowed file types',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  /**
    * GET /admin/files/:id
    * Get file metadata by ID
    * Requires: FILE_VIEW capability
@@ -365,33 +389,6 @@ export function createAdminFileRoutes(storageService: StorageService, dbPool: im
       console.error('[AdminFileRoutes] Hard delete file error:', error);
       res.status(500).json({
         error: 'Failed to permanently delete file',
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-
-  // ==========================================================================
-  // Allowed File Types Management
-  // ==========================================================================
-
-  /**
-   * GET /admin/files/allowed-types
-   * Get list of allowed file types
-   * Requires: FILE_VIEW capability
-   */
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  router.get('/allowed-types', requireCapability(Capability.FILE_VIEW), async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { category } = req.query;
-      const allowedTypes = await storageService.getAllowedFileTypes(
-        category ? String(category) : undefined
-      );
-
-      res.json({ allowedTypes });
-    } catch (error) {
-      console.error('[AdminFileRoutes] Get allowed file types error:', error);
-      res.status(500).json({
-        error: 'Failed to retrieve allowed file types',
         message: error instanceof Error ? error.message : String(error),
       });
     }
