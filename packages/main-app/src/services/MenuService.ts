@@ -73,7 +73,7 @@ export class MenuService {
     const items = rows.map((row) => this.mapMenuItem(row));
 
     // Validate items and throw error if any invalid items are detected
-    const invalidItems: Array<{ id: string; menu_id: string; label: string; parent_id: string | null }> = [];
+    const invalidItems: Array<{ id: string; menu_id: string; label: string; parent_id: string | null | undefined }> = [];
 
     for (const item of items) {
       if (!this.validateMenuItem(item)) {
