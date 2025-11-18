@@ -26,6 +26,8 @@ Full docs are now consolidated under `/docs`:
 - Scripts: `docs/scripts.md`
 - CodeRabbit CLI Integration: `docs/coderabbit-cli.md`
 - Taxonomy System: `docs/taxonomy-setup.md`
+- **GitHub Secrets Setup: `docs/github-secrets-setup.md`** ⬅️ **Required for CI/CD**
+- Testing & Automation: `docs/testing-automation.md`
 
 ## Quick Start
 

@@ -39,6 +39,14 @@ import {
 } from '@mui/icons-material';
 import type { BlogPost, BlogPostSummary } from '../types';
 
+/**
+ * Helper function to retrieve CSRF token from cookie
+ */
+const getCSRFToken = (): string | null => {
+  const csrfMatch = document.cookie.match(/csrf-token=([^;]+)/);
+  return csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+};
+
 interface BlogListProps {
   onCreateNew: () => void;
   onEdit: (post: BlogPost) => void;
@@ -113,12 +121,18 @@ export const BlogList: React.FC<BlogListProps> = ({ onCreateNew, onEdit }) => {
 
   const handlePublish = async (postId: string) => {
     try {
+      const csrfToken = getCSRFToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken;
+      }
+
       const response = await fetch(`/api/blog/${postId}/publish`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({}),
       });
 
@@ -135,12 +149,18 @@ export const BlogList: React.FC<BlogListProps> = ({ onCreateNew, onEdit }) => {
 
   const handleUnpublish = async (postId: string) => {
     try {
+      const csrfToken = getCSRFToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken;
+      }
+
       const response = await fetch(`/api/blog/${postId}/unpublish`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({}),
       });
 
@@ -161,9 +181,18 @@ export const BlogList: React.FC<BlogListProps> = ({ onCreateNew, onEdit }) => {
     }
 
     try {
+      const csrfToken = getCSRFToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken;
+      }
+
       const response = await fetch(`/api/blog/${postId}`, {
         method: 'DELETE',
         credentials: 'include',
+        headers,
       });
 
       if (!response.ok) {

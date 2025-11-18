@@ -1,0 +1,214 @@
+# CodeRabbit Configuration
+# AI-powered code review and automated testing
+
+# Review settings
+reviews:
+  # Enable automated reviews on pull requests
+  enabled: true
+
+  # Review level: "full" | "moderate" | "light"
+  level: "full"
+
+  # Auto-approve PRs that meet criteria
+  auto_approve:
+    enabled: true
+    conditions:
+      - "tests_pass"
+      - "no_security_issues"
+      - "code_coverage_maintained"
+
+  # Files and patterns to review
+  include:
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.js"
+    - "**/*.jsx"
+    - "**/*.json"
+    - "**/*.yml"
+    - "**/*.yaml"
+    - "**/Dockerfile"
+    - "**/*.sql"
+
+  # Files and patterns to exclude from review
+  exclude:
+    - "node_modules/**"
+    - "dist/**"
+    - "build/**"
+    - "**/*.min.js"
+    - "**/*.map"
+    - "coverage/**"
+    - "test-results/**"
+    - "playwright-report/**"
+    - ".next/**"
+    - ".cache/**"
+
+# Security scanning
+security:
+  enabled: true
+
+  # Scan for common vulnerabilities
+  scan_for:
+    - "sql_injection"
+    - "xss"
+    - "csrf"
+    - "command_injection"
+    - "path_traversal"
+    - "sensitive_data_exposure"
+    - "insecure_crypto"
+    - "authentication_issues"
+    - "authorization_issues"
+
+  # Block PRs with security issues
+  block_on_issues: true
+
+  # Severity levels to block: "critical" | "high" | "medium" | "low"
+  block_severity: ["critical", "high"]
+
+# Testing configuration
+testing:
+  enabled: true
+
+  # Require tests for new code
+  require_tests: true
+
+  # Minimum code coverage percentage
+  min_coverage: 80
+
+  # Run tests automatically on PR
+  auto_test: true
+
+  # Test commands to run
+  commands:
+    - "npm run lint"
+    - "npm run test:unit"
+    - "npm run test:e2e:chromium"
+
+# Code quality checks
+quality:
+  enabled: true
+
+  # Code complexity thresholds
+  complexity:
+    max_cyclomatic: 15
+    max_cognitive: 20
+
+  # Code style checks
+  style:
+    - "consistent_naming"
+    - "proper_indentation"
+    - "no_unused_variables"
+    - "no_console_logs_in_prod"
+
+  # Performance checks
+  performance:
+    - "avoid_n_plus_1_queries"
+    - "check_bundle_size"
+    - "detect_memory_leaks"
+
+# Documentation requirements
+documentation:
+  enabled: true
+
+  # Require documentation for:
+  require_for:
+    - "public_functions"
+    - "exported_classes"
+    - "api_endpoints"
+    - "database_schema_changes"
+
+  # Documentation style
+  style: "jsdoc"
+
+# Integration with CI/CD
+ci:
+  # Run CodeRabbit checks in CI pipeline
+  enabled: true
+
+  # Block merge if checks fail
+  block_merge_on_failure: true
+
+  # GitHub Actions integration
+  github_actions:
+    enabled: true
+    workflow_file: ".github/workflows/coderabbit.yml"
+
+# Custom rules specific to this project
+custom_rules:
+  - name: "CSRF Protection"
+    description: "Ensure all state-changing API endpoints use CSRF protection"
+    pattern: "router\\.(post|put|delete|patch)"
+    require: "csrfProtection"
+    severity: "high"
+
+  - name: "SQL Injection Prevention"
+    description: "Ensure all SQL queries use parameterized queries"
+    pattern: "\\$\\{.*\\}"
+    exclude_from: ["*.test.ts", "*.spec.ts"]
+    message: "Use parameterized queries instead of string interpolation"
+    severity: "critical"
+
+  - name: "Authentication Required"
+    description: "Ensure API routes require authentication"
+    pattern: "router\\.(get|post|put|delete|patch)"
+    require: ["authenticate", "requireAuth"]
+    exclude: ["public/**", "**/auth/**"]
+    severity: "high"
+
+  - name: "Input Validation"
+    description: "Ensure request inputs are validated"
+    pattern: "req\\.(body|params|query)"
+    suggest: "validateRequest"
+    severity: "medium"
+
+  - name: "Error Handling"
+    description: "Ensure async functions have proper error handling"
+    pattern: "async\\s+function|async\\s+\\("
+    require: ["try", "catch"]
+    severity: "medium"
+
+# Notifications
+notifications:
+  enabled: true
+
+  # Notification channels
+  channels:
+    - type: "github"
+      on: ["review_complete", "security_issue", "test_failure"]
+
+    - type: "email"
+      recipients: ["contact@kevinalthaus.com"]
+      on: ["security_issue", "deployment_failure"]
+
+# AI model preferences
+ai:
+  # Model to use for reviews: "gpt-4" | "gpt-3.5-turbo" | "claude-3"
+  model: "gpt-4"
+
+  # Tone for review comments: "professional" | "friendly" | "strict"
+  tone: "professional"
+
+  # Include code suggestions in reviews
+  suggest_improvements: true
+
+  # Explain complex changes
+  explain_changes: true
+
+# Rate limiting
+rate_limit:
+  # Maximum reviews per hour
+  max_reviews_per_hour: 50
+
+  # Maximum API calls per minute
+  max_api_calls_per_minute: 100
+
+# Advanced settings
+advanced:
+  # Enable experimental features
+  experimental_features: false
+
+  # Parallel processing
+  parallel_processing: true
+
+  # Cache review results
+  cache_results: true
+  cache_duration_hours: 24

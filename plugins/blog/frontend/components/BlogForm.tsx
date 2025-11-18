@@ -99,7 +99,7 @@ export const BlogForm: React.FC<BlogFormProps> = ({
             'Content-Type': 'application/json',
           };
           if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
+            headers['x-csrf-token'] = csrfToken;
           }
 
           const response = await fetch(`${API_BASE}/taxonomy/entities/blog_post/${editPost.id}/terms`, {
@@ -205,7 +205,7 @@ export const BlogForm: React.FC<BlogFormProps> = ({
 
       // Add CSRF token for state-changing requests
       if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
+        headers['x-csrf-token'] = csrfToken;
       }
 
       // Convert meta_keywords array to JSON string for API

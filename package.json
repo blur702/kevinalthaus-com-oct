@@ -25,6 +25,8 @@
     "test:e2e:firefox": "playwright test --project=firefox",
     "test:e2e:webkit": "playwright test --project=webkit",
     "test:e2e:report": "playwright show-report",
+    "test:e2e:prod": "TEST_URL=https://kevinalthaus.com playwright test tests/e2e",
+    "test:e2e:prod:blog": "TEST_URL=https://kevinalthaus.com playwright test tests/e2e/blog-csrf.spec.ts",
     "test:unit": "lerna run test --stream",
     "test:smoke": "playwright test --grep @smoke",
     "test:regression": "playwright test --grep @regression",

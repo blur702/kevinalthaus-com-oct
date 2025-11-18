@@ -11,23 +11,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      (function () {
-        if (!('serviceWorker' in navigator)) {
-          return;
-        }
-
-        navigator.serviceWorker.addEventListener('message', function (event) {
-          try {
-            if (event && event.data && event.data.type === 'SW_CLEANUP_RELOAD') {
-              window.location.reload();
-            }
-          } catch (error) {
-            console.warn('[sw-cleanup] reload handler failed', error);
-          }
-        });
-      })();
-    </script>
+    <script src="/sw-handler.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

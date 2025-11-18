@@ -10,27 +10,11 @@
     <meta name="robots" content="noindex, nofollow" />
     <!-- Custom theme overrides (loaded last to override MUI styles) -->
     <!-- In dev, this is served from main-app on port 3003; in prod, it's served from the same origin -->
-    <link rel="stylesheet" id="theme-overrides-link" href="/admin-theme-overrides.css" onerror="this.remove()" />
+    <link rel="stylesheet" id="theme-overrides-link" href="/admin-theme-overrides.css" />
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      (function () {
-        if (!('serviceWorker' in navigator)) {
-          return;
-        }
-
-        navigator.serviceWorker.addEventListener('message', function (event) {
-          try {
-            if (event && event.data && event.data.type === 'SW_CLEANUP_RELOAD') {
-              window.location.reload();
-            }
-          } catch (error) {
-            console.warn('[sw-cleanup] reload handler failed', error);
-          }
-        });
-      })();
-    </script>
+    <script src="/sw-handler.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

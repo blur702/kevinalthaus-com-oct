@@ -27,6 +27,14 @@ import {
 import { Schedule as ScheduleIcon } from '@mui/icons-material';
 import type { BlogPost, BlogPostFormData } from '../types';
 
+/**
+ * Helper function to retrieve CSRF token from cookie
+ */
+const getCSRFToken = (): string | null => {
+  const csrfMatch = document.cookie.match(/csrf-token=([^;]+)/);
+  return csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+};
+
 interface BlogFormDialogProps {
   open: boolean;
   onClose: () => void;
@@ -130,12 +138,18 @@ export const BlogFormDialog: React.FC<BlogFormDialogProps> = ({
       const url = editPost ? `/api/blog/${editPost.id}` : '/api/blog';
       const method = editPost ? 'PUT' : 'POST';
 
+      const csrfToken = getCSRFToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken;
+      }
+
       const response = await fetch(url, {
         method,
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(formData),
       });
 
