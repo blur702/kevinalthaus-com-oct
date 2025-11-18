@@ -238,8 +238,8 @@ app.use(cacheMiddleware);
 const RATE_LIMIT_BYPASS_ENABLED = config.DISABLE_AUTH_RATE_LIMIT || config.RATE_LIMIT_BYPASS_E2E;
 
 const baseAuthRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Increased from 10 to 50 to allow normal page loads with multiple validation checks
   message: {
     error: 'Too many authentication attempts',
     message: 'Please try again later',
