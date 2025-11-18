@@ -52,7 +52,7 @@ function deploy() {
     // Rebuild and restart containers
     console.log('[DEPLOY] Rebuilding and restarting containers...');
     execSync(
-      'docker compose -f docker-compose.prod.yml up -d --build --force-recreate api-gateway main-app',
+      'docker compose -f docker-compose.prod.yml up -d --build --force-recreate api-gateway main-app admin',
       { cwd: '/opt/kevinalthaus', stdio: 'inherit' }
     );
 
