@@ -5,7 +5,9 @@ import type { Pool } from 'pg';
  * Creates 'categories' and 'tags' vocabularies if they don't exist
  * Safe to run multiple times (idempotent)
  */
-export async function seedDefaultVocabularies(pool: Pool): Promise<{ created: number; existing: number }> {
+export async function seedDefaultVocabularies(
+  pool: Pool
+): Promise<{ success: boolean; created: number; existing: number }> {
   try {
     // Check if vocabularies already exist
     const checkResult = await pool.query(
@@ -60,10 +62,10 @@ export async function seedDefaultVocabularies(pool: Pool): Promise<{ created: nu
     }
 
     const existing = existingVocabs.size;
-    return { created, existing };
+    return { success: true, created, existing };
   } catch (error) {
     console.error('[Seed] Failed to seed default vocabularies:', error);
-    // Don't throw - allow app to start even if seeding fails
-    return { created: 0, existing: 0 };
+    // Return failure signal but don't throw - allow app to start even if seeding fails
+    return { success: false, created: 0, existing: 0 };
   }
 }

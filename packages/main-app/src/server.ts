@@ -153,8 +153,14 @@ async function initializeServices(): Promise<void> {
 
     // Seed default vocabularies (categories and tags)
     try {
-      await seedDefaultVocabularies(pool);
-      logger.info('Default vocabularies seeded');
+      const summary = await seedDefaultVocabularies(pool);
+      if (summary.success) {
+        logger.info(`Default vocabularies seeded (created: ${summary.created}, existing: ${summary.existing})`);
+      } else {
+        logger.warn(
+          `Failed to seed default vocabularies (created: ${summary.created}, existing: ${summary.existing})`
+        );
+      }
     } catch (error) {
       logger.warn(`Failed to seed default vocabularies: ${(error as Error).message}`);
       // Don't exit - allow app to continue even if seeding fails
