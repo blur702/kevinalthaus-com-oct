@@ -570,6 +570,9 @@ export async function runMigrations(): Promise<void> {
     // Migration 25: Blog plugin tables (includes content-manager and blog schemas)
     await runSQLFileMigration('25-blog-plugin-tables', '25-blog-plugin-tables.sql');
 
+    // Migration 26: Fix menu items integrity
+    await runSQLFileMigration('26-fix-menu-items-integrity', '26-fix-menu-items-integrity.sql');
+
     // eslint-disable-next-line no-console
     console.log('[Migrations] All migrations completed successfully');
   } catch (error) {

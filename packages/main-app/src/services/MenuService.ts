@@ -70,10 +70,44 @@ export class MenuService {
       params as any[]
     );
 
-    return rows.map((row) => this.mapMenuItem(row));
+    const items = rows.map((row) => this.mapMenuItem(row));
+
+    // Validate items and throw error if any invalid items are detected
+    const invalidItems: Array<{ id: string; menu_id: string; label: string; parent_id: string | null }> = [];
+
+    for (const item of items) {
+      if (!this.validateMenuItem(item)) {
+        invalidItems.push({
+          id: item.id,
+          menu_id: item.menu_id,
+          label: item.label,
+          parent_id: item.parent_id
+        });
+        // eslint-disable-next-line no-console
+        console.error('[MenuService] Invalid menu item detected:', {
+          id: item.id,
+          menu_id: item.menu_id,
+          label: item.label,
+          parent_id: item.parent_id
+        });
+      }
+    }
+
+    if (invalidItems.length > 0) {
+      // eslint-disable-next-line no-console
+      console.error(`[MenuService] Found ${invalidItems.length} invalid menu items with missing or invalid IDs`);
+      throw new Error(
+        `Database contains ${invalidItems.length} invalid menu item(s) with missing or undefined IDs. ` +
+        `Please run database integrity checks. Invalid items: ${invalidItems.map(i => i.label).join(', ')}`
+      );
+    }
+
+    return items;
   }
 
   private buildTree(items: MenuItem[]): MenuItem[] {
+    // Assume items have been pre-validated by fetchMenuItems()
+    // This method focuses solely on building the hierarchical structure
     const byId = new Map<string, MenuItem>();
     items.forEach((item) => {
       byId.set(item.id, item);
@@ -401,6 +435,15 @@ export class MenuService {
     );
     const max = rows[0]?.max ?? -10;
     return max + 10;
+  }
+
+  /**
+   * Validates that a menu item has a valid ID
+   * @param item - The menu item to validate
+   * @returns true if the item has a valid ID, false otherwise
+   */
+  private validateMenuItem(item: MenuItem): boolean {
+    return !!(item.id && item.id !== 'undefined' && item.id.trim() !== '');
   }
 
   async withTransaction<T>(handler: (client: PoolClient) => Promise<T>): Promise<T> {

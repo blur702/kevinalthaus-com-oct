@@ -34,8 +34,9 @@ class UnauthorizedError extends Error {
  * Handles menu-related errors and sends appropriate HTTP responses
  * @param error - The error to handle (unknown type)
  * @param res - Express Response object
+ * @param context - Optional context about the operation being performed
  */
-function handleMenuError(error: unknown, res: Response): void {
+function handleMenuError(error: unknown, res: Response, context?: { operation?: string; menuId?: string }): void {
   // Use instanceof checks for proper error classification
   if (error instanceof ValidationError) {
     res.status(400).json({ error: error.message });
@@ -56,6 +57,18 @@ function handleMenuError(error: unknown, res: Response): void {
   const err = error instanceof Error ? error : new Error(String(error));
   const errorMessage = err.message.toLowerCase();
 
+  // Check for data integrity/validation errors
+  if (errorMessage.includes('invalid menu item') || errorMessage.includes('missing id')) {
+    if (isSentryEnabled) {
+      Sentry.captureException(err, {
+        tags: { error_type: 'menu_data_integrity' },
+        extra: context
+      });
+    }
+    res.status(500).json({ error: 'Menu data integrity issue detected. Please contact administrator.' });
+    return;
+  }
+
   if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
     res.status(404).json({ error: err.message });
     return;
@@ -73,7 +86,9 @@ function handleMenuError(error: unknown, res: Response): void {
 
   // Unexpected errors - capture to Sentry and return 500
   if (isSentryEnabled) {
-    Sentry.captureException(err);
+    Sentry.captureException(err, {
+      extra: context
+    });
   }
   res.status(500).json({ error: 'Internal server error' });
 }
@@ -84,10 +99,14 @@ menusRouter.use(requireRole(Role.ADMIN));
 menusRouter.get(
   '/',
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const includeItems = req.query.includeItems !== 'false';
-    const activeOnly = req.query.activeOnly === 'true';
-    const menus = await menuService.listMenus({ includeItems, activeOnly });
-    res.json({ menus });
+    try {
+      const includeItems = req.query.includeItems !== 'false';
+      const activeOnly = req.query.activeOnly === 'true';
+      const menus = await menuService.listMenus({ includeItems, activeOnly });
+      res.json({ menus });
+    } catch (error) {
+      handleMenuError(error, res, { operation: 'list_menus' });
+    }
   })
 );
 
@@ -106,14 +125,18 @@ menusRouter.post(
 menusRouter.get(
   '/:id',
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const includeItems = req.query.includeItems !== 'false';
-    const menu = await menuService.getMenuById(req.params.id, { includeItems });
-    if (!menu) {
-      res.status(404).json({ error: 'Menu not found' });
-      return;
-    }
+    try {
+      const includeItems = req.query.includeItems !== 'false';
+      const menu = await menuService.getMenuById(req.params.id, { includeItems });
+      if (!menu) {
+        res.status(404).json({ error: 'Menu not found' });
+        return;
+      }
 
-    res.json({ menu });
+      res.json({ menu });
+    } catch (error) {
+      handleMenuError(error, res, { operation: 'get_menu_by_id', menuId: req.params.id });
+    }
   })
 );
 
