@@ -450,7 +450,9 @@ app.use('/api/blog', createBlogRouter(blogService, logger));
 
 // File management routes (storageService imported from server.ts)
 app.use('/admin/files', createAdminFileRoutes(storageService, pool));
-app.use('/api/plugins', createPluginFileRoutes(storageService));
+// Plugin file routes - NOTE: Do NOT mount at /api/plugins as it conflicts with pluginsRouter above
+// These routes expect /:pluginId/files/* structure, so mount at /api/plugin-files
+app.use('/api/plugin-files', createPluginFileRoutes(storageService));
 
 // Public file sharing routes (no authentication required)
 app.use('/share', createPublicShareRoutes(storageService, pool));
