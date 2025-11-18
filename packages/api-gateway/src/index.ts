@@ -62,6 +62,10 @@ function setupSentry(): boolean {
 }
 
 const app = express();
+
+// Enable trust proxy for rate limiting and client IP detection behind nginx
+app.set('trust proxy', true);
+
 export const isSentryEnabled = setupSentry();
 
 // Normalize LOG_LEVEL to valid enum value
