@@ -176,7 +176,7 @@ const cspDirectives = {
   scriptSrc: ["'self'"],
   styleSrc: ["'self'", 'https://fonts.googleapis.com'],
   imgSrc: ["'self'", 'data:', 'https:'],
-  connectSrc: ["'self'"],
+  connectSrc: ["'self'", "https://o4510324179206144.ingest.us.sentry.io"],
   fontSrc: ["'self'", 'https://fonts.gstatic.com'],
   objectSrc: ["'none'"],
   mediaSrc: ["'self'"],
