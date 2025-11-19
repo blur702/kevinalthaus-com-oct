@@ -29,6 +29,7 @@ import {
   FolderOpen as FilesIcon,
   SmartToy as AiIcon,
   MenuOpen as MenuManagerIcon,
+  ViewQuilt as PageBuilderIcon,
 } from '@mui/icons-material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
@@ -43,6 +44,7 @@ import EditorTest from './pages/EditorTest.tsx';
 import Files from './pages/Files.tsx';
 import AiServices from './pages/AiServices.tsx';
 import Menus from './pages/Menus.tsx';
+import PageBuilder from './pages/PageBuilder.tsx';
 
 // Import auth components and pages
 import ProtectedRoute from './components/ProtectedRoute.tsx';
@@ -83,6 +85,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
   { label: 'Users', path: '/users', icon: <PeopleIcon /> },
   { label: 'Content', path: '/content', icon: <ArticleIcon /> },
+  { label: 'Page Builder', path: '/page-builder', icon: <PageBuilderIcon /> },
   { label: 'Taxonomy', path: '/taxonomy', icon: <LabelIcon /> },
   { label: 'Files', path: '/files', icon: <FilesIcon /> },
   { label: 'Menus', path: '/menus', icon: <MenuManagerIcon /> },
@@ -240,6 +243,7 @@ const App: React.FC = () => {
           { path: '/', element: <Dashboard /> },
           { path: '/users', element: <Users /> },
           { path: '/content', element: <Content /> },
+          { path: '/page-builder', element: <PageBuilder /> },
           { path: '/taxonomy', element: <Taxonomy /> },
           { path: '/files', element: <Files /> },
           { path: '/menus', element: <Menus /> },
