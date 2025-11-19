@@ -14,6 +14,8 @@ import { listDistrictsHandler } from './listDistricts';
 import { getRepresentativeHandler } from './getRepresentative';
 import { importKMLHandler } from './importKML';
 import { syncMembersHandler } from './syncMembers';
+import { listAllAddressesHandler } from './adminAddresses';
+import { getAnalyticsHandler } from './adminAnalytics';
 
 /**
  * Middleware to require admin role
@@ -82,6 +84,12 @@ export function createSSDDRouter(context: PluginExecutionContext): Router {
   // Member sync endpoint (admin only)
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   router.post('/sync-members', requireAdmin, syncMembersHandler(context));
+
+  // Admin endpoints (admin only)
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  router.get('/admin/addresses', requireAdmin, listAllAddressesHandler(context));
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  router.get('/admin/analytics', requireAdmin, getAnalyticsHandler(context));
 
   return router;
 }

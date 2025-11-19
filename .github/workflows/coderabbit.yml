@@ -57,22 +57,6 @@ jobs:
             playwright-report/
           retention-days: 30
 
-      - name: CodeRabbit Review
-        if: secrets.CODERABBIT_TOKEN != ''
-        uses: coderabbitai/coderabbit-action@v1
-        with:
-          # CodeRabbit API token from repository secrets
-          token: ${{ secrets.CODERABBIT_TOKEN }}
-
-          # Optional: Custom configuration
-          config_file: .coderabbit.yaml
-
-          # Post review comments on PR
-          post_review: true
-
-          # Auto-approve if all checks pass
-          auto_approve: false # Set to true after testing
-        continue-on-error: true
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -93,7 +77,6 @@ jobs:
   playwright-test-production:
     name: Test Production Blog CSRF
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.TEST_ADMIN_EMAIL != '' && secrets.TEST_ADMIN_PASSWORD != ''
 
     steps:
       - name: Checkout code

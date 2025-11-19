@@ -191,3 +191,68 @@ export interface SyncMembersResponse {
   lastSyncedAt: Date;
 }
 
+export interface AdminAddress extends Address {
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    role: string;
+  };
+}
+
+export interface AdminAddressesResponse {
+  success: boolean;
+  addresses: AdminAddress[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+  error?: string;
+}
+
+export interface StateCount {
+  state: string;
+  count: number;
+}
+
+export interface DistrictCount {
+  state: string;
+  districtNumber: string;
+  name: string;
+  count: number;
+}
+
+export interface StatusCount {
+  validationStatus: string;
+  count: number;
+}
+
+export interface DailyActivity {
+  date: string;
+  count: number;
+}
+
+export interface UserCount {
+  id: string;
+  email: string;
+  username: string;
+  count: number;
+}
+
+export interface AnalyticsData {
+  totalValidations: number;
+  byState: StateCount[];
+  byDistrict: DistrictCount[];
+  byStatus: StatusCount[];
+  recentActivity: DailyActivity[];
+  topUsers: UserCount[];
+}
+
+export interface AnalyticsResponse {
+  success: boolean;
+  analytics: AnalyticsData;
+  error?: string;
+}
+

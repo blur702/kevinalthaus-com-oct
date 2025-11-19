@@ -8,6 +8,7 @@ import Joi from 'joi';
 // Import Node modules at top-level for proper typing and to avoid inline require usage.
 import * as fs from 'fs';
 import * as path from 'path';
+import defaultGridConfigJson from '../config/default-grid-config.json';
 
 /**
  * Page publication status
@@ -277,20 +278,16 @@ export const widgetInstanceSchema = Joi.object({
 /**
  * Default grid configuration
  */
-export const defaultGridConfig: GridConfig = {
-  columns: 12,
-  gap: {
-    unit: 'px',
-    value: 16
-  },
-  snapToGrid: true,
-  breakpoints: [
-    { name: 'mobile', minWidth: 0, maxWidth: 767, columns: 4 },
-    { name: 'tablet', minWidth: 768, maxWidth: 1023, columns: 8 },
-    { name: 'desktop', minWidth: 1024, maxWidth: 1439, columns: 12 },
-    { name: 'wide', minWidth: 1440, columns: 16 }
-  ]
-};
+const { error: gridConfigError, value: validatedGridConfig } = gridConfigSchema.validate(defaultGridConfigJson, {
+  abortEarly: false,
+  stripUnknown: false
+});
+
+if (gridConfigError) {
+  throw new Error(`Invalid default grid config: ${gridConfigError.message}`);
+}
+
+export const defaultGridConfig: GridConfig = validatedGridConfig as GridConfig;
 
 /**
  * Create a new empty page layout
