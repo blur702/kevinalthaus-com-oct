@@ -801,8 +801,10 @@ app.use(
 );
 
 // Editor utility routes (public - no authentication required)
+// Editor utility routes (JWT-protected)
 app.use(
   '/api/editor',
+  jwtMiddleware,
   createProxy({
     target: MAIN_APP_URL,
     pathRewrite: { '^/api/editor': '/api/editor' },
