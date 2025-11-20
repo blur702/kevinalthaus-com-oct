@@ -159,7 +159,7 @@ const PageBuilder: React.FC = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDelete(page.id)}
+                        onClick={() => void handleDelete(page.id)}
                         title="Delete page"
                       >
                         <DeleteIcon />

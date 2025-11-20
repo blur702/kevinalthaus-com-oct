@@ -1,5 +1,5 @@
 // Augment Express Request interface to include request ID and user
-import type { User } from './index';
+import type { User } from './base';
 import type { UserContext, TokenPayload } from '../services/interfaces';
 
 declare global {

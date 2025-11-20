@@ -837,6 +837,18 @@ app.use(
   })
 );
 
+// Page Builder routes (CRUD for pages)
+app.use(
+  '/api/page-builder',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/page-builder': '/api/page-builder' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
 // Public blog routes (no authentication required)
 app.use(
   '/api/blog/public',
