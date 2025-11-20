@@ -20,9 +20,17 @@ const BASE_URL = '/users-manager';
  */
 export async function listUsers(params?: UserListParams): Promise<UserListResponse> {
   const response = await api.get<UserListResponse>(BASE_URL, { params });
+  const total = asNumber(response.data.total, 0, { feature: 'UsersService', field: 'total' });
+
   return {
     users: asArray<User>(response.data.users, { feature: 'UsersService', field: 'users' }),
-    total: asNumber(response.data.total, 0, { feature: 'UsersService', field: 'total' }),
+    total,
+    page: asNumber(response.data.page, params?.page || 1, { feature: 'UsersService', field: 'page' }),
+    limit: asNumber(response.data.limit, params?.limit || 10, { feature: 'UsersService', field: 'limit' }),
+    totalPages: asNumber(response.data.totalPages, Math.ceil(total / (params?.limit || 10)), {
+      feature: 'UsersService',
+      field: 'totalPages',
+    }),
   };
 }
 
