@@ -13,12 +13,14 @@ import {
   ReusableBlock,
   PageLayout,
   PageStatus,
+  ContentType,
   validatePageLayout
 } from '../types';
 
 export interface CreatePageInput {
   title: string;
   slug: string;
+  content_type?: ContentType;
   layout_json: PageLayout;
   meta_description?: string;
   meta_keywords?: string;
@@ -30,6 +32,7 @@ export interface CreatePageInput {
 export interface UpdatePageInput {
   title?: string;
   slug?: string;
+  content_type?: ContentType;
   layout_json?: PageLayout;
   meta_description?: string;
   meta_keywords?: string;
@@ -40,6 +43,7 @@ export interface UpdatePageInput {
 
 export interface ListPagesOptions {
   status?: PageStatus;
+  content_type?: ContentType;
   limit?: number;
   offset?: number;
   search?: string;
@@ -66,13 +70,14 @@ export class PageService {
 
     const result = await this.pool.query(
       `INSERT INTO plugin_page_builder.pages
-       (id, title, slug, layout_json, meta_description, meta_keywords, status, publish_at, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       (id, title, slug, content_type, layout_json, meta_description, meta_keywords, status, publish_at, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         id,
         sanitizedTitle,
         input.slug,
+        input.content_type || 'page',
         JSON.stringify(validatedLayout),
         sanitizedMetaDesc,
         input.meta_keywords || null,
@@ -122,7 +127,7 @@ export class PageService {
    * List pages with filtering and pagination
    */
   async listPages(options: ListPagesOptions = {}): Promise<{ pages: Page[]; total: number }> {
-    const { status, limit = 20, offset = 0, search, created_by } = options;
+    const { status, content_type, limit = 20, offset = 0, search, created_by } = options;
 
     const whereConditions = ['deleted_at IS NULL'];
     const params: any[] = [];
@@ -131,6 +136,12 @@ export class PageService {
     if (status) {
       whereConditions.push(`status = $${paramIndex}`);
       params.push(status);
+      paramIndex++;
+    }
+
+    if (content_type) {
+      whereConditions.push(`content_type = $${paramIndex}`);
+      params.push(content_type);
       paramIndex++;
     }
 
@@ -188,6 +199,12 @@ export class PageService {
     if (input.slug !== undefined) {
       updates.push(`slug = $${paramIndex}`);
       params.push(input.slug);
+      paramIndex++;
+    }
+
+    if (input.content_type !== undefined) {
+      updates.push(`content_type = $${paramIndex}`);
+      params.push(input.content_type);
       paramIndex++;
     }
 
@@ -416,6 +433,7 @@ export class PageService {
       id: row.id,
       title: row.title,
       slug: row.slug,
+      content_type: row.content_type,
       layout_json: row.layout_json,
       meta_description: row.meta_description,
       meta_keywords: row.meta_keywords,
@@ -438,6 +456,7 @@ export class PageService {
       version_number: row.version_number,
       title: row.title,
       slug: row.slug,
+      content_type: row.content_type,
       layout_json: row.layout_json,
       status: row.status,
       change_summary: row.change_summary,

@@ -7,7 +7,7 @@ import { Pool } from 'pg';
 import { PageService } from '../services/page.service';
 import { WidgetRegistryService } from '../services/widget-registry.service';
 import { PluginLogger } from '@monorepo/shared/plugin/lifecycle';
-import { PageStatus } from '../types';
+import { PageStatus, ContentType } from '../types';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -57,10 +57,11 @@ export function createPageBuilderRouter(pool: Pool, logger: PluginLogger, widget
     requireCapabilities(['database:read']),
     async (req: AuthenticatedRequest, res: Response) => {
       try {
-        const { status, limit, offset, search, created_by } = req.query;
+        const { status, content_type, limit, offset, search, created_by } = req.query;
 
         const options = {
           status: status as PageStatus | undefined,
+          content_type: content_type as ContentType | undefined,
           limit: limit ? parseInt(limit as string) : 20,
           offset: offset ? parseInt(offset as string) : 0,
           search: search as string | undefined,
@@ -129,7 +130,7 @@ export function createPageBuilderRouter(pool: Pool, logger: PluginLogger, widget
     requireCapabilities(['database:write']),
     async (req: AuthenticatedRequest, res: Response) => {
       try {
-        const { title, slug, layout_json, meta_description, meta_keywords, status, publish_at } = req.body;
+        const { title, slug, content_type, layout_json, meta_description, meta_keywords, status, publish_at } = req.body;
 
         if (!title || !slug || !layout_json) {
           return res.status(400).json({
@@ -141,6 +142,7 @@ export function createPageBuilderRouter(pool: Pool, logger: PluginLogger, widget
         const page = await pageService.createPage({
           title,
           slug,
+          content_type: content_type as ContentType,
           layout_json,
           meta_description,
           meta_keywords,
@@ -192,11 +194,12 @@ export function createPageBuilderRouter(pool: Pool, logger: PluginLogger, widget
     async (req: AuthenticatedRequest, res: Response) => {
       try {
         const { id } = req.params;
-        const { title, slug, layout_json, meta_description, meta_keywords, status, publish_at } = req.body;
+        const { title, slug, content_type, layout_json, meta_description, meta_keywords, status, publish_at } = req.body;
 
         const page = await pageService.updatePage(id, {
           title,
           slug,
+          content_type: content_type as ContentType,
           layout_json,
           meta_description,
           meta_keywords,

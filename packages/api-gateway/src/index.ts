@@ -64,7 +64,8 @@ function setupSentry(): boolean {
 const app = express();
 
 // Enable trust proxy for rate limiting and client IP detection behind nginx
-app.set('trust proxy', true);
+// Trust only the first proxy (nginx/load balancer) to prevent IP spoofing
+app.set('trust proxy', 1);
 
 export const isSentryEnabled = setupSentry();
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -12,15 +13,6 @@ import {
   TableRow,
   IconButton,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,25 +32,19 @@ interface Page {
 }
 
 const PageBuilder: React.FC = () => {
+  const navigate = useNavigate();
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingPage, setEditingPage] = useState<Page | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    slug: '',
-    status: 'draft' as 'draft' | 'published',
-  });
 
   useEffect(() => {
     fetchPages();
   }, []);
 
-  const fetchPages = async () => {
+  const fetchPages = async (): Promise<void> => {
     try {
       setLoading(true);
-      const response = await api.get('/page-builder/pages');
-      setPages(response.data.pages || []);
+      const response = await api.get<{ data: Page[] }>('/page-builder/pages');
+      setPages(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch pages:', error);
     } finally {
@@ -66,53 +52,15 @@ const PageBuilder: React.FC = () => {
     }
   };
 
-  const handleOpenDialog = (page?: Page) => {
-    if (page) {
-      setEditingPage(page);
-      setFormData({
-        title: page.title,
-        slug: page.slug,
-        status: page.status,
-      });
-    } else {
-      setEditingPage(null);
-      setFormData({
-        title: '',
-        slug: '',
-        status: 'draft',
-      });
-    }
-    setOpenDialog(true);
+  const handleCreateNew = (): void => {
+    navigate('/page-builder/editor');
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setEditingPage(null);
-    setFormData({
-      title: '',
-      slug: '',
-      status: 'draft',
-    });
+  const handleEdit = (pageId: number): void => {
+    navigate(`/page-builder/editor/${pageId}`);
   };
 
-  const handleSave = async () => {
-    try {
-      if (editingPage) {
-        await api.put(`/page-builder/pages/${editingPage.id}`, formData);
-      } else {
-        await api.post('/page-builder/pages', {
-          ...formData,
-          content: { sections: [] }, // Empty page structure
-        });
-      }
-      await fetchPages();
-      handleCloseDialog();
-    } catch (error) {
-      console.error('Failed to save page:', error);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number): Promise<void> => {
     if (window.confirm('Are you sure you want to delete this page?')) {
       try {
         await api.delete(`/page-builder/pages/${id}`);
@@ -144,7 +92,7 @@ const PageBuilder: React.FC = () => {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
+          onClick={handleCreateNew}
         >
           Create New Page
         </Button>
@@ -204,7 +152,7 @@ const PageBuilder: React.FC = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleOpenDialog(page)}
+                        onClick={() => handleEdit(page.id)}
                         title="Edit page"
                       >
                         <EditIcon />
@@ -224,53 +172,6 @@ const PageBuilder: React.FC = () => {
           </Table>
         </TableContainer>
       )}
-
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingPage ? 'Edit Page' : 'Create New Page'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField
-              label="Page Title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              fullWidth
-              required
-            />
-            <TextField
-              label="Slug"
-              value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              fullWidth
-              required
-              helperText="URL-friendly identifier (e.g., about-us)"
-            />
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'draft' | 'published' })}
-                label="Status"
-              >
-                <MenuItem value="draft">Draft</MenuItem>
-                <MenuItem value="published">Published</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            onClick={handleSave}
-            variant="contained"
-            color="primary"
-            disabled={!formData.title || !formData.slug}
-          >
-            {editingPage ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

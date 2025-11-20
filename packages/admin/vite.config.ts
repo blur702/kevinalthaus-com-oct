@@ -40,6 +40,7 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, './src'),
       '@monorepo/shared': resolve(__dirname, '../shared/src/browser.ts'),
+      '@page-builder/frontend': resolve(__dirname, '../../plugins/page-builder/frontend/src'),
     },
   },
   server: {

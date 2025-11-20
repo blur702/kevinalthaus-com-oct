@@ -31,7 +31,8 @@ import {
   Typography,
   Paper,
 } from '@mui/material';
-import { TreeView, TreeItem } from '@mui/x-tree-view';
+import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView';
+import { TreeItem } from '@mui/x-tree-view/TreeItem';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -102,7 +103,7 @@ const MenuDialog: React.FC<MenuDialogProps> = ({ open, menu, onClose, onSubmit, 
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<MenuLocation>
   ) => {
     const value = event.target.value;
-    setForm((prev) => ({
+    setForm((prev: CreateMenuRequest) => ({
       ...prev,
       [field]: value,
     }));
@@ -111,7 +112,7 @@ const MenuDialog: React.FC<MenuDialogProps> = ({ open, menu, onClose, onSubmit, 
   const handleToggle = (field: keyof CreateMenuRequest) => (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    setForm((prev) => ({
+    setForm((prev: CreateMenuRequest) => ({
       ...prev,
       [field]: event.target.checked,
     }));
@@ -573,7 +574,7 @@ const MenusPage: React.FC = () => {
       return (
         <TreeItem
           key={nodeId}
-          nodeId={nodeId}
+          itemId={nodeId}
           label={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="body2">{item.label}</Typography>
@@ -735,9 +736,11 @@ const MenusPage: React.FC = () => {
                     This menu does not contain any items yet.
                   </Typography>
                 ) : (
-                  <TreeView
-                    defaultCollapseIcon={<MenuIcon fontSize="small" />}
-                    defaultExpandIcon={<MenuIcon fontSize="small" />}
+                  <SimpleTreeView
+                    slots={{
+                      collapseIcon: MenuIcon,
+                      expandIcon: MenuIcon,
+                    }}
                     sx={{
                       maxHeight: 520,
                       overflowY: 'auto',
@@ -747,7 +750,7 @@ const MenusPage: React.FC = () => {
                     }}
                   >
                     {renderMenuTree(selectedMenu.items)}
-                  </TreeView>
+                  </SimpleTreeView>
                 )}
               </>
             ) : (

@@ -8,7 +8,7 @@ import Joi from 'joi';
 // Import Node modules at top-level for proper typing and to avoid inline require usage.
 import * as fs from 'fs';
 import * as path from 'path';
-import defaultGridConfigJson from '../config/default-grid-config.json';
+import { defaultGridConfigData } from '../config/default-grid-config';
 
 /**
  * Page publication status
@@ -21,12 +21,21 @@ export enum PageStatus {
 }
 
 /**
+ * Content type discriminator for unified content system
+ */
+export enum ContentType {
+  PAGE = 'page',
+  BLOG_POST = 'blog_post'
+}
+
+/**
  * Main page entity with layout and metadata
  */
 export interface Page {
   id: string;
   title: string;
   slug: string;
+  content_type: ContentType;
   layout_json: PageLayout;
   meta_description?: string;
   meta_keywords?: string;
@@ -50,6 +59,7 @@ export interface PageVersion {
   version_number: number;
   title: string;
   slug: string;
+  content_type: ContentType;
   layout_json: PageLayout;
   status: PageStatus;
   change_summary?: string;
@@ -278,7 +288,7 @@ export const widgetInstanceSchema = Joi.object({
 /**
  * Default grid configuration
  */
-const { error: gridConfigError, value: validatedGridConfig } = gridConfigSchema.validate(defaultGridConfigJson, {
+const { error: gridConfigError, value: validatedGridConfig } = gridConfigSchema.validate(defaultGridConfigData, {
   abortEarly: false,
   stripUnknown: false
 });

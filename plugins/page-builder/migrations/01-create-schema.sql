@@ -25,6 +25,12 @@ CREATE TYPE plugin_page_builder.page_status AS ENUM (
   'archived'
 );
 
+-- Content type discriminator to distinguish between regular pages and blog posts
+CREATE TYPE plugin_page_builder.content_type AS ENUM (
+  'page',
+  'blog_post'
+);
+
 -- ============================================================================
 -- MIGRATION TRACKING TABLE
 -- ============================================================================
@@ -48,4 +54,5 @@ ON CONFLICT (migration_name) DO NOTHING;
 
 COMMENT ON SCHEMA plugin_page_builder IS 'Isolated schema for Page Builder plugin - prevents namespace collisions';
 COMMENT ON TYPE plugin_page_builder.page_status IS 'Page publication workflow states';
+COMMENT ON TYPE plugin_page_builder.content_type IS 'Distinguishes between regular pages and blog posts in unified content system';
 COMMENT ON TABLE plugin_page_builder.plugin_migrations IS 'Tracks applied migrations for idempotent execution';

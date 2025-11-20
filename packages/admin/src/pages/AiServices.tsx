@@ -106,8 +106,9 @@ const AiServices: React.FC = () => {
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [deletePromptId, setDeletePromptId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [favoriteFilter, setFavoriteFilter] = useState<boolean | 'all'>('all');
+  // TODO: Implement filtering functionality
+  // const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  // const [favoriteFilter, setFavoriteFilter] = useState<boolean | 'all'>('all');
 
   // Snackbar state
   const [snackbar, setSnackbar] = useState<{

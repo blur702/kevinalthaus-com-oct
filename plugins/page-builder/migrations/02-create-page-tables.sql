@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS plugin_page_builder.pages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title VARCHAR(500) NOT NULL CHECK (length(title) > 0 AND length(title) <= 500),
   slug VARCHAR(500) NOT NULL CHECK (length(slug) > 0 AND length(slug) <= 500),
+  content_type plugin_page_builder.content_type NOT NULL DEFAULT 'page',
   layout_json JSONB NOT NULL DEFAULT '{}'::JSONB CHECK (jsonb_typeof(layout_json) = 'object'),
   meta_description VARCHAR(160) CHECK (meta_description IS NULL OR length(meta_description) <= 160),
   meta_keywords TEXT,
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS plugin_page_builder.page_versions (
   version_number INTEGER NOT NULL CHECK (version_number > 0),
   title VARCHAR(500) NOT NULL,
   slug VARCHAR(500) NOT NULL,
+  content_type plugin_page_builder.content_type NOT NULL,
   layout_json JSONB NOT NULL,
   status plugin_page_builder.page_status NOT NULL,
   change_summary TEXT,
@@ -68,6 +70,10 @@ CREATE INDEX IF NOT EXISTS idx_pages_status
 
 CREATE INDEX IF NOT EXISTS idx_pages_slug
   ON plugin_page_builder.pages (slug)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_pages_content_type
+  ON plugin_page_builder.pages (content_type)
   WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_pages_created_by
@@ -145,6 +151,7 @@ BEGIN
       version_number,
       title,
       slug,
+      content_type,
       layout_json,
       status,
       change_summary,
@@ -154,6 +161,7 @@ BEGIN
       next_version,
       OLD.title,
       OLD.slug,
+      OLD.content_type,
       OLD.layout_json,
       OLD.status,
       'Auto-version on update',
@@ -191,6 +199,7 @@ COMMENT ON TABLE plugin_page_builder.pages IS 'Main pages table with JSONB layou
 COMMENT ON TABLE plugin_page_builder.page_versions IS 'Historical versions for audit trail and rollback capability';
 COMMENT ON COLUMN plugin_page_builder.pages.layout_json IS 'JSONB storage for PageLayout structure with grid and widgets';
 COMMENT ON COLUMN plugin_page_builder.pages.slug IS 'URL-friendly identifier, unique among non-deleted pages';
+COMMENT ON COLUMN plugin_page_builder.pages.content_type IS 'Distinguishes between regular pages and blog posts in unified content system';
 COMMENT ON COLUMN plugin_page_builder.pages.status IS 'Publication workflow state (draft, published, scheduled, archived)';
 COMMENT ON FUNCTION plugin_page_builder.update_page_timestamp() IS 'Auto-updates updated_at timestamp on row modification';
 COMMENT ON FUNCTION plugin_page_builder.create_page_version() IS 'Creates version snapshot when significant fields change';

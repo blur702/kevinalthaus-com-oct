@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -11,6 +9,10 @@ services:
       # NODE_ENV used by init script (00-setup-ssl.sh) to enforce SSL in production
       NODE_ENV: production
       POSTGRES_USE_SSL: "true"
+      # Locale configuration to prevent warnings
+      POSTGRES_INITDB_ARGS: "--locale=C.UTF-8"
+      LC_ALL: C.UTF-8
+      LANG: C.UTF-8
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - postgres_backups:/backups
