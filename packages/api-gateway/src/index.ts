@@ -776,6 +776,41 @@ app.use(
   })
 );
 
+// Themes routes (admin theme customization)
+app.use(
+  '/api/themes',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/themes': '/api/themes' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
+// AI services routes (AI configuration and prompt library)
+app.use(
+  '/api/ai',
+  jwtMiddleware,
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/ai': '/api/ai' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
+// Editor utility routes (public - no authentication required)
+app.use(
+  '/api/editor',
+  createProxy({
+    target: MAIN_APP_URL,
+    pathRewrite: { '^/api/editor': '/api/editor' },
+    includeForwardingHeaders: true,
+    timeout: 30000
+  })
+);
+
 // Taxonomy routes (vocabularies and terms management)
 app.use(
   '/api/taxonomy',
